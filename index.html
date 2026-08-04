@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0d0d">
+<title>Dad Hustle HQ</title>
+<style>
+  :root{
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232322;
+    --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --hairline:#2c2c2a; --ring:rgba(255,255,255,0.10);
+    --accent:#3987e5; --accent-deep:#1c5cab; --accent-soft:rgba(57,135,229,0.14);
+    --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+    --good-soft:rgba(12,163,12,0.14); --warn-soft:rgba(250,178,25,0.12);
+    --serious-soft:rgba(236,131,90,0.13); --crit-soft:rgba(208,59,59,0.14);
+    --radius:16px; --radius-s:10px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px; line-height:1.5;
+    padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  }
+  header.app{
+    position:sticky; top:0; z-index:40; background:rgba(13,13,13,0.97);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--hairline);
+    padding:calc(10px + env(safe-area-inset-top)) 18px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .brand{font-weight:800; letter-spacing:0.06em; font-size:15px}
+  .brand small{display:block; font-weight:500; letter-spacing:0; color:var(--ink-3); font-size:11.5px}
+  .daychip{
+    background:var(--accent-soft); border:1px solid rgba(57,135,229,0.35);
+    color:var(--ink); border-radius:999px; padding:6px 14px; font-size:13.5px; font-weight:650;
+    white-space:nowrap; cursor:pointer;
+  }
+  .daychip span{color:var(--ink-2); font-weight:500}
+  main{max-width:760px; margin:0 auto; padding:16px 16px 40px}
+  section.tab{display:block}
+  body.js section.tab{display:none}
+  body.js section.tab.active{display:block; animation:fade .18s ease}
+  body:not(.js) nav{display:none}
+  .nojs{background:var(--warn-soft); border-bottom:1px solid rgba(250,178,25,0.3); padding:11px 16px; font-size:13.5px; color:var(--ink-2)}
+  .nojs b{color:var(--warn)}
+  .streakwrap{display:flex; align-items:center; gap:18px; margin-top:6px}
+  .streaknum{font-size:46px; font-weight:800; line-height:1}
+  .streaklbl{font-size:13px; color:var(--ink-3); font-weight:650}
+  .streakstat{font-size:14.5px; color:var(--ink-2)}
+  .addrow{display:flex; gap:8px; margin-top:12px}
+  .addrow input{flex:1}
+  .addrow .btn{width:auto; padding:11px 16px; flex:none}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+
+  .card{
+    background:var(--surface); border:1px solid var(--ring); border-radius:var(--radius);
+    padding:18px; margin:0 0 14px;
+  }
+  .card.tight{padding:14px 16px}
+  .card h2{margin:0 0 4px; font-size:13px; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-3); font-weight:700}
+  .card h3{margin:0 0 8px; font-size:18px; font-weight:750}
+  .card p{margin:8px 0; color:var(--ink-2)}
+  .card p strong{color:var(--ink)}
+  .fine{font-size:13px; color:var(--ink-3)}
+  .divider{height:1px; background:var(--hairline); margin:14px 0; border:0}
+
+  /* hero */
+  .hero{padding:26px 20px; text-align:left}
+  .hero .big{font-size:56px; font-weight:800; line-height:1.02; letter-spacing:-0.01em}
+  .hero .sub{color:var(--ink-2); font-size:17px; margin-top:6px}
+  .hero .sub b{color:var(--ink)}
+
+  /* chips */
+  .chip{display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:3px 11px; font-size:12.5px; font-weight:700; letter-spacing:0.02em}
+  .chip svg{flex:none}
+  .chip.good{background:var(--good-soft); color:#7be07b}
+  .chip.warn{background:var(--warn-soft); color:var(--warn)}
+  .chip.serious{background:var(--serious-soft); color:var(--serious)}
+  .chip.crit{background:var(--crit-soft); color:#f38a8a}
+  .chip.info{background:var(--accent-soft); color:#9ec5f4}
+  .chip.neutral{background:var(--surface-2); color:var(--ink-2)}
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--accent); color:#fff; border:0; border-radius:12px;
+    padding:12px 18px; font-size:16px; font-weight:700; cursor:pointer; width:100%;
+  }
+  .btn:active{transform:scale(0.985)}
+  .btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--ring)}
+  .btn.small{width:auto; padding:8px 14px; font-size:14px; border-radius:10px}
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+
+  /* checklist */
+  ol.next{list-style:none; margin:10px 0 0; padding:0; counter-reset:n}
+  ol.next li{
+    counter-increment:n; display:flex; gap:12px; align-items:flex-start;
+    padding:13px 0; border-top:1px solid var(--hairline);
+  }
+  ol.next li:first-child{border-top:0}
+  ol.next li::before{
+    content:counter(n); flex:none; width:26px; height:26px; border-radius:50%;
+    background:var(--surface-2); border:1px solid var(--ring); color:var(--ink-2);
+    font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+  ol.next li.crit::before{background:var(--crit-soft); border-color:rgba(208,59,59,0.4); color:#f38a8a}
+  ol.next li{cursor:pointer}
+  ol.next li.done{opacity:0.42}
+  ol.next li.done .t{text-decoration:line-through}
+  ol.next li.done::before{content:"✓"; background:var(--good-soft); border-color:rgba(12,163,12,0.4); color:#7be07b}
+  ol.next li .t{font-weight:700}
+  ol.next li .d{color:var(--ink-2); font-size:14.5px; margin-top:2px}
+  ol.next li a{color:var(--accent); text-decoration:none; font-weight:650}
+
+  .checkline{display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-top:1px solid var(--hairline); cursor:pointer; user-select:none}
+  .checkline:first-of-type{border-top:0}
+  .checkline .box{
+    flex:none; width:24px; height:24px; border-radius:8px; border:1.5px solid var(--ink-3);
+    display:flex; align-items:center; justify-content:center; margin-top:1px; transition:all .12s;
+  }
+  .checkline.on .box{background:var(--good); border-color:var(--good)}
+  .checkline.on .box::after{content:"✓"; color:#fff; font-size:14px; font-weight:900}
+  .checkline.on .txt{color:var(--ink-3); text-decoration:line-through}
+  .checkline .txt{font-size:15.5px; color:var(--ink-2)}
+
+  /* stat tiles */
+  .tilegrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px}
+  .tile{background:var(--surface-2); border:1px solid var(--ring); border-radius:var(--radius-s); padding:12px 14px}
+  .tile .lbl{font-size:12.5px; color:var(--ink-3); font-weight:600}
+  .tile .val{font-size:26px; font-weight:750; margin-top:2px}
+  .tile .delta{font-size:12.5px; font-weight:700; margin-top:1px}
+  .delta.up{color:var(--good)} .delta.flat{color:var(--ink-3)}
+
+  .platform{border-top:1px solid var(--hairline); padding:14px 0}
+  .platform:first-of-type{border-top:0; padding-top:4px}
+  .platform .rowtop{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+  .platform .pname{font-weight:800; font-size:16.5px}
+  .platform .nums{display:flex; gap:16px; flex-wrap:wrap; margin-top:8px}
+  .platform .nums div{font-size:13px; color:var(--ink-3)}
+  .platform .nums b{display:block; font-size:17px; color:var(--ink); font-weight:700}
+  .platform .verdict{font-size:13.5px; color:var(--ink-2); margin-top:8px}
+
+  /* bar chart */
+  .chart{margin-top:14px}
+  .chart .row{display:flex; align-items:flex-end; gap:14px; height:150px; padding:0 4px; border-bottom:1px solid var(--hairline)}
+  .chart .col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%}
+  .chart .bar{width:24px; max-width:24px; background:var(--accent); border-radius:4px 4px 0 0}
+  .chart .col .vlab{font-size:12.5px; font-weight:700; color:var(--ink-2); margin-bottom:4px}
+  .chart .xlabs{display:flex; gap:14px; padding:6px 4px 0}
+  .chart .xlabs div{flex:1; text-align:center; font-size:12px; color:var(--ink-3)}
+  .chart .caption{font-size:12.5px; color:var(--ink-3); margin-top:8px; font-variant-numeric:tabular-nums}
+
+  /* inputs */
+  label.f{display:block; font-size:13px; color:var(--ink-3); font-weight:650; margin:12px 0 4px}
+  input[type=text],input[type=date],input[type=number],textarea,select{
+    width:100%; background:var(--page); color:var(--ink); border:1px solid var(--hairline);
+    border-radius:10px; padding:11px 12px; font-size:16px; font-family:inherit;
+  }
+  textarea{min-height:150px; line-height:1.55; resize:vertical}
+  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--accent)}
+
+  /* lab results */
+  .flag{border-left:3px solid; border-radius:0 var(--radius-s) var(--radius-s) 0; background:var(--surface-2); padding:10px 12px; margin:8px 0; font-size:14.5px}
+  .flag.red{border-color:var(--crit)} .flag.amber{border-color:var(--warn)} .flag.green{border-color:var(--good)}
+  .flag .fh{font-weight:750; font-size:13px; letter-spacing:0.04em}
+  .flag.red .fh{color:#f38a8a} .flag.amber .fh{color:var(--warn)} .flag.green .fh{color:#7be07b}
+  .flag .fb{color:var(--ink-2); margin-top:2px}
+  .flag mark{background:rgba(208,59,59,0.25); color:#ffd7d7; border-radius:4px; padding:0 3px}
+  .flag.amber mark{background:rgba(250,178,25,0.2); color:#ffe6b3}
+  .labverdict{border-radius:var(--radius-s); padding:14px; text-align:center; font-weight:800; font-size:18px; margin-top:12px}
+  .labverdict.ship{background:var(--good-soft); color:#7be07b; border:1px solid rgba(12,163,12,0.35)}
+  .labverdict.fix{background:var(--crit-soft); color:#f38a8a; border:1px solid rgba(208,59,59,0.35)}
+
+  /* rehearsal view */
+  .rehearse{font-size:22px; line-height:1.65; font-weight:600; color:var(--ink); padding:6px 2px}
+  .rehearse .blank{color:var(--warn); font-weight:750}
+
+  /* accordions */
+  details{border-top:1px solid var(--hairline); padding:2px 0}
+  details:first-of-type{border-top:0}
+  summary{
+    list-style:none; cursor:pointer; padding:13px 0; font-weight:700; font-size:16px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary .arrow{color:var(--ink-3); transition:transform .15s; flex:none}
+  details[open] summary .arrow{transform:rotate(90deg)}
+  details .body{padding:0 0 14px; color:var(--ink-2); font-size:15px}
+  details .body p{margin:8px 0}
+
+  /* interview */
+  .q{display:flex; gap:11px; padding:10px 0; border-top:1px solid var(--hairline); cursor:pointer}
+  .q:first-of-type{border-top:0}
+  .q .qn{flex:none; color:var(--ink-3); font-weight:700; font-size:13.5px; width:24px; text-align:right; margin-top:2px}
+  .q .qt{font-size:15px; color:var(--ink-2)}
+  .q.done .qt{color:var(--ink-3); text-decoration:line-through}
+  .q.done .qn{color:var(--good)}
+  .loadbear{font-size:11.5px; font-weight:800; letter-spacing:0.06em; color:var(--warn); background:var(--warn-soft); border-radius:6px; padding:2px 8px}
+
+  /* nav */
+  nav{
+    position:fixed; bottom:0; left:0; right:0; z-index:50;
+    background:rgba(13,13,13,0.97); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border-top:1px solid var(--hairline);
+    display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    flex:1; background:none; border:0; color:var(--ink-3); font-family:inherit;
+    font-size:11px; font-weight:700; letter-spacing:0.02em; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; border-radius:10px;
+  }
+  nav button svg{width:23px; height:23px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  nav button.active{color:var(--accent)}
+  .copyok{position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(8px);
+    background:var(--good); color:#fff; font-weight:800; font-size:14px; border-radius:999px; padding:9px 18px;
+    opacity:0; pointer-events:none; transition:all .2s; z-index:60}
+  .copyok.show{opacity:1; transform:translateX(-50%)}
+  .warnbanner{background:var(--warn-soft); border:1px solid rgba(250,178,25,0.3); border-radius:var(--radius-s); padding:10px 13px; font-size:13.5px; color:var(--ink-2); margin-top:10px}
+  .warnbanner b{color:var(--warn)}
+  @media(max-width:420px){ .tilegrid{grid-template-columns:repeat(3,1fr)} .hero .big{font-size:48px} }
+</style>
+</head>
+<body>
+
+<div class="nojs" id="nojsbanner"><b>You're in a preview that can't run the app.</b> Save the file, then open it in <b>Safari</b> (Files → long-press → Share → Safari). If Safari offers "Add to Home Screen," take it; if not, bookmark it — either way, always open it from that same place. Everything below still reads as one page.</div>
+<div class="nojs" id="nosave" style="display:none"><b>Taps work here, but nothing saves in this preview.</b> Open the file in Safari / from your home screen and the app remembers everything — streak, tasks, settings, all of it.</div>
+
+<header class="app">
+  <div class="brand">DAD HUSTLE HQ<small>one honest video a day until the baby comes</small></div>
+  <button class="daychip" onclick="go('today');document.getElementById('settings').open=true;document.getElementById('settings').scrollIntoView({behavior:'smooth'})">
+    Day <b id="chipDay">–</b> <span>· <b id="chipWeeks">–</b> wks left</span>
+  </button>
+</header>
+
+<main>
+
+<!-- ============ TODAY ============ -->
+<section class="tab active" id="tab-today">
+
+  <div class="card hero">
+    <div class="big">Day <span id="heroDay">–</span></div>
+    <div class="sub"><b id="heroWeeks">–</b> weeks until <span id="heroBaby">the baby</span> gets here</div>
+    <div class="warnbanner" id="dateGuessBanner"><b>These dates are my guess.</b> I know you found out in late June — I don't know the exact day or the due date. Fix them in Settings below, hit "Copy settings," and paste it to Claude so the next version of this app has them baked in.</div>
+  </div>
+
+  <div class="card tight" id="migrateCard" style="display:none">
+    <h2>Fresh copy detected</h2>
+    <p class="fine">If this is an update replacing an older HQ, paste the backup you copied from the old one and everything — streak, tasks, ideas — carries straight over. If this is your first time here, just ignore this and start below.</p>
+    <input type="text" id="migrateBox" placeholder="paste your DHQ-BACKUP blob">
+    <div class="btnrow"><button class="btn small" onclick="restoreBackup('migrateBox')">Restore my data</button></div>
+  </div>
+
+  <div class="card tight">
+    <h2>Streak</h2>
+    <div class="streakwrap">
+      <div><div class="streaknum" id="streakNum">0</div><div class="streaklbl">day streak</div></div>
+      <div>
+        <div class="streakstat" id="streakStat">Post today and log it below — that's day one.</div>
+        <div class="fine">Best: <b id="streakBest" style="color:var(--ink)">0</b> · counts only days you check off "posted" — it's your word, keep it honest</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Today's tasks — fresh every morning</h2>
+    <div id="todayTasks"></div>
+    <div class="addrow">
+      <input type="text" id="customTask" placeholder="Add your own for today…">
+      <button class="btn small" onclick="addCustomTask()">Add</button>
+    </div>
+    <p class="fine" style="margin-top:10px">These reset at midnight and come back matched to the day — Sundays bring batch-recording, Mondays bring the numbers check. The one-time setup jobs live further down and disappear for good once you clear them.</p>
+  </div>
+
+  <div class="card tight">
+    <h2>Today's way in</h2>
+    <p id="sparkLine" style="font-size:16.5px; margin-bottom:4px">–</p>
+    <p class="fine">A door, not a script — walk through it with whatever's true today. New one every day.</p>
+  </div>
+
+  <div class="card tight">
+    <h2>Today's pillar</h2>
+    <h3 id="pillarName">–</h3>
+    <p id="pillarPrompt" style="margin-bottom:4px">–</p>
+    <p class="fine">Five pillars rotate so there's always something to say without inventing events. Tomorrow brings the next one.</p>
+  </div>
+
+  <div class="card">
+    <h2>Setup — clear these once, they stay gone</h2>
+    <p class="fine" style="margin-top:6px">Tap one when it's done. Unlike the daily tasks, these never come back.</p>
+    <ol class="next">
+      <li class="crit" data-setup="bot" onclick="setupToggle(this)">
+        <div><span class="t">Pause the daily bot</span> <span class="chip crit">still ON</span>
+        <div class="d">Checked Mon Aug 3, 8:56 PM: enabled, fires 6:00 AM every morning. It's posting the retired scripts — including false claims — twice a day. Only you can pause it: <a href="https://claude.ai/code/routines" target="_blank">claude.ai/code/routines</a> → "Dad Hustle daily" → pause.</div></div>
+      </li>
+      <li data-setup="takedown" onclick="setupToggle(this)">
+        <div><span class="t">Take down the Aug 2 video</span>
+        <div class="d">"I Built My Entire Digital Product At 11pm After She Fell Asleep." It isn't true and it puts her in a scene. Delete or private it on all five platforms. Also fix the free pack's "exact setup I used" line on Beacons.</div></div>
+      </li>
+      <li data-setup="record001" onclick="setupToggle(this)">
+        <div><span class="t">Record Script 001 tonight</span>
+        <div class="d">In the car, engine off. Fill the blanks in the Record tab, read it twice, put it down, talk. Use take two.</div></div>
+      </li>
+      <li data-setup="native" onclick="setupToggle(this)">
+        <div><span class="t">Post it natively — by hand</span>
+        <div class="d">Instagram first, inside the app, sound from the app's library, then stay 30 minutes and reply to every comment. This is the experiment: if it beats a bot post by ~10×, we've found the problem.</div></div>
+      </li>
+      <li data-setup="dates" onclick="setupToggle(this)">
+        <div><span class="t">Tell Claude the real dates + handles</span>
+        <div class="d">Settings below → "Copy settings" → paste in chat. Fixes the day counter for good.</div></div>
+      </li>
+      <li data-setup="interview" onclick="setupToggle(this)">
+        <div><span class="t">Answer interview sections 3, 4 and 5 by voice</span>
+        <div class="d">The fear, your dad, the texture of your days. They're in the Plan tab. Use the mic button in chat and ramble — that's where every future script comes from.</div></div>
+      </li>
+      <li data-setup="store" onclick="setupToggle(this)">
+        <div><span class="t">Fix the store</span>
+        <div class="d">Pull the ® and the $102.45 strike-through, hide the $197, read the resale licence. The six licence questions are in the Plan tab.</div></div>
+      </li>
+      <li data-setup="twoplat" onclick="setupToggle(this)">
+        <div><span class="t">Cut to two platforms</span>
+        <div class="d">Facebook + Instagram get everything. TikTok pauses until the native test says it's recoverable. X gets dropped — 3 lifetime impressions is a zero.</div></div>
+      </li>
+    </ol>
+  </div>
+
+  <div class="card tight">
+    <h2>The test — before anything ships</h2>
+    <p style="font-size:17px"><strong>Could this video have been made by someone else, about someone else?</strong></p>
+    <p class="fine">If yes, it reads as AI no matter how it was made. If it could only be about you, it reads as real no matter what tools touched it.</p>
+  </div>
+
+  <div class="card tight">
+    <h2>Claude — wired in</h2>
+    <div class="btnrow" style="margin-top:10px">
+      <a class="btn" href="https://claude.ai" target="_blank" style="text-decoration:none">Open Claude</a>
+      <button class="btn ghost" onclick="copyContext()">Copy my status → paste to Claude</button>
+    </div>
+    <p class="fine" style="margin-top:10px">"Copy my status" grabs today's date, day number, streak, which tasks are done, and your latest ideas — so the moment you paste it, Claude knows exactly where you are without you explaining anything.</p>
+    <p class="fine" style="margin-top:8px">
+    "<b style="color:var(--ink)">update HQ numbers</b>" — I re-pull the log and rebuild this app with fresh stats.<br><br>
+    "<b style="color:var(--ink)">check this script</b>" + paste — full review beyond the Lab's pattern checks.<br><br>
+    "<b style="color:var(--ink)">here's my voice memo</b>" + attach — I turn it into cut points, captions and a cover line.<br><br>
+    "<b style="color:var(--ink)">interview answers</b>" + talk — I file them and start building your voice profile.<br><br>
+    "<b style="color:var(--ink)">change the app</b>" + what you want — this file is mine to edit. Ask for anything.</p>
+    <p class="fine" style="margin-top:8px"><b style="color:var(--ink)">There is only one HQ.</b> Once it lives at its web address, that address <i>is</i> the app: fresh numbers land every morning by themselves, and app updates appear the next time you open it — nothing to save over, nothing to restore. Until then, updates arrive as this same file: save it over the old one, and if your streak comes up empty the restore box appears at the top.</p>
+  </div>
+
+  <div class="card">
+    <h2>Idea inbox</h2>
+    <p class="fine">A line lands on you at work, in the car, at 2am — drop it here before it evaporates. Tap one to strike it. Send them all to Claude on batch day and they come back as scripts.</p>
+    <div id="ideaList"></div>
+    <div class="addrow">
+      <input type="text" id="ideaInput" placeholder="e.g. the crib took 3 hours and I cried a little">
+      <button class="btn small" onclick="addIdea()">Save</button>
+    </div>
+    <div class="btnrow"><button class="btn ghost" onclick="copyIdeas()">Copy all ideas → paste to Claude</button></div>
+  </div>
+
+  <details class="card tight" id="settings">
+    <summary>Settings — dates, baby, handles <span class="arrow">›</span></summary>
+    <div class="body">
+      <label class="f">Day you found out (my guess: June 25)</label>
+      <input type="date" id="setFound" value="2026-06-25" onchange="recalc()">
+      <label class="f">Due date (my guess — I don't know this)</label>
+      <input type="date" id="setDue" value="2027-02-25" onchange="recalc()">
+      <label class="f">The baby is…</label>
+      <select id="setBaby" onchange="recalc()">
+        <option value="the baby" selected>don't know yet — "the baby"</option>
+        <option value="he">he</option>
+        <option value="she">she</option>
+      </select>
+      <label class="f">TikTok handle</label>
+      <input type="text" id="setTT" placeholder="@ — Claude doesn't have this one confirmed">
+      <label class="f">YouTube handle</label>
+      <input type="text" id="setYT" placeholder="@ — not confirmed either">
+      <label class="f">Facebook page name</label>
+      <input type="text" id="setFB" placeholder="page name">
+      <div class="btnrow">
+        <button class="btn" onclick="copySettings()">Copy settings → paste to Claude</button>
+      </div>
+      <p class="fine" style="margin-top:10px" id="saveNote">Everything in this app — streak, tasks, ideas, these settings — saves on this device automatically when you've opened the file in Safari or from your home screen. Still send the settings to Claude once, so the master copy in your project matches.</p>
+      <hr class="divider">
+      <label class="f">Backup — your whole app state as one blob of text</label>
+      <div class="btnrow" style="margin-top:4px">
+        <button class="btn ghost small" onclick="copyBackup()">Copy backup</button>
+      </div>
+      <label class="f">Restore — paste a backup here</label>
+      <input type="text" id="restoreBox" placeholder="paste the blob">
+      <div class="btnrow" style="margin-top:4px">
+        <button class="btn ghost small" onclick="restoreBackup('restoreBox')">Restore it</button>
+      </div>
+      <p class="fine">Copy a backup before you get a replacement version of this app from Claude, restore it in the new one, and nothing is lost. Pasting the backup to Claude also works as a "here's where I'm at."</p>
+    </div>
+  </details>
+
+</section>
+<!-- ============ STATS ============ -->
+<section class="tab" id="tab-stats">
+
+  <div class="card tight" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span class="chip info" id="freshChip">FROM THE AUG 3 PULL · 7:13 AM</span>
+    <span class="fine">The numbers bot pulls the API every morning ~7. This page shows its latest logged pull — ask Claude "update HQ numbers" after any morning to refresh this file. For live-right-now truth, each app's own analytics is the source.</span>
+  </div>
+
+  <div class="card tight">
+    <h2>The whole account, honestly</h2>
+    <div class="tilegrid">
+      <div class="tile"><div class="lbl">Followers, all platforms</div><div class="val">35</div><div class="delta up">+1 since Jul 28</div></div>
+      <div class="tile"><div class="lbl">Videos on TikTok</div><div class="val">49</div><div class="delta flat">+7 that week</div></div>
+      <div class="tile"><div class="lbl">Comments, account-wide</div><div class="val">3</div><div class="delta flat">all on YouTube</div></div>
+    </div>
+    <p class="fine" style="margin-top:12px">Seven more videos bought one follower. Volume was never the constraint — <b style="color:var(--ink)">zero comments, saves and shares</b> is the number to attack, because those are what buy distribution.</p>
+  </div>
+
+  <div class="card">
+    <h2>Platforms</h2>
+
+    <div class="platform">
+      <div class="rowtop"><span class="pname">Facebook</span><span class="chip good">● WORKING — feed it</span></div>
+      <div class="nums">
+        <div><b>2</b>followers <span class="delta up">+1</span></div>
+        <div><b>2,077</b>unique reach</div>
+        <div><b>2,222</b>impressions</div>
+        <div><b>204</b>best day (Aug 3)</div>
+      </div>
+      <div class="verdict">The only platform growing, and Aug 3 was its best day since July 20 — right as the pipeline went quiet. Its running total accumulates, so trust the day-level number, not the headline.</div>
+      <div class="chart">
+        <div class="row" id="fbChart"></div>
+        <div class="xlabs" id="fbChartX"></div>
+        <div class="caption">Facebook daily unique reach, the four days the log has: 73 · 74 · 30 · 204</div>
+      </div>
+    </div>
+
+    <div class="platform">
+      <div class="rowtop"><span class="pname">Instagram</span><span class="chip good">● ALIVE — invest</span></div>
+      <div class="nums">
+        <div><b>12</b>followers <span class="delta flat">+0</span></div>
+        <div><b>556</b>reach</div>
+        <div><b>51</b>likes</div>
+        <div><b>0</b>saves · <b style="display:inline">3</b> engaged</div>
+      </div>
+      <div class="verdict">Small but real, healthy like rate, right audience. Second home for the native test. Three accounts engaged is the honest size of it — that's who you're talking to right now.</div>
+    </div>
+
+    <div class="platform">
+      <div class="rowtop"><span class="pname">YouTube</span><span class="chip warn">▲ UNSEEN — park it</span></div>
+      <div class="nums">
+        <div><b>4</b>subscribers <span class="delta flat">+0</span></div>
+        <div><b>117</b>views (window)</div>
+        <div><b>45</b>likes</div>
+        <div><b>3</b>comments</div>
+      </div>
+      <div class="verdict">45 likes on 117 views — the few people who see it genuinely like it. The problem is distribution, not content. Parks until Facebook + Instagram are working.</div>
+    </div>
+
+    <div class="platform">
+      <div class="rowtop"><span class="pname">TikTok</span><span class="chip serious">▲ NOT DISTRIBUTED — paused</span></div>
+      <div class="nums">
+        <div><b>16</b>followers <span class="delta flat">+0</span></div>
+        <div><b>17</b>views (window)</div>
+        <div><b>28</b>likes</div>
+        <div><b>49</b>videos · <b style="display:inline">0</b> comments ever</div>
+      </div>
+      <div class="verdict">49 videos, 17 views in the window. That's not underperforming — that's not entering distribution at all. Likely stack: API posting + AI flags + near-duplicates + new account. Paused until the native test answers it.</div>
+    </div>
+
+    <div class="platform">
+      <div class="rowtop"><span class="pname">X</span><span class="chip crit">✕ DEAD — dropped</span></div>
+      <div class="nums">
+        <div><b>1</b>follower</div>
+        <div><b>3</b>impressions, lifetime</div>
+      </div>
+      <div class="verdict">Three lifetime impressions is a zero. Stop posting there; it costs render time and buys nothing.</div>
+    </div>
+  </div>
+
+  <div class="card tight">
+    <h2>Read the numbers right</h2>
+    <p class="fine" style="margin-top:8px"><b style="color:var(--warn)">Don't compare views across dates.</b> YouTube "fell" 1,591 → 117 and Instagram 1,477 → 768 between Jul 28 and Aug 3. Views don't go down — those platforms report a rolling recent window, not lifetime. Facebook reports a cumulative total, so its headline flatters. Follower counts are the one number that's always comparable.</p>
+  </div>
+
+  <div class="card">
+    <h2>What do the apps say right now?</h2>
+    <p class="fine">Open each app's own analytics, type what you see, and send it to Claude — it goes in the log as a real dated pull.</p>
+    <label class="f">Facebook — followers / today's reach</label>
+    <input type="text" id="mFB" placeholder="e.g. 2 followers, 310 reach today">
+    <label class="f">Instagram — followers / reach</label>
+    <input type="text" id="mIG" placeholder="">
+    <label class="f">TikTok — followers / views</label>
+    <input type="text" id="mTT" placeholder="">
+    <label class="f">YouTube — subs / views</label>
+    <input type="text" id="mYT" placeholder="">
+    <label class="f">Anything else you noticed</label>
+    <input type="text" id="mNote" placeholder="comments, a video that moved, a DM">
+    <div class="btnrow"><button class="btn" onclick="copyNumbers()">Copy report → paste to Claude</button></div>
+  </div>
+
+  <div class="card tight">
+    <h2>Your pages</h2>
+    <p style="margin-top:10px">
+      <a href="https://instagram.com/scale.enginez" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none">Instagram — @scale.enginez ›</a><br>
+      <a href="https://beacons.ai/scale.enginez" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none">Beacons store — /scale.enginez ›</a>
+    </p>
+    <p class="fine">TikTok, YouTube and Facebook links appear here once you give Claude the handles (Settings on the Today tab) — I only link what's confirmed.</p>
+  </div>
+
+</section>
+
+<!-- ============ LAB ============ -->
+<section class="tab" id="tab-lab">
+
+  <div class="card">
+    <h2>Script lab</h2>
+    <h3>Paste a script. Get it checked before it ships.</h3>
+    <p class="fine">Live feedback against your four rules + the craft rules. These are honest pattern checks, not judgment — the last two toggles are the judgment.</p>
+    <textarea id="labText" placeholder="Paste or write the script here…" oninput="runLab()"></textarea>
+    <div id="labMeta" class="fine" style="margin-top:8px"></div>
+    <div id="labFlags"></div>
+    <hr class="divider">
+    <div class="checkline" onclick="toggleCheck(this);runLab()" data-manual="detail"><div class="box"></div><div class="txt">There's one specific, true, <b>useless</b> detail in it — the line that proves the place is real</div></div>
+    <div class="checkline" onclick="toggleCheck(this);runLab()" data-manual="anyone"><div class="box"></div><div class="txt">It passes the test: nobody else could have made this video about themselves</div></div>
+    <div class="checkline" onclick="toggleCheck(this);runLab()" data-manual="true"><div class="box"></div><div class="txt">Every single claim in it is actually true of you, today</div></div>
+    <div id="labVerdict"></div>
+    <div class="btnrow"><button class="btn ghost" onclick="copyLab()">Copy script + report for Claude</button></div>
+  </div>
+
+  <div class="card tight">
+    <h2>What the checks catch</h2>
+    <p class="fine" style="margin-top:8px"><b style="color:#f38a8a">Red</b> = breaks one of your four rules (her in a scene · real money figures · job/city tells) — fix before it ships.<br>
+    <b style="color:var(--warn)">Amber</b> = guru grammar, truth-check prompts, robotic rhythm — style problems that read as AI.<br>
+    <b style="color:#7be07b">Green</b> = the things a video needs: the day counter, a real question at the end.</p>
+    <p class="fine">What they can't catch: a city name, her name, or a lie. That stays on you and the toggles.</p>
+  </div>
+
+</section>
+<!-- ============ RECORD ============ -->
+<section class="tab" id="tab-record">
+
+  <div class="card">
+    <h2>Script 001 — "Almost fifty videos"</h2>
+    <p class="fine">Fill the blanks, then read the rehearsal view twice, put the iPad down, and say it. If you change every word, that's a success.</p>
+    <label class="f">[FOLLOWERS] — real count on the platform you're posting to</label>
+    <input type="text" id="s1Followers" placeholder="12 on Instagram · 16 on TikTok — use the true one" oninput="renderScript1()">
+    <label class="f">[DETAIL] — one true thing you can see or hear right now, that serves no purpose</label>
+    <input type="text" id="s1Detail" placeholder="e.g. this car's been on E for two days" oninput="renderScript1()">
+    <p class="fine">Day, weeks and the baby word fill in automatically from Settings.</p>
+    <hr class="divider">
+    <div class="rehearse" id="script1"></div>
+    <div class="btnrow">
+      <button class="btn ghost" onclick="copyScript1()">Copy the finished script</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>How to record it</h2>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Car, engine off — best free vocal booth you own. Kill the radio and anything naming a place.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Phone at chin level, 6–8 inches, slightly off to the side of your mouth</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Read twice, put it down, talk. Don't read while recording — it flattens into recital.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Use take two. Take one is fumbling, take five is a performance.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Fumble? Don't restart — say it again and keep it. That is the take.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Say the hardest sentence quieter. You will anyway, if you're not reading.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">No cleanup after. No noise gate, no de-breathing. The breaths are the proof.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Ten seconds of silence at the end — keep it. Room tone makes edits invisible.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>What to point the camera at</h2>
+    <p class="fine">One unbroken 40-second handheld shot beats five perfect clips — the unbroken take is the thing that can't be assembled. Don't tidy the frame first; the clutter is the evidence. Shoot at the hour the video is about.</p>
+    <p style="font-size:15px">Best options, in order: <b>hands on the steering wheel</b> in dashboard glow · windshield POV of whatever's really there · the corner that might become the nursery, at 11pm · your phone in your hand in a dark room.</p>
+  </div>
+
+  <div class="card">
+    <h2>Frame check — every frame, before it ships</h2>
+    <p class="fine">Rule 4 is a camera rule. You're hunting the corners, backgrounds and reflections, not the story.</p>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Paper — mail, bills, receipts with store names, prescription labels, envelopes</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Work — lanyard, badge, uniform, branded mug, work laptop, parking pass</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Screens — tabs, weather app, maps, notifications, lock screen, autofill</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Outside — street signs, storefronts, plates, transit, skyline, local team logos</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Reflections — your face in the dark TV, a window, the windshield. This catches people constantly.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Money — any real figure anywhere: balance, price tag, total, dashboard</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Her — any part of her, her voice in the background, anything obviously hers</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Audio — no local radio, TV news, or sports commentary underneath</div></div>
+    <p class="fine" style="margin-top:8px">Unsure about a frame? Cut it. There is always more b-roll.</p>
+  </div>
+
+  <div class="card">
+    <h2>Post it natively — the experiment</h2>
+    <p class="fine"><b style="color:var(--ink)">Don't let the bot touch this one.</b> The test only works by hand.</p>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Open Instagram itself. Upload from the camera roll inside the app.</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Trim it in the app's editor — don't import a finished file untouched</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Pick a sound from the app's own library, quiet, under your voice</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Choose the cover frame yourself · type the caption in the app · 3 hashtags max</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Turn ON the AI-content label — the avatar/AI frames make it required, and getting caught hiding it ends the account</div></div>
+    <div class="checkline" onclick="toggleCheck(this)"><div class="box"></div><div class="txt">Post at an hour you can stay — then 30 minutes replying to every comment, in your own words</div></div>
+    <p class="fine" style="margin-top:10px"><b style="color:var(--ink)">Measuring:</b> its 48-hour reach vs a typical bot post. ~10× = native posting was the problem and the pipeline changes shape. Flat = the problem is upstream and we look at the account next. Either answer is worth one video.</p>
+  </div>
+
+  <div class="card tight">
+    <h2>The weekly ritual</h2>
+    <p class="fine" style="margin-top:8px">One post a day, seven days a week — but you record <b style="color:var(--ink)">once</b>: one sitting, about seven voice memos, roughly an hour. The pillars on the Today tab rotate so each memo has a lane. Recording daily is the version of this that breaks.</p>
+  </div>
+
+</section>
+
+<!-- ============ PLAN ============ -->
+<section class="tab" id="tab-plan">
+
+  <div class="card">
+    <h2>The reset — four decisions, locked July 29</h2>
+    <div class="body" style="color:var(--ink-2);font-size:15px">
+      <p><b style="color:var(--ink)">1 · The frame.</b> AI avatar built from your own likeness + your real recorded voice. Phone b-roll carries most of the runtime; the avatar appears only where a talking head earns it. Honest label on: "The face is AI. The voice is mine, and so is everything I'm telling you."</p>
+      <p><b style="color:var(--ink)">2 · Off-limits.</b> The four rules below. They override everything.</p>
+      <p><b style="color:var(--ink)">3 · Cadence.</b> One a day, batch-recorded weekly.</p>
+      <p><b style="color:var(--ink)">4 · The name.</b> Dad Hustle stays. The fabricated library goes. The craft stays.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>The four rules — nothing ships that fails these</h2>
+    <div class="body" style="color:var(--ink-2);font-size:15px">
+      <p><b style="color:#7be07b">1 · The pregnancy is fair game.</b> Everyone who matters knows. Real dates, real milestones, the day counter runs.</p>
+      <p><b style="color:#f38a8a">2 · She exists, never described.</b> "She/we" is fine. No name, appearance, personality, dialogue, symptoms. No second character — every video is told from inside your own head.</p>
+      <p><b style="color:#f38a8a">3 · Money in shapes, never figures.</b> "Rent eats about a third." No real numbers on screen, in voice, or in captions — including this channel's revenue, including zero.</p>
+      <p><b style="color:#f38a8a">4 · No job, employer, industry, city.</b> "Work" is a flat noun and a wall of time. This is a camera rule too — see the frame check.</p>
+      <p class="fine">Plus the fifth check that isn't a privacy rule: every claim must be actually true of you. That's the rule the old library broke.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Why there were no views — the short version</h2>
+    <div class="body" style="color:var(--ink-2);font-size:15px">
+      <p><b style="color:var(--ink)">First problem: zero engagement signal.</b> 0 comments, 0 saves, 0 shares account-wide. Platforms show a video to more people only when the first few DO something. Views are downstream.</p>
+      <p><b style="color:var(--ink)">Second problem: repetition.</b> Every video restated the premise instead of advancing a story — video 49 contained nothing video 1 didn't, so there was never a reason to follow. The fix is structural: the serial. Day counter + countdown means the content can't repeat, because the number moves.</p>
+      <p><b style="color:var(--ink)">Third: the packaging read as the category people swipe past.</b> "5-Step Plan," "Why Most Dads Fail" — guru grammar. Replaced by what actually happened.</p>
+      <p class="fine">Full write-up with the numbers: WHY-NO-VIEWS.md in the project.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Humanize — the five that matter most</h2>
+    <div class="body" style="color:var(--ink-2);font-size:15px">
+      <p>1 · <b style="color:var(--ink)">Voice is the biggest lever.</b> Real voice over mediocre footage reads as real; synthetic voice over perfect footage reads as an ad.</p>
+      <p>2 · <b style="color:var(--ink)">Don't clean the audio.</b> Breath, clicks, swallows — TTS strips them, so leaving them in is the loudest proof of a person.</p>
+      <p>3 · <b style="color:var(--ink)">One useless true detail per video.</b> The line with no purpose is the line that proves the place is real.</p>
+      <p>4 · <b style="color:var(--ink)">Never fake the imperfection.</b> Fake ums and fake shake read worse than clean AI. People detect performed authenticity faster than they detect AI.</p>
+      <p>5 · <b style="color:var(--ink)">Disclose the avatar, in your own words, once.</b> It kills the uncanny feeling, makes "getting caught" impossible, and is itself the differentiator.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>The store — what's live and what to fix</h2>
+    <div class="body" style="color:var(--ink-2);font-size:15px">
+      <p>Live on beacons.ai/scale.enginez (read Jul 29): the free AI Avatar Beginner's Pack · 20 Prompts at $27 (struck from $102.45) · "AI Creator Academy® 2.0" at $197 — <b style="color:var(--ink)">a resale product you didn't build</b>, and you're the merchant of record for refunds and chargebacks.</p>
+      <p><b style="color:var(--ink)">Fix now:</b> pull the ® (a resale licence isn't a trademark licence — flagging, not legal advice) · pull the $102.45 anchor · hide the $197 · rewrite or kill the free pack's "exact setup I used" line, which isn't true.</p>
+      <p><b style="color:var(--ink)">Read the licence and answer six things:</b> the tier (RR / MRR / PLR) · can you rename it · can you edit it · price floor · free-giveaway allowed · what licence passes to your buyer.</p>
+      <p><b style="color:var(--ink)">The real product</b> is the one you'd own: what the first year actually costs, the insurance-and-leave checklist, buy-vs-registry, reading a hospital bill. Researched honestly because you're living it. Built in public, as the content, at $27 — so the audience and the product arrive together.</p>
+      <p class="fine">Full audit: OFFER-AUDIT.md in the project. And the sequence matters: 35 followers with zero saves sells nothing — reach first, product built alongside.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>The interview — what everything gets built from</h2>
+    <p class="fine">Tap a question to mark it done — it stays marked. The real answers go to Claude in chat, ideally with the mic, rambling. Sections 3, 4 and 5 carry the whole thing now.</p>
+    <div id="interview"></div>
+    <div class="fine" style="margin-top:10px"><span id="ivCount">0</span>/66 answered · full text with section notes: THE-INTERVIEW.md in the project</div>
+  </div>
+
+  <div class="card tight">
+    <h2>What this app is — honestly</h2>
+    <p class="fine" style="margin-top:8px">One HTML file. No login, no server, no tracking. Opened in Safari or from your home screen, it <b style="color:var(--ink)">saves everything on this device</b> — streak, tasks, ideas, settings — and the parts that change daily (the counter, the tasks, the way in) generate themselves fresh every morning, offline. What it can't do alone is fetch the internet: the posting keys live in the scheduled bots, on purpose, not in a file on your iPad. So the live layer is a team: <b style="color:var(--ink)">the morning bot</b> pulls your real numbers into the log every day around 7, and <b style="color:var(--ink)">Claude</b> rebuilds this app with them whenever you say "update HQ numbers" — and rewires anything else you ask for. The master copy lives in your project either way, so it can never be lost.</p>
+  </div>
+
+  <div class="card tight">
+    <h2>The library — full docs in the project</h2>
+    <p class="fine" style="margin-top:8px">BRAIN.md (front door) · CONTENT-RULES.md (the four rules, full text) · WHY-NO-VIEWS.md (diagnosis) · HUMANIZE.md (every tell + fix) · THE-INTERVIEW.md (66 questions) · SCRIPT-001 (tonight's script) · RECORDING-KIT.md · OFFER-AUDIT.md (the store) · VIDEO-CRAFT.md · DAILY-LOG.md (the bot's real pulls). This app is the neat front end; those are the deep ends.</p>
+  </div>
+
+  <p class="fine" style="text-align:center; padding:6px 20px 0">
+    Every claim true · AI labels on · no income promises · she's never described · shapes, not figures · no job, no city<br>
+    <span style="opacity:0.7">HQ v3 · Aug 3, 2026 · hosted-ready · one app, one address · by Claude, for Xavier</span>
+  </p>
+
+</section>
+</main>
+
+<div class="copyok" id="copyok">Copied</div>
+
+<nav>
+  <button class="active" id="nav-today" onclick="go('today')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+    Today</button>
+  <button id="nav-stats" onclick="go('stats')">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+    Stats</button>
+  <button id="nav-lab" onclick="go('lab')">
+    <svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v5.5L4.7 18a2 2 0 0 0 1.8 3h11a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg>
+    Lab</button>
+  <button id="nav-record" onclick="go('record')">
+    <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>
+    Record</button>
+  <button id="nav-plan" onclick="go('plan')">
+    <svg viewBox="0 0 24 24"><path d="M9 4H5a1 1 0 0 0-1 1v15l5-2 6 2 5-2V3l-5 2-6-2v15"/></svg>
+    Plan</button>
+</nav>
+
+<script>
+"use strict";
+/* ---------- boot: JS is alive ---------- */
+document.body.classList.add('js');
+(function(){ var b=document.getElementById('nojsbanner'); if(b) b.style.display='none'; })();
+
+/* ---------- storage — guarded, so previews without storage still run ---------- */
+var CAN_SAVE=false;
+try{ localStorage.setItem('__dhq_t','1'); localStorage.removeItem('__dhq_t'); CAN_SAVE=true; }
+catch(e){ CAN_SAVE=false; }
+if(!CAN_SAVE){ var _ns=document.getElementById('nosave'); if(_ns) _ns.style.display='block'; }
+var MEM={};
+function loadState(){
+  if(CAN_SAVE){ try{ return JSON.parse(localStorage.getItem('dhq')||'{}')||{}; }catch(e){ return {}; } }
+  return MEM;
+}
+var S=loadState();
+var FRESH=!Object.keys(S.days||{}).length && !(S.ideas||[]).length && !Object.keys(S.setup||{}).length && !Object.keys(S.iv||{}).length;
+S.settings=S.settings||{}; S.setup=S.setup||{}; S.days=S.days||{}; S.ideas=S.ideas||[]; S.iv=S.iv||{}; S.best=S.best||0;
+function save(){ if(CAN_SAVE){ try{ localStorage.setItem('dhq',JSON.stringify(S)); }catch(e){} } }
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function todayKey(){ return fmtDate(new Date()); }
+function dayRec(){ var k=todayKey(); if(!S.days[k]) S.days[k]={t:{},custom:[],posted:false}; return S.days[k]; }
+
+/* ---------- tabs ---------- */
+function go(name){
+  document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  document.documentElement.scrollTop=0; document.body.scrollTop=0;
+}
+
+/* ---------- toast + clipboard ---------- */
+function toast(msg){
+  const t=document.getElementById('copyok'); t.textContent=msg||'Copied';
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600);
+}
+function copyText(str){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(()=>toast('Copied — paste it to Claude'),()=>fallbackCopy(str));
+  } else fallbackCopy(str);
+}
+function fallbackCopy(str){
+  const ta=document.createElement('textarea'); ta.value=str; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); toast('Copied — paste it to Claude'); }catch(e){ toast('Select + copy by hand'); }
+  document.body.removeChild(ta);
+}
+
+/* ---------- dates, hero, pillar ---------- */
+const PILLARS=[
+  {n:"The milestone", p:"What moved this week? An appointment, a purchase, the room changing, the counter ticking. Small counts. Say what it was and what it did to you."},
+  {n:"The 2am thought", p:"The sentence that actually ran in your head last night. Word for word. Say it quiet — this is the one you record at the hour it happened."},
+  {n:"The number — in shapes only", p:"A cost, a fraction, a comparison. \"The number the hospital gave me is bigger than my car was.\" Never the figure — the shape."},
+  {n:"The question", p:"Ask them something you genuinely want answered, then live in the comments for the evening. Comments are what buy distribution."},
+  {n:"The dad thing", p:"Your dad — or the dad you're deciding to become. One memory, or one thing you'll do differently. This vein touches no rule."}
+];
+let dayN=null;
+function recalc(){
+  const f=document.getElementById('setFound').value, d=document.getElementById('setDue').value;
+  const now=new Date(); now.setHours(0,0,0,0);
+  let day='–', wks='–';
+  if(f){ const fd=new Date(f+'T00:00:00'); day=Math.max(1,Math.floor((now-fd)/86400000)+1); dayN=day; }
+  if(d){ const dd=new Date(d+'T00:00:00'); const w=Math.round((dd-now)/6.048e8*10)/10; wks=w>0?Math.round(w):0; }
+  document.getElementById('chipDay').textContent=day;
+  document.getElementById('chipWeeks').textContent=wks;
+  document.getElementById('heroDay').textContent=day;
+  document.getElementById('heroWeeks').textContent=(wks==='–'?'–':'About '+wks);
+  const baby=document.getElementById('setBaby').value;
+  document.getElementById('heroBaby').textContent=(baby==='the baby')?'the baby':baby;
+  const edited=(f!=='2026-06-25')||(d!=='2027-02-25');
+  document.getElementById('dateGuessBanner').style.display=edited?'none':'block';
+  if(typeof day==='number'){
+    const pl=PILLARS[(day-1)%5];
+    document.getElementById('pillarName').textContent=pl.n;
+    document.getElementById('pillarPrompt').textContent=pl.p;
+  }
+  S.settings.found=f; S.settings.due=d; S.settings.baby=baby; save();
+  renderScript1();
+  renderDaily();
+}
+function hydrate(){
+  if(S.settings.found) document.getElementById('setFound').value=S.settings.found;
+  if(S.settings.due) document.getElementById('setDue').value=S.settings.due;
+  if(S.settings.baby) document.getElementById('setBaby').value=S.settings.baby;
+  if(S.settings.tt) document.getElementById('setTT').value=S.settings.tt;
+  if(S.settings.yt) document.getElementById('setYT').value=S.settings.yt;
+  if(S.settings.fb) document.getElementById('setFB').value=S.settings.fb;
+  ['setTT','setYT','setFB'].forEach(function(id){
+    document.getElementById(id).addEventListener('input',function(){
+      S.settings[id.slice(3).toLowerCase()]=this.value; save();
+    });
+  });
+}
+function copySettings(){
+  copyText("HQ settings — bake these into the app:\n"+
+    "Found out: "+document.getElementById('setFound').value+"\n"+
+    "Due date: "+document.getElementById('setDue').value+"\n"+
+    "Baby: "+document.getElementById('setBaby').value+"\n"+
+    "TikTok: "+(document.getElementById('setTT').value||'(not given)')+"\n"+
+    "YouTube: "+(document.getElementById('setYT').value||'(not given)')+"\n"+
+    "Facebook page: "+(document.getElementById('setFB').value||'(not given)'));
+}
+
+/* ---------- daily engine: tasks, streak, spark ---------- */
+var SPARKS=[
+ "Start mid-thought, like the camera caught you talking: '…so that's the car, that's the rent, and that's the problem.'",
+ "Open on the clock: 'It's 11:40 and I'm still up doing this.' Say why tonight, specifically.",
+ "Start with what's in your hand right now. Then why you're holding it.",
+ "First line: the thing you almost didn't say out loud. Say it quiet.",
+ "Open on the counter: 'Day however-many.' Then the one thing that's different from yesterday.",
+ "Start with a sound in the house and what it means: the dryer, the fan, the quiet.",
+ "First line: 'Nobody told me…' — then the thing nobody told you.",
+ "Open with the smallest purchase that hit you hardest this week. No price — the feeling.",
+ "Start with where you're sitting. Describe it for five seconds before the point shows up.",
+ "First line: the question someone asked you this week that you couldn't answer.",
+ "Open with 'I keep doing this thing where…' — then the habit the fear gave you.",
+ "Start at the end: 'So it didn't work.' Then tell them what didn't.",
+ "First line: what you'd tell the version of you from one month ago.",
+ "Open on your dad: one sentence he used to say, and whether you believe it yet.",
+ "Start with the number of weeks left. Let it sit for a beat before you talk.",
+ "First line: 'Today was a normal day, and that's what got me.' Then the ordinary thing that landed.",
+ "Open with the last thing you googled at 2am. Just read it out.",
+ "Start with 'She's asleep. I'm not.' — and no more about her than that."
+];
+var SHOTS=[
+ "hands on the steering wheel, engine off, one unbroken take",
+ "the corner that might become the nursery, at night, lamp only",
+ "your phone in your hand in a dark room, screen glow on your fingers",
+ "the kitchen counter exactly as it is — don't tidy it",
+ "windshield POV of whatever's really in front of the car",
+ "the last light you turn off before bed, and the dark after",
+ "your shoes by the door, or whatever's actually by the door"
+];
+var PILLAR_TASKS=[
+ "Milestone day: put the one thing that moved this week in the idea box — it's tonight's video",
+ "2am-thought day: record at the hour it actually shows up, even if that's late",
+ "Number day: find today's shape — compare the cost to something real, no figures",
+ "Question day: end on a question you actually want answered, then live in the comments",
+ "Dad day: write one memory of your dad in the idea box before you record"
+];
+function renderDaily(){
+  var host=document.getElementById('todayTasks'); if(!host) return;
+  var r=dayRec();
+  var ep=Math.floor(Date.now()/86400000);
+  var sp=document.getElementById('sparkLine');
+  if(sp) sp.textContent=SPARKS[ep%SPARKS.length];
+  var tasks=[
+    {id:'post', t:"Post today's video — natively, by hand, in the app"},
+    {id:'reply', t:"Reply to every comment within the hour — set a 30-minute timer"},
+    {id:'pillar', t:(typeof dayN==='number')?PILLAR_TASKS[(dayN-1)%5]:PILLAR_TASKS[0]},
+    {id:'shot', t:"Shoot one b-roll clip: "+SHOTS[ep%SHOTS.length]}
+  ];
+  var dow=new Date().getDay();
+  if(dow===0) tasks.push({id:'batch', t:"Batch day: record all 7 voice memos in one sitting — about an hour"});
+  if(dow===1) tasks.push({id:'nums', t:"Numbers day: open Stats, type what the apps say, copy the report to Claude"});
+  var html='';
+  tasks.forEach(function(tk){
+    html+='<div class="checkline'+(r.t[tk.id]?' on':'')+'" data-task="'+tk.id+'" onclick="taskToggle(this)"><div class="box"></div><div class="txt">'+tk.t+'</div></div>';
+  });
+  (r.custom||[]).forEach(function(c,i){
+    html+='<div class="checkline'+(c.done?' on':'')+'" data-custom="'+i+'" onclick="customToggle(this)"><div class="box"></div><div class="txt">'+esc(c.t)+'</div></div>';
+  });
+  host.innerHTML=html;
+  renderStreak();
+}
+function taskToggle(el){
+  var id=el.dataset.task, r=dayRec();
+  r.t[id]=!r.t[id];
+  el.classList.toggle('on',!!r.t[id]);
+  if(id==='post'){ r.posted=!!r.t[id]; }
+  save(); renderStreak();
+}
+function customToggle(el){
+  var i=+el.dataset.custom, r=dayRec();
+  if(r.custom[i]){ r.custom[i].done=!r.custom[i].done; el.classList.toggle('on',r.custom[i].done); save(); }
+}
+function addCustomTask(){
+  var inp=document.getElementById('customTask'), v=inp.value.trim();
+  if(!v) return;
+  dayRec().custom.push({t:v,done:false}); save(); inp.value=''; renderDaily();
+}
+function calcStreak(){
+  var d=new Date(); var k=todayKey();
+  var postedToday=!!(S.days[k]&&S.days[k].posted);
+  if(!postedToday) d.setDate(d.getDate()-1);
+  var n=0;
+  for(;;){ var kk=fmtDate(d);
+    if(S.days[kk]&&S.days[kk].posted){ n++; d.setDate(d.getDate()-1); } else break;
+    if(n>3650) break;
+  }
+  return {n:n, today:postedToday};
+}
+function renderStreak(){
+  var el=document.getElementById('streakNum'); if(!el) return;
+  var s=calcStreak();
+  el.textContent=s.n;
+  if(s.n>S.best){ S.best=s.n; save(); }
+  document.getElementById('streakBest').textContent=S.best;
+  document.getElementById('streakStat').textContent=
+    s.today ? "Logged for today. See you tomorrow."
+    : (s.n>0 ? "Alive — check off today's post to keep it."
+    : "Post today and check it off — that's day one.");
+}
+function setupToggle(li){
+  var ev=window.event;
+  if(ev && ev.target && ev.target.closest && ev.target.closest('a')) return;
+  var id=li.dataset.setup;
+  S.setup[id]=!S.setup[id];
+  li.classList.toggle('done',!!S.setup[id]);
+  save();
+}
+function renderSetupState(){
+  document.querySelectorAll('[data-setup]').forEach(function(li){
+    li.classList.toggle('done',!!S.setup[li.dataset.setup]);
+  });
+}
+/* ---------- ideas ---------- */
+function renderIdeas(){
+  var host=document.getElementById('ideaList'); if(!host) return;
+  var html='';
+  S.ideas.forEach(function(it,i){
+    html+='<div class="checkline'+(it.done?' on':'')+'" data-idea="'+i+'" onclick="ideaToggle(this)"><div class="box"></div><div class="txt">'+esc(it.t)+'</div></div>';
+  });
+  host.innerHTML=html||'<p class="fine">Nothing yet. The next line that lands on you goes here.</p>';
+}
+function ideaToggle(el){ var i=+el.dataset.idea; if(S.ideas[i]){ S.ideas[i].done=!S.ideas[i].done; save(); renderIdeas(); } }
+function addIdea(){
+  var inp=document.getElementById('ideaInput'), v=inp.value.trim();
+  if(!v) return; S.ideas.push({t:v,done:false,d:todayKey()}); save(); inp.value=''; renderIdeas();
+}
+function copyIdeas(){
+  if(!S.ideas.length){ toast('Inbox is empty'); return; }
+  copyText("Idea inbox from HQ ("+todayKey()+"):\n"+S.ideas.map(function(i){return "- "+(i.done?'[used] ':'')+i.t;}).join("\n")+"\nTurn the live ones into scripts.");
+}
+/* ---------- backup ---------- */
+function copyBackup(){ copyText('DHQ-BACKUP:'+JSON.stringify(S)); }
+function restoreBackup(srcId){
+  var box=document.getElementById(srcId||'restoreBox');
+  var v=(box&&box.value||'').trim();
+  if(!v){ toast('Paste a backup first'); return; }
+  if(v.indexOf('DHQ-BACKUP:')===0) v=v.slice(11);
+  try{
+    var o=JSON.parse(v);
+    if(typeof o!=='object'||!o){ throw 0; }
+    S=o; S.settings=S.settings||{}; S.setup=S.setup||{}; S.days=S.days||{}; S.ideas=S.ideas||[]; S.iv=S.iv||{}; S.best=S.best||0;
+    save(); hydrate(); recalc(); renderIdeas(); renderSetupState(); applyIv();
+    var mc=document.getElementById('migrateCard'); if(mc) mc.style.display='none';
+    toast('Restored');
+  }catch(e){ toast("That doesn't look like a backup"); }
+}
+function copyContext(){
+  var s=calcStreak(), r=dayRec();
+  var done=[], open=[];
+  document.querySelectorAll('#todayTasks .checkline').forEach(function(el){
+    var t=el.querySelector('.txt').textContent;
+    (el.classList.contains('on')?done:open).push(t);
+  });
+  var ideas=S.ideas.filter(function(i){return !i.done;}).slice(-3).map(function(i){return i.t;});
+  copyText("HQ status "+todayKey()+" — Day "+(dayN||'?')+", "+
+    document.getElementById('chipWeeks').textContent+" wks left. Streak "+s.n+" (best "+S.best+"), posted today: "+(r.posted?'yes':'not yet')+".\n"+
+    "Done: "+(done.join(' · ')||'nothing yet')+"\n"+
+    "Still open: "+(open.join(' · ')||'nothing')+"\n"+
+    (ideas.length?("Latest ideas: "+ideas.join(' | ')+"\n"):"")+
+    "App v2.1, numbers baked from the Aug 3 pull.");
+}
+
+/* ---------- FB chart + live data layer ---------- */
+function renderChart(data){
+  var row=document.getElementById('fbChart'), xl=document.getElementById('fbChartX');
+  if(!row||!xl||!data||!data.length) return;
+  row.innerHTML=''; xl.innerHTML='';
+  var max=Math.max.apply(null,data.map(function(x){return x.v;}));
+  data.forEach(function(x){
+    var col=document.createElement('div'); col.className='col';
+    col.title=x.d+': '+x.v+' unique reach';
+    if(x.v===max){ var v=document.createElement('div'); v.className='vlab'; v.textContent=x.v; col.appendChild(v); }
+    var bar=document.createElement('div'); bar.className='bar';
+    bar.style.height=Math.max(4,Math.round(x.v/max*118))+'px';
+    col.appendChild(bar); row.appendChild(col);
+    var lab=document.createElement('div'); lab.textContent=x.d; xl.appendChild(lab);
+  });
+  var cap=document.querySelector('.chart .caption');
+  if(cap) cap.textContent='Facebook daily unique reach: '+data.map(function(x){return x.v;}).join(' · ');
+}
+renderChart([{d:'Jul 31',v:73},{d:'Aug 1',v:74},{d:'Aug 2',v:30},{d:'Aug 3',v:204}]);
+
+/* When HQ lives at its web address, a bot refreshes data.json every morning.
+   Opened as a local file, this fetch quietly fails and the baked numbers stand. */
+function applyLive(j){
+  if(!j || j.v!==1) return;
+  var chip=document.getElementById('freshChip');
+  if(chip && j.asOf){ chip.textContent='LIVE · '+j.asOf; }
+  if(j.totals){
+    var tiles=document.querySelectorAll('#tab-stats .tilegrid .tile');
+    (j.totals.vals||[]).forEach(function(v,i){ var el=tiles[i]&&tiles[i].querySelector('.val'); if(el) el.textContent=v; });
+    (j.totals.deltas||[]).forEach(function(v,i){ var el=tiles[i]&&tiles[i].querySelector('.delta'); if(el) el.textContent=v; });
+  }
+  if(j.platforms){
+    var order=['fb','ig','yt','tt','x'];
+    var blocks=document.querySelectorAll('#tab-stats .platform');
+    order.forEach(function(k,pi){
+      var pj=j.platforms[k], el=blocks[pi];
+      if(!pj||!el) return;
+      var bs=el.querySelectorAll('.nums b');
+      (pj.nums||[]).forEach(function(v,i){ if(bs[i]) bs[i].textContent=v; });
+      if(pj.delta){ var d=el.querySelector('.nums .delta'); if(d) d.textContent=pj.delta; }
+    });
+  }
+  if(j.fbSeries && j.fbSeries.length) renderChart(j.fbSeries);
+}
+function tryLive(){
+  if(location.protocol.indexOf('http')!==0) return;
+  fetch('data.json?t='+Math.floor(Date.now()/60000),{cache:'no-store'})
+    .then(function(r){ return r.ok? r.json(): null; })
+    .then(function(j){ if(j) applyLive(j); })
+    .catch(function(){});
+}
+
+/* ---------- generic checklines ---------- */
+function toggleCheck(el){ el.classList.toggle('on'); }
+
+/* ---------- manual numbers report ---------- */
+function copyNumbers(){
+  const g=id=>document.getElementById(id).value.trim()||'—';
+  copyText("Manual numbers check, "+new Date().toLocaleString()+" (read off the apps by hand):\n"+
+    "Facebook: "+g('mFB')+"\nInstagram: "+g('mIG')+"\nTikTok: "+g('mTT')+"\nYouTube: "+g('mYT')+"\nNote: "+g('mNote')+
+    "\nPlease log this in DAILY-LOG as a manual pull.");
+}
+
+/* ---------- Script 001 ---------- */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function script1Text(){
+  const fol=document.getElementById('s1Followers').value.trim();
+  const det=document.getElementById('s1Detail').value.trim();
+  const baby=document.getElementById('setBaby').value;
+  const babyWord=(baby==='the baby')?'the baby':baby;
+  const day=(dayN||'[DAY]'), wks=document.getElementById('chipWeeks').textContent;
+  return "I've made almost fifty videos about being a broke soon-to-be dad.\n\n"+
+  "I've got "+(fol||'[FOLLOWERS]')+" followers.\n\n"+
+  "And I know exactly why. I wasn't in any of them. It was a robot voice reading something a robot wrote, over footage of a house I've never been inside.\n\n"+
+  "So — this is me. "+(det||'[DETAIL — one true thing you can see right now]')+"\n\n"+
+  "I found out I'm gonna be a dad. I'm scared about the money. I haven't figured it out, I'm not gonna pretend I have, and I've got nothing to sell you.\n\n"+
+  "I'm just gonna tell you what actually happens. Every day. Until "+babyWord+" gets here.\n\n"+
+  "Some of what you'll see is AI — I'm not ready to show my face yet. The voice is mine. The story's mine.\n\n"+
+  "Day "+day+". "+wks+" weeks left.\n\n"+
+  "What's the money thing you're not telling anybody right now? I'll go first down there.";
+}
+function renderScript1(){
+  const el=document.getElementById('script1'); if(!el) return;
+  el.innerHTML=esc(script1Text()).replace(/\[([^\]]+)\]/g,'<span class="blank">[$1]</span>').replace(/\n/g,'<br>');
+}
+function copyScript1(){ copyText(script1Text()); }
+
+/* ---------- Script lab ---------- */
+const CHECKS=[
+  {sev:'red', h:'RULE 2 — puts her in a scene',
+   re:/\bshe\s+(said|says|told|asked|wants|wanted|thinks|thought|feels|felt|laughed|cried|goes|got mad|screamed)\b|\btold her\b|\basked her\b|\bshe was (there|crying|laughing)\b/gi,
+   why:'She can be referred to, never rendered. No dialogue, no reactions, no scenes with her in them.'},
+  {sev:'red', h:'RULE 3 — real money figure',
+   re:/\$\s?\d[\d,]*(\.\d+)?|\b\d[\d,]*\s?(dollars|bucks|grand)\b|\b\d+k\b/gi,
+   why:'Shapes, never figures: "about a third of my check," "less than a month of rent."'},
+  {sev:'red', h:'RULE 4 — job texture leaking through',
+   re:/\bmy\s+(boss|manager|coworkers?|shift|route|store|warehouse|clients?)\b|\bthe\s+(warehouse|plant|site|office)\b|\bthird\s+shift\b|\bclock(ed|ing)?\s?(in|out)\b|\bmy\s+job\s+at\b/gi,
+   why:'"Work" stays a flat noun — a wall of time. Even the texture of the job leaks the job.'},
+  {sev:'amber', h:'Guru grammar — the register people swipe past',
+   re:/\b\d+\s+(steps?|ways|tips|hacks|things)\b|\bsecret\b|\bhack\b|\bgame.?changer\b|\bsave\s+this\b|\bfollow\s+for\b|\bmost\s+(dads|people|guys)\b|\bpassive\s+income\b|\bfinancial\s+freedom\b|\bwon'?t\s+tell\s+you\b/gi,
+   why:'Replace the promise with the thing that happened: "I did the hospital math last night and I\'m still sitting here."'},
+  {sev:'amber', h:'Truth check — is this claim true of you today?',
+   re:/\bI\s+built\b|\bI\s+made\s+money\b|\bmy\s+(course|academy|product|business)\b|\bI\s+figured\s+out\b/gi,
+   why:'Not automatically wrong — but this is the pattern the old library broke. If it\'s true, keep it.'},
+  {sev:'amber', h:'Naming her role',
+   re:/\b(girlfriend|my girl|wife|fianc[ée]e?|baby\s?mama)\b/gi,
+   why:'"She / we" is inside the rules and lands harder. Naming the role invites questions the rules won\'t let you answer.'}
+];
+function labState(){
+  const m={}; document.querySelectorAll('[data-manual]').forEach(el=>m[el.dataset.manual]=el.classList.contains('on'));
+  return m;
+}
+function runLab(){
+  const txt=document.getElementById('labText').value;
+  const flags=document.getElementById('labFlags'), meta=document.getElementById('labMeta'), verd=document.getElementById('labVerdict');
+  if(!txt.trim()){ flags.innerHTML=''; meta.textContent=''; verd.innerHTML=''; return; }
+  const words=txt.trim().split(/\s+/).length;
+  const secs=Math.round(words/2.4);
+  meta.innerHTML='<b style="color:var(--ink)">'+words+'</b> words · about <b style="color:var(--ink)">'+secs+'s</b> spoken'+(secs>60?' — long; the serial format wants 20–50s most days':'');
+  let html='', redCount=0;
+  CHECKS.forEach(c=>{
+    const found=[...new Set((txt.match(c.re)||[]).map(s=>s.trim()))];
+    if(found.length){
+      if(c.sev==='red') redCount++;
+      html+='<div class="flag '+c.sev+'"><div class="fh">'+c.h+'</div><div class="fb">'+
+        found.slice(0,6).map(f=>'<mark>'+esc(f)+'</mark>').join(' ')+' — '+c.why+'</div></div>';
+    }
+  });
+  const hasDay=/\bday\s+\d+/i.test(txt);
+  html+=hasDay
+    ?'<div class="flag green"><div class="fh">DAY COUNTER ✓</div><div class="fb">The serial spine is in. This is what makes people come back.</div></div>'
+    :'<div class="flag amber"><div class="fh">NO DAY COUNTER</div><div class="fb">Open or close with it — "Day '+(dayN||'…')+'." The countdown is the reason to follow.</div></div>';
+  const tail=txt.trim().slice(-180);
+  html+=/\?/.test(tail)
+    ?'<div class="flag green"><div class="fh">ENDS ON A QUESTION ✓</div><div class="fb">Now be there to answer every reply. That\'s the other half.</div></div>'
+    :'<div class="flag amber"><div class="fh">NO QUESTION AT THE END</div><div class="fb">No question → no comments → no distribution. Ask something you actually want answered.</div></div>';
+  const sents=txt.split(/[.!?]+/).map(s=>s.trim().split(/\s+/).filter(Boolean).length).filter(n=>n>2);
+  if(sents.length>=5){
+    const mean=sents.reduce((a,b)=>a+b,0)/sents.length;
+    const sd=Math.sqrt(sents.reduce((a,b)=>a+(b-mean)*(b-mean),0)/sents.length);
+    if(sd/mean<0.35) html+='<div class="flag amber"><div class="fh">EVERY SENTENCE IS THE SAME SIZE</div><div class="fb">Metronomic rhythm reads as a script being read. Break one sentence on purpose. Abandon another halfway.</div></div>';
+  }
+  flags.innerHTML=html;
+  const m=labState();
+  const manualsDone=m.detail&&m.anyone&&m.true;
+  if(redCount===0&&manualsDone){
+    verd.innerHTML='<div class="labverdict ship">SHIP IT</div>';
+  } else {
+    const needs=[];
+    if(redCount>0) needs.push(redCount+' rule break'+(redCount>1?'s':''));
+    if(!manualsDone) needs.push('the three toggles above');
+    verd.innerHTML='<div class="labverdict fix">FIX FIRST — '+needs.join(' + ')+'</div>';
+  }
+}
+function copyLab(){
+  const txt=document.getElementById('labText').value;
+  if(!txt.trim()){ toast('Nothing to copy yet'); return; }
+  copyText("Script for review:\n\n"+txt+"\n\n(Ran it through HQ's lab — please do the full check and tighten it.)");
+}
+
+/* ---------- interview ---------- */
+const IV=[
+ ["1 · The moment","",[
+  "When did you find out? Where were you standing, what time, what were you doing ten minutes before.",
+  "First words out of your mouth — the real ones.",
+  "What did you do in the first hour after?",
+  "Who did you tell first, and what did they say?",
+  "Who still doesn't know?",
+  "How far along is she now? When's the due date?",
+  "Boy, girl, or don't know yet? Do you want to know?",
+  "Names — is there one you love that she hates?",
+  "First baby thing you bought, and what it cost. (Shape, not figure, if it ever goes on camera.)",
+  "The moment that made it real in a way the test didn't."]],
+ ["2 · The money, honestly","Background only — none of this gets said out loud. It makes the shape-lines sound right.",[
+  "What do you do for work — what you actually do for eight hours.",
+  "Do you like it?",
+  "What does a month look like — shapes are fine: \"rent eats about a third.\"",
+  "The scariest number in your life right now.",
+  "What you've already cut — and did anyone notice?",
+  "The one thing you're afraid you'll have to give up.",
+  "Debt? What kind, how'd it happen?",
+  "The last thing that broke and cost money you didn't have.",
+  "Have you looked at what the birth costs? What did you find?",
+  "Does she work? Leave — paid or unpaid? (Background only.)",
+  "Your runway if something went wrong tomorrow."]],
+ ["3 · The fear","LOAD-BEARING — answer these long.",[
+  "The 2am thought. The literal sentence. Word for word.",
+  "More afraid of not providing, or of not being there?",
+  "Something you're scared you'll be bad at as a dad.",
+  "Something about all this you haven't said out loud to anyone.",
+  "When did you last feel genuinely calm about it, and why?",
+  "What do people say to reassure you that makes it worse?"]],
+ ["4 · Your dad","LOAD-BEARING — and tell Claude: does he get the she-treatment (exists, never described) or can he be a real character?",[
+  "What did your dad do for work?",
+  "One thing he did that you want to do exactly the same.",
+  "One thing you're determined to do differently.",
+  "Your clearest memory of him from when you were small.",
+  "Is he in your life now? Have you told him?",
+  "What do you think he was scared of at your age? Did he ever say?"]],
+ ["5 · The texture of your days","LOAD-BEARING — this is where b-roll and details come from. Be boring and specific. One paragraph each = a month of content.",[
+  "What time do you wake up? First thing you do, honestly?",
+  "Your commute — what do you listen to? (No route details.)",
+  "Where do you physically sit when you work on this? Describe the room.",
+  "What time of night do you start? What does the house sound like?",
+  "What are you drinking?",
+  "Five things within arm's reach of you right now.",
+  "The last thing you do before bed.",
+  "What does a Saturday look like?",
+  "Is there a place you go to think?"]],
+ ["6 · Why this, and what it's cost","",[
+  "Why this instead of a second job or driving — the real reason, unflattering part included.",
+  "Roughly what you've spent trying to make this work. (Shape is fine.)",
+  "The dumbest thing you've tried that went nowhere.",
+  "When did you almost quit? What stopped you?",
+  "The smallest win you've had — even a single comment.",
+  "What did you believe a month ago that you don't now?",
+  "What do you tell people you're doing — do you tell them at all?"]],
+ ["7 · How you actually talk","",[
+  "Do you curse in normal conversation? Should the videos?",
+  "Are you funny? Dry, goofy, deadpan, not at all?",
+  "A phrase you say constantly that friends would recognize.",
+  "Who do you sound like? A person, a podcast, anyone.",
+  "What kind of creator makes you cringe — what specifically?",
+  "Talking to a friend, thinking out loud, or explaining?",
+  "What does your voice sound like to a stranger?"]],
+ ["8 · Who you're talking to","",[
+  "The exact guy this is for — age, job, situation, what's stressing him.",
+  "Is he a real person you know?",
+  "What does he need to hear that nobody's saying?",
+  "Advice you've been given that was completely useless.",
+  "What would make him trust you in three seconds?"]],
+ ["9 · What you know now — this becomes the product","",[
+  "What do you understand today that you didn't three months ago?",
+  "What have you researched to death for your own situation?",
+  "What did you figure out the hard way?",
+  "What would you have paid $27 for a month ago?",
+  "One page for a guy who just found out — what's on it?"]]
+];
+(function(){
+  const host=document.getElementById('interview'); let n=0;
+  IV.forEach(sec=>{
+    const d=document.createElement('details');
+    const isLB=sec[1].indexOf('LOAD-BEARING')===0;
+    d.innerHTML='<summary>'+sec[0]+(isLB?' <span class="loadbear">LOAD-BEARING</span>':'')+'<span class="arrow">›</span></summary>';
+    const body=document.createElement('div'); body.className='body';
+    if(sec[1]) body.innerHTML='<p class="fine">'+sec[1]+'</p>';
+    sec[2].forEach(q=>{
+      n++;
+      const row=document.createElement('div'); row.className='q'; row.dataset.ivn=n;
+      row.innerHTML='<div class="qn">'+n+'</div><div class="qt">'+q+'</div>';
+      row.onclick=function(){
+        var k=this.dataset.ivn;
+        S.iv[k]=!S.iv[k]; save();
+        this.classList.toggle('done',!!S.iv[k]);
+        document.getElementById('ivCount').textContent=document.querySelectorAll('.q.done').length;
+      };
+      body.appendChild(row);
+    });
+    d.appendChild(body); host.appendChild(d);
+  });
+})();
+function applyIv(){
+  document.querySelectorAll('.q[data-ivn]').forEach(function(row){
+    row.classList.toggle('done',!!S.iv[row.dataset.ivn]);
+  });
+  document.getElementById('ivCount').textContent=document.querySelectorAll('.q.done').length;
+}
+
+/* ---------- init ---------- */
+hydrate();
+recalc();
+runLab();
+renderIdeas();
+renderSetupState();
+applyIv();
+if(FRESH && CAN_SAVE){ var _mc=document.getElementById('migrateCard'); if(_mc) _mc.style.display='block'; }
+tryLive();
+</script>
+</body>
+</html>
