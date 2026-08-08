@@ -1,24 +1,24 @@
 {
   "v": 1,
-  "asOf": "Thu Aug 6, 7:30 AM pull",
+  "asOf": "Sat Aug 8, 7:22 AM pull",
   "totals": {
     "vals": ["35", "49", "3"],
-    "deltas": ["+0 since Aug 5", "+0 since Aug 5", "all on YouTube"]
+    "deltas": ["+0 since Aug 6", "+0 since Aug 6", "all on YouTube"]
   },
   "platforms": {
-    "fb": {"nums": ["2", "2,086", "2,227", "305"], "delta": "+0"},
-    "ig": {"nums": ["12", "556", "51", "0", "3"], "delta": "+0"},
-    "yt": {"nums": ["4", "117", "45", "3"], "delta": "+0"},
+    "fb": {"nums": ["2", "2,055", "2,181", "305"], "delta": "+0"},
+    "ig": {"nums": ["12", "413", "48", "0", "3"], "delta": "+0"},
+    "yt": {"nums": ["4", "90", "45", "3"], "delta": "+0"},
     "tt": {"nums": ["16", "21", "32", "49", "0"], "delta": "+0"},
-    "x":  {"nums": ["1", "4"]}
+    "x":  {"nums": ["1", "9"]}
   },
   "fbSeries": [
-    {"d": "Jul 31", "v": 0},
     {"d": "Aug 1", "v": 74},
     {"d": "Aug 2", "v": 31},
     {"d": "Aug 3", "v": 205},
     {"d": "Aug 4", "v": 8},
     {"d": "Aug 5", "v": 1},
-    {"d": "Aug 6", "v": 0}
+    {"d": "Aug 6", "v": 0},
+    {"d": "Aug 8", "v": 1}
   ]
 }
