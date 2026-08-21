@@ -1,3 +1,3 @@
-2026-08-20 07:25 AM America/Chicago
+2026-08-21 07:23 AM America/Chicago
 SUCCESS
-Pulled fresh analytics for all platforms (Facebook required a page_id retry, which succeeded); totals unchanged at 34 followers / 49 TikTok videos / 3 comments, all deltas +0 since Aug 19; appended Aug 20 (2) to fbSeries, dropping Aug 13.
+Pulled fresh analytics for all platforms (Facebook required a page_id retry, which succeeded); totals unchanged at 34 followers / 49 TikTok videos, comments dropped to 0 (YouTube comments/likes fell to 0 this period); appended Aug 21 (2) to fbSeries, dropping Aug 14.
