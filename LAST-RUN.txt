@@ -1,3 +1,3 @@
-Tue Aug 25, 2026, 7:25 AM America/Chicago
+Wed Aug 26, 2026, 7:26 AM America/Chicago
 SUCCESS
-All platforms unchanged vs previous pull (total followers 36, TikTok videos 49, total comments 0).
+Total followers 36 -> 34 (TikTok -2), TikTok videos unchanged at 49, total comments unchanged at 0.
