@@ -1,3 +1,3 @@
-Fri Aug 28, 2026, 7:21 AM America/Chicago
+Sat Aug 29, 2026, 7:21 AM America/Chicago
 SUCCESS
-Total followers unchanged at 34, TikTok videos unchanged at 49, total comments unchanged at 0. Facebook required a page_id retry, which succeeded.
+Total followers unchanged at 34, TikTok videos unchanged at 49, total comments unchanged at 0. Facebook reach rose slightly (343->345) and IG reach dipped (62->47) as older days rolled off the 30-day window. X analytics failed twice (non-page_id error), previous X values carried forward.
