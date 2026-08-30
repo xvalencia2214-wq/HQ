@@ -1,11 +1,11 @@
 {"v":1,
- "asOf":"Sat Aug 29, 7:21 AM pull",
+ "asOf":"Sun Aug 30, 7:22 AM pull",
  "totals":{"vals":["34","49","0"],
-           "deltas":["+0 since Aug 28","+0 since Aug 28","no comments this period"]},
+           "deltas":["+0 since Aug 29","+0 since Aug 29","no comments this period"]},
  "platforms":{
-   "fb":{"nums":["2","345","378","205"],"delta":"+0"},
-   "ig":{"nums":["12","47","1","0","1"],"delta":"+0"},
+   "fb":{"nums":["2","271","296","205"],"delta":"+0"},
+   "ig":{"nums":["12","43","0","0","0"],"delta":"+0"},
    "yt":{"nums":["4","7","0","0"],"delta":"+0"},
    "tt":{"nums":["15","22","32","49","0"],"delta":"+0"},
    "x":{"nums":["1","9"]}},
- "fbSeries":[{"d":"Aug 23","v":0},{"d":"Aug 24","v":0},{"d":"Aug 25","v":0},{"d":"Aug 26","v":0},{"d":"Aug 27","v":0},{"d":"Aug 28","v":0},{"d":"Aug 29","v":2}]}
+ "fbSeries":[{"d":"Aug 24","v":0},{"d":"Aug 25","v":0},{"d":"Aug 26","v":0},{"d":"Aug 27","v":0},{"d":"Aug 28","v":0},{"d":"Aug 29","v":2},{"d":"Aug 30","v":0}]}
