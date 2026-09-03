@@ -1,3 +1,3 @@
-Wed Sep 2, 2026, 7:26 AM America/Chicago
+Thu Sep 3, 2026, 7:23 AM America/Chicago
 SUCCESS
-Pulled TikTok, Instagram, YouTube, and Facebook (retried with page_id) analytics; X analytics call failed ("Failed to fetch X user metrics") with no retry defined for it, so X values carried forward unchanged from previous data.json. TikTok followers dropped 15->14 (-1), total followers across platforms 34->33 (-1); FB reach/impressions/best-day shifted with the rolling 30-day window; IG reach ticked down to 1; fbSeries rolled forward to include Sep 2 (dropped Aug 26).
+Pulled TikTok, Instagram, YouTube, Facebook (retried with page_id), and X analytics successfully; all follower counts unchanged (total 33) and TikTok video count unchanged (49); Facebook unique reach/impressions shifted with the rolling 30-day window (31->30, 41->38) while best single-day reach held at 5; X impressions dropped to 0 (real API value, not missing); fbSeries rolled forward to include Sep 3 (dropped Aug 27).
