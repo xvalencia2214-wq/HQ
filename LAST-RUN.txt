@@ -1,3 +1,3 @@
-Thu Sep 3, 2026, 7:23 AM America/Chicago
+Fri Sep 4, 2026, 7:24 AM America/Chicago
 SUCCESS
-Pulled TikTok, Instagram, YouTube, Facebook (retried with page_id), and X analytics successfully; all follower counts unchanged (total 33) and TikTok video count unchanged (49); Facebook unique reach/impressions shifted with the rolling 30-day window (31->30, 41->38) while best single-day reach held at 5; X impressions dropped to 0 (real API value, not missing); fbSeries rolled forward to include Sep 3 (dropped Aug 27).
+Pulled TikTok, Instagram, YouTube, Facebook (retried with page_id), and X analytics successfully; all metrics unchanged from the previous pull (total followers 33, TikTok videos 49, total comments 0); fbSeries rolled forward to include Sep 4 (dropped Aug 28).
