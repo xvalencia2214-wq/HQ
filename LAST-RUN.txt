@@ -1,3 +1,3 @@
-2026-09-06 07:21 CDT
+2026-09-07 07:24 CDT
 SUCCESS
-Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); no follower/video/comment changes since Sep 5 pull, appended Sep 6 Facebook daily reach (2) to fbSeries.
+Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); no follower/video/comment changes since Sep 6 pull, appended Sep 7 Facebook daily reach (1) to fbSeries.
