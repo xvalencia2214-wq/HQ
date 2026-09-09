@@ -1,3 +1,3 @@
-2026-09-08 07:24 CDT
+2026-09-09 07:24 CDT
 SUCCESS
-Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); Facebook impressions rose 31->32 and Instagram reach rose 0->1, all follower/video/comment totals unchanged since Sep 7; appended Sep 8 Facebook daily reach (1) to fbSeries.
+Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); Facebook unique reach rose 23->25 and impressions rose 32->34, all follower/video/comment totals unchanged since Sep 8; appended Sep 9 Facebook daily reach (2) to fbSeries.
