@@ -1,3 +1,3 @@
-2026-09-10 07:24 CDT
+2026-09-11 07:23 CDT
 SUCCESS
-Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); Facebook unique reach rose 25->26 and impressions rose 34->35, all follower/video/comment totals unchanged since Sep 9; appended Sep 10 Facebook daily reach (1) to fbSeries.
+Refreshed data.json from upload-post analytics pull; Facebook required page_id retry (succeeded); all follower/video/comment totals unchanged since Sep 10 (Facebook rolling-window reach/impressions/best-day dipped 26->23 / 35->32 / 3->2 as older high-reach days aged out of the 30-day window); appended Sep 11 Facebook daily reach (0) to fbSeries.
