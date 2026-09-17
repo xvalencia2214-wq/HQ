@@ -1,3 +1,3 @@
-Wed Sep 16, 2026 7:22 AM America/Chicago
+Thu Sep 17, 2026 7:21 AM America/Chicago
 SUCCESS
-Total followers held at 33 and comments at 0; TikTok video_count and views/likes dropped sharply from the API (videos 49->1, views 26->0, likes 32->0) while TikTok followers stayed at 14 -- flagging as a notable API-reported change, not an invented number; Facebook impressions eased 35->33 (reach steady at 26, best single-day reach still 5), IG/YT/X unchanged; fbSeries rolled to Sep 10-16 with Sep 16 at 1.
+All totals held steady (followers 33, TikTok videos 1, comments 0); Facebook unique reach rose 26->29 and impressions rose 33->36 with Sep 17 reach at 4, best single-day reach still 5 (Sep 13); IG/YT/TikTok/X unchanged; fbSeries rolled to Sep 11-17. Facebook required a page_id retry, which succeeded.
