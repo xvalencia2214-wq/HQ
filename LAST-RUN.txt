@@ -1,3 +1,3 @@
-Thu Sep 17, 2026 7:21 AM America/Chicago
+Fri Sep 18, 2026 7:22 AM America/Chicago
 SUCCESS
-All totals held steady (followers 33, TikTok videos 1, comments 0); Facebook unique reach rose 26->29 and impressions rose 33->36 with Sep 17 reach at 4, best single-day reach still 5 (Sep 13); IG/YT/TikTok/X unchanged; fbSeries rolled to Sep 11-17. Facebook required a page_id retry, which succeeded.
+Refreshed data.json from upload-post analytics (Facebook required a page_id retry, which succeeded); FB impressions ticked to 37, fbSeries rolled forward to Sep 18, all other platform totals unchanged since Sep 17.
