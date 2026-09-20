@@ -1,3 +1,3 @@
-Sat Sep 19, 2026 7:21 AM America/Chicago
+Sun Sep 20, 2026 7:21 AM America/Chicago
 SUCCESS
-Refreshed data.json from upload-post analytics (Facebook required a page_id retry, which succeeded); FB reach/impressions dipped slightly to 28/36, fbSeries rolled forward to Sep 19, all other platform totals unchanged since Sep 18.
+Refreshed data.json from upload-post analytics (Facebook required a page_id retry, which succeeded); FB reach/impressions ticked up to 29/37, fbSeries rolled forward to Sep 20, all other platform totals unchanged since Sep 19.
