@@ -20,3 +20,13 @@ export function miles(a, b) {
   const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(x));
 }
+
+// Closest ZIP centroid to a point (used by "use my location").
+export function nearestZip(lat, lon) {
+  let best = null, bestD = Infinity;
+  for (const z of zips.values()) {
+    const d = (z.lat - lat) ** 2 + ((z.lon - lon) * Math.cos((lat * Math.PI) / 180)) ** 2;
+    if (d < bestD) { bestD = d; best = z; }
+  }
+  return best;
+}

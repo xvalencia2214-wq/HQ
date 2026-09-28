@@ -1,6 +1,6 @@
 import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
-import { lookupZip, miles, zipCount } from "../geo.js";
+import { lookupZip, miles, zipCount, nearestZip } from "../geo.js";
 import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf } from "../shared.js";
 
 // Which music suits which event when a group hasn't said what it plays.
@@ -91,6 +91,14 @@ export default function searchRoutes(ctx, add) {
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     payments: stripe.mode, sms: sms.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
   }));
+
+  add("GET", "/api/nearest-zip", ({ query }) => {
+    const lat = Number(query.lat), lon = Number(query.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new HttpError(400, "Bad location");
+    const z = nearestZip(lat, lon);
+    if (!z || miles({ lat, lon }, z) > 60) throw new HttpError(404, "No US ZIP code near that location");
+    return z;
+  });
 
   add("GET", "/api/zip/:zip", ({ params }) => {
     const z = isZip(params.zip) ? lookupZip(params.zip) : null;

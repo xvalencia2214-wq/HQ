@@ -331,3 +331,21 @@ test("account settings: profile, password change signs out other devices", async
   assert.equal((await a.get("/api/me")).json.user.name, "Patricia"); // this one stays in
   assert.equal((await client(S.base).post("/api/auth/login", { email: "pw@example.com", password: "brand new password" })).status, 200);
 });
+
+test("group page tells the calendar where the first free date is; nearest-ZIP lookup", async () => {
+  const c = client(S.base), owner = client(S.base);
+  await owner.signup("nx@example.com", "Next Open");
+  const d = inDays(45), d2 = inDays(46);
+  const gid = await makeGroup(owner, { name: "Next Open Band", dates: [d, d2] });
+  assert.equal((await c.get(`/api/groups/${gid}`)).json.next_open, d);
+  // a fully-booked first date is skipped
+  const cust = client(S.base); await cust.signup("nx2@example.com", "Cust Two");
+  await owner.put(`/api/groups/${gid}/availability`, { dates: { [d]: ["12:00 PM"] } });
+  const b = (await cust.post("/api/bookings", bookingBody(gid, d, { time: "12:00 PM" }))).json.booking;
+  assert.ok(b);
+  assert.equal((await c.get(`/api/groups/${gid}`)).json.next_open, d2);
+  const z = (await c.get("/api/nearest-zip?lat=41.85&lon=-87.67")).json;
+  assert.equal(z.city, "Chicago");
+  assert.equal((await c.get("/api/nearest-zip?lat=0&lon=0")).status, 404); // middle of the ocean
+  assert.equal((await c.get("/api/nearest-zip?lat=abc&lon=1")).status, 400);
+});

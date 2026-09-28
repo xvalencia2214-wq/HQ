@@ -29,6 +29,8 @@ function renderChrome() {
   const banner = document.getElementById("banner");
   banner.hidden = state.meta.payments !== "simulated";
   banner.textContent = t("banner.test");
+  const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
+  nav.classList.remove("open"); tog.setAttribute("aria-expanded", "false"); tog.setAttribute("aria-label", t("nav.menu"));
   const cur = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] || "home";
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
@@ -52,7 +54,7 @@ async function route() {
   const box = document.createElement("div");
   app.replaceChildren(box);
   try {
-    if (seg[0] === "group" && seg[1]) await group(box, seg[1]);
+    if (seg[0] === "group" && seg[1]) await group(box, seg[1], params);
     else if (seg[0] === "best" && seg[1]) await best(box, seg[1]);
     else if (seg[0] === "login" || seg[0] === "signup") authView(box, seg[0], params);
     else if (seg[0] === "bookings") await myBookings(box);
@@ -67,6 +69,17 @@ async function route() {
     box.innerHTML = `<div class="panel empty">${esc(e && e.message ? e.message : t("common.error"))}</div>`;
   }
 }
+
+document.getElementById("navtoggle").onclick = () => {
+  const nav = document.getElementById("nav"), open = nav.classList.toggle("open");
+  document.getElementById("navtoggle").setAttribute("aria-expanded", String(open));
+};
+window.addEventListener("bm:unauth", () => {
+  if (!state.user) return;
+  setUser(null);
+  toast(t("common.sessionExpired"), "error");
+  location.hash = "#/login?next=" + encodeURIComponent(location.hash);
+});
 
 initLang(() => { renderChrome(); route(); });
 await init();

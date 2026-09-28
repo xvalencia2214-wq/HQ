@@ -22,6 +22,15 @@ export function hasOpenDate(db, groupId, date) {
   return openSlots(db, groupId, date).length > 0;
 }
 
+// First upcoming date that still has a free slot, so calendars open on a month that has something to click.
+export function firstOpenDate(db, groupId) {
+  expirePending(db);
+  for (const r of db.all("SELECT date FROM availability WHERE group_id = ? AND date > ? ORDER BY date LIMIT 150", groupId, todayStr())) {
+    if (openSlots(db, groupId, r.date, { expire: false }).length) return r.date;
+  }
+  return null;
+}
+
 export function ratingMap(db) {
   const m = new Map();
   for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM reviews GROUP BY group_id")) m.set(r.group_id, r);
@@ -66,6 +75,7 @@ export function groupDetail(ctx, g) {
   const { db } = ctx;
   return publicGroup(ctx, g, {
     fields: {
+      next_open: firstOpenDate(db, g.id),
       photos: db.all("SELECT id, file FROM photos WHERE group_id = ? ORDER BY position, created_at", g.id).map((p) => ({ id: p.id, url: "/uploads/" + p.file })),
       packages: db.all("SELECT id, name, description, hours, price_cents FROM packages WHERE group_id = ? ORDER BY price_cents", g.id),
       recent_reviews: db.all(

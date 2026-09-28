@@ -1,23 +1,14 @@
 // Browser end-to-end check. Needs Playwright + Chromium (not part of `npm test`).
 //   NODE_PATH=$(npm root -g) node e2e/e2e.mjs [screenshotDir]
-import zlib from "node:zlib";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { startApp } from "../test/helpers.js";
+import { png } from "./png.mjs";
 const { chromium } = createRequire(import.meta.url)("playwright");
 
 const shots = process.argv[2] || "";
 if (shots) fs.mkdirSync(shots, { recursive: true });
-
-function png(w = 48, h = 48) {
-  const crcT = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
-  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
-  const raw = Buffer.alloc((w * 3 + 1) * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * (w * 3 + 1) + 1 + x * 3; raw[i] = 200; raw[i + 1] = 150 + x; raw[i + 2] = 40 + y; }
-  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
-}
 
 const S = await startApp();
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
@@ -57,15 +48,15 @@ try {
   await O.locator(".slot.sel").first().click(); // close one slot
   await O.waitForFunction(() => document.querySelectorAll(".slot.sel").length === 4);
   ok("manager can toggle a slot", true);
-  await O.click("text=Listing"); await O.waitForSelector("#lform");
+  await O.click(".tabs >> text=Profile"); await O.waitForSelector("#lform");
   await O.check("input[name=ev][value=Wedding]"); await O.check("input[name=sound]"); await O.fill("#l-guests", "300");
   await O.click("#lform button[type=submit]"); await O.waitForSelector("#toast:not([hidden])");
-  await O.click("text=Packages & songs"); await O.waitForSelector("#pkform");
+  await O.click(".tabs >> text=Packages"); await O.waitForSelector("#pkform");
   await O.fill("#k-name", "Serenata"); await O.fill("#k-desc", "3 songs"); await O.fill("#k-h", "1"); await O.fill("#k-p", "200");
   await O.click("#pkform button[type=submit]"); await O.waitForSelector("text=Serenata");
   await O.fill("#songs", "Cielito Lindo\nEl Rey\nLas Mañanitas"); await O.click("#sform2 button[type=submit]");
   await O.waitForSelector("text=Saved");
-  await O.click("text=Photos & video"); await O.waitForSelector("#file", { state: "attached" });
+  await O.click(".tabs >> text=Media"); await O.waitForSelector("#file", { state: "attached" });
   await O.setInputFiles("#file", { name: "band.png", mimeType: "image/png", buffer: png() });
   await O.waitForSelector(".ph-item img");
   ok("photo upload works (resized in the browser)", (await O.locator(".ph-item img").count()) === 1);
@@ -123,16 +114,17 @@ try {
   ok("manager sees the request, phone hidden", (await O.locator(".req").innerText()).includes("Carlos Cliente") && !(await O.locator(".req").innerText()).includes("555"));
   await shot(O, "2-dashboard-requests.png");
   await O.click("[data-act=accept]"); await O.waitForSelector(".req a[href^='tel:']");
-  ok("after accepting, the customer's phone is shown", (await O.locator(".req").innerText()).includes("+13125550142"));
-  await O.click("text=Messages"); await O.waitForSelector(".thread");
+  ok("after accepting, the customer's phone is shown", (await O.locator(".req").innerText()).includes("(312) 555-0142"));
+  await O.click(".tabs >> text=Messages"); await O.waitForSelector(".thread");
   await O.click(".thread"); await O.waitForSelector("#rform");
   await O.fill("#rin", "Claro que si, tocamos Volver Volver"); await O.click("#rform button"); await O.waitForSelector(".msg.me");
   ok("manager can reply in the thread", (await O.locator(".msg.me").count()) === 1);
 
   // ---------------- customer: bookings, Spanish, cancel ----------------
+  ok("phone header collapses into a menu", await C.locator("#nav").isHidden());
   await C.goto(S.base + "/#/bookings"); await C.waitForSelector(".req");
   ok("customer sees Confirmed and the refund preview", (await C.locator(".req").innerText()).includes("Confirmed") && /get back \$/.test(await C.locator(".req").innerText()));
-  await C.click("#langbtn"); await C.waitForSelector("text=Mis reservas");
+  await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h2:has-text(\"Mis reservas\")"); await C.click("#navtoggle");
   ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").innerText()).includes("Buscar música"));
   await shot(C, "3-bookings-es-phone.png");
   C.once("dialog", (d) => d.accept());

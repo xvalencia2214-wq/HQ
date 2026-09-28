@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 
 const TABS = ["requests", "calendar", "listing", "extras", "media", "payments", "messages"];
@@ -50,12 +50,22 @@ function createForm(app) {
 // ---- requests ----
 async function requests({ g, body, refresh }) {
   const { bookings } = await api.get(`/api/groups/${encodeURIComponent(g.id)}/bookings`);
-  body.innerHTML = `<div class="panel"><h3 class="sec">${esc(t("tab.requests"))}</h3>${bookings.length ? bookings.map((b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
-      ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${b.phone ? ` · <a href="tel:${esc(b.phone)}">${esc(b.phone)}</a>` : ` · <span class="dim">${esc(t("dash.phoneLater"))}</span>`}
+  const byDate = (dir) => (x, y) => (x.date < y.date ? -dir : x.date > y.date ? dir : 0);
+  const sections = [
+    ["dash.secNew", bookings.filter((b) => b.status === "requested").sort(byDate(1)), true],
+    ["dash.secUpcoming", bookings.filter((b) => b.status === "confirmed").sort(byDate(1)), false],
+    ["dash.secPast", bookings.filter((b) => !["requested", "confirmed"].includes(b.status)).sort(byDate(-1)), false]
+  ];
+  const phone = (b) => (b.phone ? ` · <a href="tel:${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>` : b.status === "requested" ? ` · <span class="dim">${esc(t("dash.phoneLater"))}</span>` : "");
+  const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
+      ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
       ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
-      ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`).join("") : `<div class="empty">${esc(t("dash.noReq"))}</div>`}</div>`;
+      ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`;
+  body.innerHTML = `<div class="panel"><h3 class="sec">${esc(t("tab.requests"))}</h3>${bookings.length
+    ? sections.filter(([, list]) => list.length).map(([key, list, hot]) => `<div class="sec-h${hot ? " hot" : ""}"><strong>${esc(t(key))}</strong><span class="count">${list.length}</span></div>${list.map(row).join("")}`).join("")
+    : `<div class="empty">${esc(t("dash.noReq"))}</div>`}</div>`;
   body.querySelectorAll("[data-act]").forEach((b) => {
     b.onclick = async () => {
       const act = b.dataset.act;
@@ -67,7 +77,8 @@ async function requests({ g, body, refresh }) {
 
 // ---- calendar ----
 async function calTab({ g, body }) {
-  const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null };
+  const first = g.next_open ? new Date(Number(g.next_open.slice(0, 4)), Number(g.next_open.slice(5, 7)) - 1, 1) : null;
+  const st = { month: first || new Date(today().getFullYear(), today().getMonth(), 1), date: null };
   body.innerHTML = `<div class="panel"><h3 class="sec">${esc(t("tab.calendar"))}</h3><div id="calbox"></div><div id="daybox"></div>
     <div class="quick"><button class="btn ghost small" id="fill">${esc(t("dash.fill"))}</button><button class="btn ghost small" id="clear">${esc(t("dash.clear"))}</button></div>
     <div class="legend">${esc(t("dash.calHint"))}</div></div>`;
@@ -130,7 +141,7 @@ function listing({ g, body, refresh }) {
     <div class="row"><div><label for="l-dep">${esc(t("dash.depositPct"))}</label><input id="l-dep" name="deposit_pct" type="number" min="20" max="50" value="${g.deposit_pct}"></div>
     <div><label for="l-pol">${esc(t("g.policy"))}</label><select id="l-pol" name="cancel_policy">${["flexible", "moderate", "strict"].map((k) => `<option value="${k}"${sel(k, g.cancel_policy)}>${esc(t("policy." + k))}</option>`).join("")}</select></div></div>
     <div class="dim small" id="polhint"></div>
-    <label for="l-phone">${esc(t("dash.contactPhone"))}</label><input id="l-phone" name="contact_phone" inputmode="tel" maxlength="20" value="${esc(g.contact_phone)}"><div class="dim small">${esc(t("dash.contactHint"))}</div>
+    <label for="l-phone">${esc(t("dash.contactPhone"))}</label><input id="l-phone" name="contact_phone" inputmode="tel" maxlength="20" value="${esc(fmtPhone(g.contact_phone))}"><div class="dim small">${esc(t("dash.contactHint"))}</div>
     <div id="lerr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>`;
   const hint = () => { document.getElementById("polhint").textContent = meta.policies[document.getElementById("l-pol").value][lang()]; };
   document.getElementById("l-pol").onchange = hint; hint();

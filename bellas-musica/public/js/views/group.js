@@ -1,18 +1,21 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare } from "../ui.js";
+import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
 
-export async function group(app, id) {
+export async function group(app, id, params = new URLSearchParams()) {
   let g;
   try { g = await api.get("/api/groups/" + encodeURIComponent(id)); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Música`;
   const meta = state.meta, user = state.user;
   const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {} };
+  // What the customer already told us on the search page.
+  const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: params.get("zip") || "", date: params.get("date") || "" };
+  const monthOf = (k) => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1);
   const policy = meta.policies[g.cancel_policy] || {};
 
   const fact = (k, v) => `<div class="fact"><span>${esc(t(k))}</span><strong>${v}</strong></div>`;
@@ -20,8 +23,9 @@ export async function group(app, id) {
   const video = g.video ? `<div class="video"><iframe src="${esc(g.video.url)}" title="${esc(g.name)}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : "";
 
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
+  <div class="gp"><div class="gp-main">
   <div class="panel"><div class="titlebar"><h2>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h2>${shareButtons(g.name, "#/group/" + g.id)}</div>
-    <div class="meta">${g.reviews ? `${stars(g.rating)}<span class="stars">${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span><span>${esc(g.city)}, ${esc(g.state)}</span></div>
+    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span><span>${esc(g.city)}, ${esc(g.state)}</span></div>
     ${gallery}${video}
     <div class="facts">
       ${fact("g.members", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${fact("g.set", esc(t("g.minutes", { n: g.set_minutes })))}
@@ -35,13 +39,13 @@ export async function group(app, id) {
   </div>
   ${g.songs.length ? `<div class="panel"><h3 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h3><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
   ${g.packages.length ? `<div class="panel"><h3 class="sec">${esc(t("g.packages"))}</h3><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
-  <div class="two"><div>
-    <div class="panel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
-    ${g.recent_reviews.length ? `<div class="panel"><h3 class="sec">${esc(t("g.reviewsTitle"))}</h3>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("")}</div>` : ""}
-  </div><div>
+  ${g.recent_reviews.length ? `<div class="panel"><h3 class="sec">${esc(t("g.reviewsTitle"))}</h3>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("")}</div>` : ""}
+  </div><aside class="gp-side">
+    <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
     <div class="panel" id="bookpanel"><h2>${esc(t("g.request"))}</h2><div id="bookbox"></div></div>
     <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="chatbox"></div></div>
-  </div></div>`;
+  </aside></div>
+  ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(g.packages.length ? Math.min(...g.packages.map((p) => p.price_cents)) : g.rate_cents) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
   wireShare(app);
   app.querySelectorAll(".thumb").forEach((b) => { b.onclick = () => { document.getElementById("hero-img").src = g.photos[Number(b.dataset.i)].url; }; });
 
@@ -70,7 +74,7 @@ export async function group(app, id) {
     const sb = document.getElementById("slotbox");
     const slots = st.date ? (st.days[st.date.slice(0, 7)] || {})[st.date] || [] : [];
     sb.innerHTML = st.date ? `<div class="slots">${slots.map((s) => `<button type="button" class="slot${st.time === s ? " sel" : ""}" data-t="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : "";
-    sb.querySelectorAll(".slot").forEach((b) => { b.onclick = () => { st.time = b.dataset.t; drawCal(); drawBook(); }; });
+    sb.querySelectorAll(".slot").forEach((b) => { b.onclick = () => { st.time = b.dataset.t; drawCal(); drawBook(); document.getElementById("bookpanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }; });
   }
 
   // booking form
@@ -88,11 +92,11 @@ export async function group(app, id) {
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
       <label for="b-pkg">${esc(t("g.package"))}</label><select id="b-pkg" name="packageId"><option value="">${esc(t("g.hourly", { price: money(g.rate_cents) }))}</option>${g.packages.map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
       <div id="hrs-wrap"><label for="b-hrs">${esc(t("g.hoursLabel"))}</label><select id="b-hrs" name="hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === Number(prev.hours || 2) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
-      <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === prev.event ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
-      <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests")}"></div>
-      <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", g.zip)}"></div></div>
+      <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
+      <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
+      <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
       <label for="b-name">${esc(t("g.yourName"))}</label><input id="b-name" name="name" required maxlength="80" autocomplete="name" value="${v("name", user.name)}">
-      <label for="b-phone">${esc(t("g.yourPhone"))}</label><input id="b-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" value="${v("phone", user.phone)}">
+      <label for="b-phone">${esc(t("g.yourPhone"))}</label><input id="b-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" value="${v("phone", fmtPhone(user.phone))}">
       <label for="b-addr">${esc(t("g.address"))}</label><input id="b-addr" name="address" required maxlength="160" value="${v("address")}">
       <label for="b-msg">${esc(t("g.special"))}</label><textarea id="b-msg" name="message" maxlength="500" placeholder="${esc(t("g.specialHint"))}">${v("message")}</textarea>
       <div id="quote" class="quote"></div>
@@ -161,5 +165,20 @@ export async function group(app, id) {
     };
   }
 
+  // Open on a month that has something to click, or on the date the customer searched for.
+  async function initCalendar() {
+    if (ctx.date && /^\d{4}-\d{2}-\d{2}$/.test(ctx.date)) {
+      st.month = monthOf(ctx.date); await loadMonth();
+      if ((st.days[monthKey(st.month)] || {})[ctx.date]) { st.date = ctx.date; return; }
+    }
+    if (g.next_open) st.month = monthOf(g.next_open);
+  }
+  await initCalendar();
   await drawCal(); drawBook(); await drawChat();
+
+  const ctaBtn = document.getElementById("ctabtn");
+  if (ctaBtn) {
+    ctaBtn.onclick = () => document.getElementById("calpanel").scrollIntoView({ behavior: "smooth" });
+    if ("IntersectionObserver" in window) new IntersectionObserver(([e]) => { document.getElementById("ctabar")?.toggleAttribute("hidden", e.isIntersecting); }, { threshold: 0.15 }).observe(document.getElementById("calpanel"));
+  }
 }

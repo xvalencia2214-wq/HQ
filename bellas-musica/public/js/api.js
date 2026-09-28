@@ -10,7 +10,11 @@ async function call(method, url, body) {
   });
   let json = null;
   try { json = await res.json(); } catch { /* empty body */ }
-  if (!res.ok) throw new ApiError(res.status, (json && json.error) || `Error ${res.status}`);
+  if (!res.ok) {
+    // A 401 on anything but the login form means the session ended: let the app send the user to log in.
+    if (res.status === 401 && !url.startsWith("/api/auth/") && !url.startsWith("/api/me")) window.dispatchEvent(new CustomEvent("bm:unauth"));
+    throw new ApiError(res.status, (json && json.error) || `Error ${res.status}`);
+  }
   return json;
 }
 

@@ -2,6 +2,9 @@ import { api } from "./api.js";
 import { state } from "./state.js";
 
 const EN = {
+  "f.more": "More filters", "f.radius": "Distance", "f.miles": "Within {n} miles", "f.clear": "Clear filters", "f.locate": "Use my location", "f.locating": "Finding your ZIP…", "f.locFail": "Couldn't find your location. Type your ZIP instead.",
+  "home.searching": "Searching…", "common.loading": "Loading…", "common.sessionExpired": "Your session expired. Please log in again.", "card.nearby": "In your area", "g.checkDates": "Check dates", "nav.menu": "Menu",
+  "dash.secNew": "Needs your response", "dash.secUpcoming": "Upcoming", "dash.secPast": "Past & closed", "dash.emptySec": "Nothing here.",
   "nav.find": "Find music", "nav.bookings": "My bookings", "nav.groups": "For groups", "nav.login": "Log in", "nav.signup": "Sign up", "nav.logout": "Log out", "nav.loggedOut": "You're logged out",
   "foot": "Bella's Música · USA only · Deposits are refunded according to each group's cancellation policy.",
   "foot.terms": "Terms", "foot.privacy": "Privacy", "banner.test": "Test mode: no real money moves and texts are not sent.",
@@ -49,7 +52,7 @@ const EN = {
   "pay.depositFor": "Deposit for {name}", "pay.amount": "Deposit", "pay.testMode": "Test mode: no real card is charged.", "pay.button": "Pay {amount} (test)",
   "pay.featureTitle": "Featured placement (30 days)", "pay.featureText": "Your group appears first in local search.",
   "cal.prev": "Previous month", "cal.next": "Next month",
-  "tab.requests": "Requests", "tab.calendar": "Calendar", "tab.listing": "Listing", "tab.extras": "Packages & songs", "tab.media": "Photos & video", "tab.payments": "Payments & featuring", "tab.messages": "Messages",
+  "tab.requests": "Requests", "tab.calendar": "Calendar", "tab.listing": "Profile", "tab.extras": "Packages", "tab.media": "Media", "tab.payments": "Payments", "tab.messages": "Messages",
   "dash.title": "group dashboard", "dash.pick": "Choose group", "dash.add": "Add a group", "dash.view": "View public page",
   "dash.create": "List your group", "dash.createSub": "Get found, take deposits and manage your dates in one place.", "dash.createBtn": "Create listing", "dash.created": "Group created! Now add your open dates.",
   "dash.name": "Group name", "dash.zip": "Home ZIP code", "dash.members": "Number of musicians", "dash.rate": "Price per hour ($)", "dash.maxGuests": "Best for up to (guests)",
@@ -73,6 +76,9 @@ const EN = {
 };
 
 const ES = {
+  "f.more": "Más filtros", "f.radius": "Distancia", "f.miles": "A menos de {n} millas", "f.clear": "Quitar filtros", "f.locate": "Usar mi ubicación", "f.locating": "Buscando tu código postal…", "f.locFail": "No pudimos encontrar tu ubicación. Escribe tu código postal.",
+  "home.searching": "Buscando…", "common.loading": "Cargando…", "common.sessionExpired": "Tu sesión expiró. Inicia sesión de nuevo.", "card.nearby": "En tu zona", "g.checkDates": "Ver fechas", "nav.menu": "Menú",
+  "dash.secNew": "Esperan tu respuesta", "dash.secUpcoming": "Próximas", "dash.secPast": "Pasadas y cerradas", "dash.emptySec": "Nada aquí.",
   "nav.find": "Buscar música", "nav.bookings": "Mis reservas", "nav.groups": "Para grupos", "nav.login": "Iniciar sesión", "nav.signup": "Crear cuenta", "nav.logout": "Cerrar sesión", "nav.loggedOut": "Cerraste sesión",
   "foot": "Bella's Música · Solo EE. UU. · Los depósitos se reembolsan según la política de cancelación de cada grupo.",
   "foot.terms": "Términos", "foot.privacy": "Privacidad", "banner.test": "Modo de prueba: no se mueve dinero real y no se envían mensajes de texto.",
@@ -120,7 +126,7 @@ const ES = {
   "pay.depositFor": "Depósito para {name}", "pay.amount": "Depósito", "pay.testMode": "Modo de prueba: no se cobra ninguna tarjeta real.", "pay.button": "Pagar {amount} (prueba)",
   "pay.featureTitle": "Lugar destacado (30 días)", "pay.featureText": "Tu grupo aparece primero en las búsquedas locales.",
   "cal.prev": "Mes anterior", "cal.next": "Mes siguiente",
-  "tab.requests": "Solicitudes", "tab.calendar": "Calendario", "tab.listing": "Perfil", "tab.extras": "Paquetes y canciones", "tab.media": "Fotos y video", "tab.payments": "Pagos y destacado", "tab.messages": "Mensajes",
+  "tab.requests": "Solicitudes", "tab.calendar": "Calendario", "tab.listing": "Perfil", "tab.extras": "Paquetes", "tab.media": "Fotos y video", "tab.payments": "Pagos", "tab.messages": "Mensajes",
   "dash.title": "panel del grupo", "dash.pick": "Elegir grupo", "dash.add": "Agregar un grupo", "dash.view": "Ver página pública",
   "dash.create": "Publica tu grupo", "dash.createSub": "Que te encuentren, cobra depósitos y maneja tus fechas en un solo lugar.", "dash.createBtn": "Crear perfil", "dash.created": "¡Grupo creado! Ahora agrega tus fechas disponibles.",
   "dash.name": "Nombre del grupo", "dash.zip": "Código postal de origen", "dash.members": "Número de músicos", "dash.rate": "Precio por hora ($)", "dash.maxGuests": "Ideal hasta (invitados)",

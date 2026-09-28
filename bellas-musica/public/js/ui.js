@@ -15,6 +15,9 @@ export const fmtDate = (k) => parseKey(k).toLocaleDateString(lang() === "es" ? "
 export const fmtMonth = (d) => d.toLocaleString(lang() === "es" ? "es-US" : "en-US", { month: "long", year: "numeric" });
 export const dowLetters = () => (lang() === "es" ? ["D", "L", "M", "M", "J", "V", "S"] : ["S", "M", "T", "W", "T", "F", "S"]);
 
+// +13125550142 -> (312) 555-0142 (display only; the server accepts any format)
+export const fmtPhone = (p) => { const d = String(p || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, ""); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : String(p || ""); };
+
 // Attribute-safe "selected" helper for <option>.
 export const sel = (a, b) => (String(a) === String(b) ? " selected" : "");
 
