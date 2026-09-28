@@ -116,3 +116,25 @@ label { display: block; font-size: .85rem; color: var(--ink-2); margin: 12px 0 4
 .req:last-child { border-bottom: 0; }
 .badge { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: #fbf1d7; border: 1px solid var(--gold-2); }
 footer { text-align: center; color: var(--ink-2); font-size: .8rem; padding: 10px 16px 30px; }
+
+/* logo, map, dashboard */
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { border-radius: 9px; }
+.hero-logo { width: 84px; height: 84px; border-radius: 18px; margin-bottom: 8px; }
+.titlebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--gold); border-radius: 999px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 7px 18px; color: var(--ink); }
+.seg button.on { background: var(--black); color: var(--gold-2); }
+.map { height: 460px; border-radius: var(--radius); border: 1px solid var(--line); z-index: 0; }
+.feat { position: absolute; top: -10px; right: 12px; background: var(--gold); color: #fff; font-size: .75rem; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.feat.inline { position: static; vertical-align: middle; font-family: system-ui, sans-serif; margin-left: 6px; }
+.dim { color: var(--ink-2); font-weight: 400; font-size: .9rem; }
+h2 small.dim { font-family: system-ui, sans-serif; }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.quick .btn { font-size: .85rem; padding: 8px 12px; }
+.chk { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: .95rem; }
+.chk input { width: auto; }
+.badge.confirmed { background: #e6f2e7; border-color: #9fcaa5; color: #245a2c; }
+.badge.declined { background: #f6e3e3; border-color: #d9a3a3; color: var(--bad); }
+.slot[disabled] { opacity: .5; cursor: not-allowed; }
+.day[disabled] { cursor: default; }
