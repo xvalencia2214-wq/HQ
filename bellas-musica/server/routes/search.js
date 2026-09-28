@@ -35,7 +35,7 @@ export default function searchRoutes(ctx, add) {
 
     expirePending(db);
     const ratings = ratingMap(db), photos = firstPhotos(db);
-    const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages GROUP BY group_id").map((r) => [r.group_id, r.m]));
+    const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
 
     let list = [];
     // Only groups whose ZIP is inside the radius can match, so let SQL skip everything else.

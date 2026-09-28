@@ -1,6 +1,7 @@
 import { todayStr, addDays, now, getTimezone } from "./util.js";
 import { usd } from "./emails.js";
 import { backupIfNeeded } from "./backups.js";
+import { RESCHED_TTL } from "./shared.js";
 import { expirePending } from "./shared.js";
 import { fillDemoAvailability } from "./seed.js";
 
@@ -50,6 +51,7 @@ export function housekeeping(ctx) {
   db.run("DELETE FROM sessions WHERE expires_at < ?", now());
   db.run("DELETE FROM webhook_events WHERE created_at < ?", now() - 30 * 86400);
   db.run("DELETE FROM auth_tokens WHERE expires_at < ?", now() - 86400);
+  db.run("UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = '' WHERE resched_status = 'pending' AND (resched_at < ? OR date < ?)", now() - RESCHED_TTL, todayStr());
   db.run("DELETE FROM payments_feature WHERE status = 'pending' AND created_at < ?", now() - 7 * 86400);
 }
 

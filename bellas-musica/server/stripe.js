@@ -76,11 +76,23 @@ export function createStripe(config) {
       }, `checkout-feature-${feature.id}`);
     },
 
+    // The rest of the price, paid after the group confirms. No platform fee here: it was already taken from the deposit.
+    checkoutForBalance({ booking, group, successUrl, cancelUrl }) {
+      return call("POST", "/v1/checkout/sessions", {
+        mode: "payment", success_url: successUrl, cancel_url: cancelUrl, client_reference_id: booking.id,
+        expires_at: Math.floor(Date.now() / 1000) + 2400,
+        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: booking.total_cents - booking.deposit_cents, product_data: { name: `Balance: ${group.name} on ${booking.date}` } } }],
+        payment_intent_data: { transfer_data: { destination: group.stripe_account_id }, metadata: { kind: "balance", booking_id: booking.id } },
+        metadata: { kind: "balance", booking_id: booking.id }
+      }, `checkout-balance-${booking.id}-${Math.floor(Date.now() / 600000)}`); // retries within 10 minutes reuse the same session
+    },
+    expireCheckoutSession: (id) => call("POST", `/v1/checkout/sessions/${encodeURIComponent(id)}/expire`, {}),
+
     getCheckoutSession: (id) => call("GET", `/v1/checkout/sessions/${encodeURIComponent(id)}`),
 
     // Refund a deposit. reverse_transfer pulls the money back from the group; the app fee is returned too.
-    refund({ paymentIntent, amountCents, key }) {
-      return call("POST", "/v1/refunds", { payment_intent: paymentIntent, amount: amountCents, reverse_transfer: "true", refund_application_fee: "true" }, key);
+    refund({ paymentIntent, amountCents, key, applicationFee = true }) {
+      return call("POST", "/v1/refunds", { payment_intent: paymentIntent, amount: amountCents, reverse_transfer: "true", ...(applicationFee ? { refund_application_fee: "true" } : {}) }, key);
     },
 
     createAccount: (email) => call("POST", "/v1/accounts", { type: "express", country: "US", email, capabilities: { card_payments: { requested: true }, transfers: { requested: true } } }),

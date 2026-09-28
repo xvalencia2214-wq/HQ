@@ -54,9 +54,9 @@ export default function adminRoutes(ctx, add) {
       texts_30d: { sent: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 1 AND created_at > ?", d30).c, failed: one("SELECT COUNT(*) c FROM sms_log WHERE error != '' AND created_at > ?", d30).c, logged_only: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 0 AND error = '' AND created_at > ?", d30).c },
       invites: db.all("SELECT id, name, type, zip, created_at FROM groups WHERE invited = 1 AND owner_id IS NULL ORDER BY created_at DESC").map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "" })),
       groups_list: db.all(
-        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
+        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
                 (SELECT COUNT(*) FROM bookings b WHERE b.group_id = g.id AND b.status IN ('requested','confirmed')) AS active_bookings
-         FROM groups g LEFT JOIN users u ON u.id = g.owner_id ORDER BY g.demo, g.created_at DESC LIMIT 200`).map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "", demo: Boolean(g.demo), hidden: Boolean(g.hidden), status: g.hidden ? "hidden" : g.demo ? "live" : g.published_at === 0 ? "draft" : g.paused ? "paused" : "live", stripe_ready: Boolean(g.stripe_ready) })),
+         FROM groups g LEFT JOIN users u ON u.id = g.owner_id ORDER BY g.demo, g.created_at DESC LIMIT 200`).map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "", demo: Boolean(g.demo), hidden: Boolean(g.hidden), verified: Boolean(g.verified), insured: Boolean(g.insured), status: g.hidden ? "hidden" : g.demo ? "live" : g.published_at === 0 ? "draft" : g.paused ? "paused" : "live", stripe_ready: Boolean(g.stripe_ready) })),
       recent_bookings: db.all(`SELECT b.id, g.name AS group_name, b.status, b.payment_status, b.date, b.total_cents, b.deposit_cents, b.created_at FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status != 'expired' ORDER BY b.created_at DESC LIMIT 15`),
       recent_signups: db.all("SELECT id, name, email, created_at FROM users ORDER BY id DESC LIMIT 10"),
       log: db.all("SELECT admin_email, action, target, details, created_at FROM admin_log ORDER BY id DESC LIMIT 25")
@@ -110,6 +110,18 @@ export default function adminRoutes(ctx, add) {
     db.run("UPDATE groups SET hidden = ? WHERE id = ?", hidden, params.id);
     log(user, hidden ? "hide group" : "unhide group", params.id);
     return { ok: true, hidden: Boolean(hidden) };
+  });
+
+  // "Verified" (you checked they are a real, working group) and "Insured" (you saw proof of insurance). Only you can grant these.
+  add("POST", "/api/admin/groups/:id/badges", ({ params, body, user }) => {
+    admin(user);
+    const g = db.get("SELECT verified, insured FROM groups WHERE id = ?", params.id);
+    if (!g) throw new HttpError(404, "Group not found");
+    const verified = body.verified === undefined ? g.verified : body.verified === true ? 1 : 0;
+    const insured = body.insured === undefined ? g.insured : body.insured === true ? 1 : 0;
+    db.run("UPDATE groups SET verified = ?, insured = ? WHERE id = ?", verified, insured, params.id);
+    log(user, "badges", params.id, `verified=${verified} insured=${insured}`);
+    return { ok: true, verified: Boolean(verified), insured: Boolean(insured) };
   });
 
   // Comp (or clear) featured placement without a payment.

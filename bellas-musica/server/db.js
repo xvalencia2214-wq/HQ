@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS packages (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   hours INTEGER NOT NULL,
-  price_cents INTEGER NOT NULL
+  price_cents INTEGER NOT NULL,
+  private_customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS availability (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -106,6 +108,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   reminder_sent INTEGER NOT NULL DEFAULT 0,
   reminder7_sent INTEGER NOT NULL DEFAULT 0,
   reminder1_sent INTEGER NOT NULL DEFAULT 0,
+  balance_status TEXT NOT NULL DEFAULT 'unpaid',
+  balance_pi TEXT NOT NULL DEFAULT '',
+  balance_session_id TEXT NOT NULL DEFAULT '',
+  balance_refund_cents INTEGER NOT NULL DEFAULT 0,
+  balance_paid_at INTEGER NOT NULL DEFAULT 0,
+  resched_status TEXT NOT NULL DEFAULT '',
+  resched_date TEXT NOT NULL DEFAULT '',
+  resched_time TEXT NOT NULL DEFAULT '',
+  resched_note TEXT NOT NULL DEFAULT '',
+  resched_at INTEGER NOT NULL DEFAULT 0,
+  resched_count INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -146,6 +159,15 @@ CREATE TABLE IF NOT EXISTS stats_daily (
   ref TEXT NOT NULL DEFAULT '',
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, key, ref)
+);
+-- A payment that arrived when it should not stand (a duplicate, or after a cancellation) is refunded in full and recorded here.
+CREATE TABLE IF NOT EXISTS extra_refunds (
+  id INTEGER PRIMARY KEY,
+  booking_id TEXT NOT NULL,
+  payment_intent TEXT NOT NULL,
+  cents INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS thread_reads (
   group_id TEXT NOT NULL,
@@ -212,12 +234,29 @@ export function openDb(config) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
     return true;
   };
+  ensureColumn("reviews", "reply", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("reviews", "reply_at", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "verified", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "insured", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("packages", "private_customer_id", "INTEGER REFERENCES users(id) ON DELETE CASCADE");
+  ensureColumn("packages", "expires_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "hidden", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "paused", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "invited", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "claim_token_hash", "TEXT NOT NULL DEFAULT ''");
   // Groups that already existed when the draft/publish step was introduced stay live.
   if (ensureColumn("groups", "published_at", "INTEGER NOT NULL DEFAULT 0")) db.exec("UPDATE groups SET published_at = created_at WHERE demo = 0 AND owner_id IS NOT NULL");
+  ensureColumn("bookings", "balance_status", "TEXT NOT NULL DEFAULT 'unpaid'");
+  ensureColumn("bookings", "balance_pi", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "balance_session_id", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "balance_refund_cents", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "balance_paid_at", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "resched_status", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "resched_date", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "resched_time", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "resched_note", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "resched_at", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "resched_count", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "reminder7_sent", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "reminder1_sent", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("users", "email_verified", "INTEGER NOT NULL DEFAULT 0");

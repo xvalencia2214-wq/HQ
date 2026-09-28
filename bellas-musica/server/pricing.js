@@ -18,11 +18,19 @@ export function refundPercent(policy, daysBefore) {
   return 0;
 }
 
-// Refund (in cents) owed to the customer if they cancel today.
-export function refundForCancel(booking, today) {
-  if (booking.payment_status !== "paid") return 0;
+export const balanceCents = (b) => b.total_cents - b.deposit_cents;
+
+// What a customer gets back if they cancel today: the policy's percentage of everything they paid in the app
+// (the deposit, plus the balance if they already paid it). A balance paid outside the app is between them and the group.
+export function refundParts(booking, today) {
   const pct = refundPercent(booking.policy, daysBetween(today, booking.date));
-  return Math.floor((booking.deposit_cents * pct) / 100);
+  const deposit = booking.payment_status === "paid" ? Math.floor((booking.deposit_cents * pct) / 100) : 0;
+  const balance = booking.balance_status === "paid" ? Math.floor((balanceCents(booking) * pct) / 100) : 0;
+  return { deposit, balance, pct };
+}
+export function refundForCancel(booking, today) {
+  const p = refundParts(booking, today);
+  return p.deposit + p.balance;
 }
 
 // Build a quote. `pkg` is a package row or null (hourly). All values integer cents.

@@ -19,14 +19,29 @@ function checkInvariants(db, fake, log) {
     if (b.status === "pending_payment" && b.payment_status !== "unpaid") fail("pending but paid", b);
     if (b.platform_fee_cents > b.deposit_cents || b.deposit_cents > b.total_cents) fail("money ordering broken", b);
   }
+  for (const b of db.all("SELECT * FROM bookings")) {
+    const owed = b.total_cents - b.deposit_cents;
+    if (b.balance_refund_cents < 0 || b.balance_refund_cents > owed) fail("balance refund out of range", b);
+    if (["unpaid", "offline"].includes(b.balance_status) && (b.balance_refund_cents !== 0 || b.balance_pi !== "")) fail("balance not paid but has a payment or refund", b);
+    if (b.balance_status === "paid" && b.balance_refund_cents !== 0) fail("balance paid but has refund", b);
+    if (b.balance_status === "partial_refund" && !(b.balance_refund_cents > 0 && b.balance_refund_cents < owed)) fail("bad partial balance refund", b);
+    if (b.balance_status === "refunded" && b.balance_refund_cents !== owed) fail("balance refunded amount mismatch", b);
+    if (["paid", "partial_refund", "refunded"].includes(b.balance_status) && (!b.balance_pi || b.payment_status === "unpaid")) fail("balance paid without a payment or before the deposit", b);
+    if (b.balance_status !== "unpaid" && !["confirmed", "cancelled"].includes(b.status)) fail("balance touched on a booking that was never confirmed", b);
+    if (b.status === "cancelled" && b.balance_status === "paid" && b.refund_cents === b.deposit_cents && b.payment_status === "refunded") fail("cancelled with everything refunded but the balance was left paid", b);
+  }
+  if (db.get("SELECT 1 AS x FROM extra_refunds WHERE cents <= 0")) fail("empty stray refund", {});
   const dup = db.get(`SELECT group_id, date, time, COUNT(*) c FROM bookings WHERE status IN ('pending_payment','requested','confirmed') GROUP BY group_id, date, time HAVING c > 1`);
   if (dup) fail("double-booked slot", dup);
   if (db.get("SELECT 1 AS x FROM reviews GROUP BY booking_id HAVING COUNT(*) > 1")) fail("duplicate review", {});
-  if (fake) { // every cent we recorded as refunded was actually refunded by Stripe exactly once
+  if (fake) { // every cent we recorded as refunded was actually refunded by Stripe exactly once, on the payment it belongs to
     const byPi = new Map();
     for (const r of fake.state.refunded) byPi.set(r.pi, (byPi.get(r.pi) || 0) + r.amount);
-    for (const b of db.all("SELECT stripe_payment_intent pi, SUM(refund_cents) r FROM bookings WHERE stripe_payment_intent != '' GROUP BY stripe_payment_intent")) {
-      if ((byPi.get(b.pi) || 0) !== b.r) fail("Stripe refunds do not match our records", { pi: b.pi, stripe: byPi.get(b.pi) || 0, ours: b.r });
+    const ours = new Map(), add = (pi, n) => { if (pi) ours.set(pi, (ours.get(pi) || 0) + n); };
+    for (const b of db.all("SELECT stripe_payment_intent dpi, refund_cents dr, balance_pi bpi, balance_refund_cents br FROM bookings")) { add(b.dpi, b.dr); add(b.bpi, b.br); }
+    for (const e of db.all("SELECT payment_intent pi, cents FROM extra_refunds")) add(e.pi, e.cents);
+    for (const pi of new Set([...byPi.keys(), ...ours.keys()])) {
+      if ((byPi.get(pi) || 0) !== (ours.get(pi) || 0)) fail("Stripe refunds do not match our records", { pi, stripe: byPi.get(pi) || 0, ours: ours.get(pi) || 0 });
     }
   }
 }
@@ -54,13 +69,13 @@ async function run(mode, seed, steps) {
     for (let i = 0; i < steps; i++) {
       const roll = R() * 100, b = bookings.length ? pick(bookings) : null;
       let what;
-      if (roll < 28 || !b) { // create
+      if (roll < 22 || !b) { // create
         const g = pick(groups), c = pick(custs);
         const body = bookingBody(g.id, pick(dates), { time: pick(["12:00 PM", "2:00 PM", "4:00 PM"]), hours: pick([1, 2, 3]), eventZip: pick(["60608", "77003"]) });
         what = `create ${g.id} ${body.date} ${body.time}`;
         const r = ok(await c.post("/api/bookings", body), what);
         if (r.status === 200) bookings.push({ id: r.json.booking.id, group: g, cust: c, deposit: r.json.booking.deposit_cents });
-      } else if (roll < 50) { // pay (a webhook may repeat, or arrive late for an expired/cancelled booking)
+      } else if (roll < 42) { // pay the deposit (a webhook may repeat, or arrive late for an expired/cancelled booking)
         what = `pay ${b.id}`;
         if (fake) {
           const dep = S.db.get("SELECT deposit_cents d FROM bookings WHERE id = ?", b.id).d;
@@ -68,21 +83,32 @@ async function run(mode, seed, steps) {
           ok(await postWebhook(S.base, ev, "whsec_f"), what);
           if (R() < 0.3) ok(await postWebhook(S.base, ev, "whsec_f"), what + " (replay)");
         } else ok(await b.cust.post(`/api/bookings/${b.id}/simulate-pay`), what);
-      } else if (roll < 60) { what = `accept ${b.id}`; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "accept" }), what); }
-      else if (roll < 67) { what = `decline ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.25; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "decline" }), what + (fake?.state.failRefunds ? " [refund fails]" : "")); if (fake) fake.state.failRefunds = false; }
-      else if (roll < 77) { what = `cancel(cust) ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.2; ok(await b.cust.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); if (fake) fake.state.failRefunds = false; }
-      else if (roll < 81) { what = `cancel(owner) ${b.id}`; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); }
-      else if (roll < 86) { what = `expire hold ${b.id}`; S.db.run("UPDATE bookings SET created_at = created_at - 4000 WHERE id = ? AND status = 'pending_payment'", b.id); ok(await b.cust.get("/api/my/bookings"), what); }
-      else if (roll < 90) { what = `time passes ${b.id}`; S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-2), b.id); }
-      else if (roll < 94) { what = `review ${b.id}`; ok(await b.cust.post(`/api/bookings/${b.id}/review`, { rating: 1 + Math.floor(R() * 5), text: "ok" }), what); }
-      else if (roll < 97) { // two identical requests at once (double-tap)
-        const act = pick(["cancel", "cancel", "accept", "decline"]); const who = act === "cancel" ? b.cust : b.group.owner;
+      } else if (roll < 56) { // pay the balance: normally once, sometimes twice (a second payment id), sometimes at a bad time
+        what = `pay balance ${b.id}`;
+        if (fake) {
+          const owed = S.db.get("SELECT total_cents - deposit_cents d FROM bookings WHERE id = ?", b.id).d;
+          const suffix = R() < 0.25 ? "_second" : "";
+          const ev = { id: `evt_b_${Math.floor(R() * 1e9)}`, type: "checkout.session.completed", data: { object: { payment_status: "paid", amount_total: owed, payment_intent: `pi_fzb_${b.id}${suffix}`, metadata: { kind: "balance", booking_id: b.id } } } };
+          ok(await postWebhook(S.base, ev, "whsec_f"), what + suffix);
+          if (R() < 0.3) ok(await postWebhook(S.base, ev, "whsec_f"), what + " (replay)");
+        } else { ok(await b.cust.post(`/api/bookings/${b.id}/balance`), what); ok(await b.cust.post(`/api/bookings/${b.id}/simulate-pay-balance`), what + " (sim)"); }
+      } else if (roll < 65) { what = `accept ${b.id}`; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "accept" }), what); }
+      else if (roll < 69) { const rec = R() < 0.7; what = `balance offline=${rec} ${b.id}`; ok(await b.group.owner.post(`/api/bookings/${b.id}/balance-offline`, { received: rec }), what); }
+      else if (roll < 74) { what = `decline ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.25; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "decline" }), what + (fake?.state.failRefunds ? " [refund fails]" : "")); if (fake) fake.state.failRefunds = false; }
+      else if (roll < 83) { what = `cancel(cust) ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.2; ok(await b.cust.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); if (fake) fake.state.failRefunds = false; }
+      else if (roll < 86) { what = `cancel(owner) ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.2; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); if (fake) fake.state.failRefunds = false; }
+      else if (roll < 89) { what = `expire hold ${b.id}`; S.db.run("UPDATE bookings SET created_at = created_at - 4000 WHERE id = ? AND status = 'pending_payment'", b.id); ok(await b.cust.get("/api/my/bookings"), what); }
+      else if (roll < 92) { what = `time passes ${b.id}`; S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-2), b.id); }
+      else if (roll < 95) { what = `review ${b.id}`; ok(await b.cust.post(`/api/bookings/${b.id}/review`, { rating: 1 + Math.floor(R() * 5), text: "ok" }), what); }
+      else if (roll < 98) { // two identical requests at once (double-tap)
+        const act = pick(["cancel", "cancel", "accept", "decline", "balance"]); const who = act === "cancel" || act === "balance" ? b.cust : b.group.owner;
         what = `double ${act} ${b.id}`;
         if (fake) fake.state.refundDelay = 30;
-        const rs = await Promise.all([who.patch(`/api/bookings/${b.id}`, { action: act }), who.patch(`/api/bookings/${b.id}`, { action: act })]);
+        const call = () => (act === "balance" ? (fake ? who.post(`/api/bookings/${b.id}/balance`) : who.post(`/api/bookings/${b.id}/simulate-pay-balance`)) : who.patch(`/api/bookings/${b.id}`, { action: act }));
+        const rs = await Promise.all([call(), call()]);
         if (fake) fake.state.refundDelay = 0;
         rs.forEach((r) => ok(r, what));
-        assert.ok(rs.filter((r) => r.status === 200).length <= 1 || act === "accept" && false, `both double-${act} requests succeeded: ${b.id}`);
+        if (act !== "balance") assert.ok(rs.filter((r) => r.status === 200).length <= 1, `both double-${act} requests succeeded: ${b.id}`);
       } else { what = `chat ${b.group.id}`; ok(await b.cust.post(`/api/groups/${b.group.id}/messages`, { text: "Hola, tocan Volver Volver?" }), what); }
       log.push(what);
       checkInvariants(S.db, fake, log);
@@ -98,7 +124,7 @@ async function run(mode, seed, steps) {
 }
 
 for (const mode of ["simulated", "live"]) {
-  test(`stress: ${mode} payments, 3 seeds x 250 random steps keep every invariant`, { timeout: 240_000 }, async () => {
+  test(`stress: ${mode} payments, 3 seeds x 250 random steps (deposits and balances) keep every invariant`, { timeout: 240_000 }, async () => {
     for (const seed of [7, 2024, 987654]) {
       const stats = await run(mode, seed, 250);
       console.log(`  ${mode} seed ${seed}: ${stats}`);

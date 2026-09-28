@@ -24,7 +24,7 @@ export function renderSharePage(ctx, kind, id) {
       const photo = db.get("SELECT file FROM photos WHERE group_id = ? ORDER BY position, created_at LIMIT 1", g.id);
       if (photo) image = `${config.baseUrl}/uploads/${photo.file}`;
       url = `${config.baseUrl}/g/${g.id}`;
-      const fromPrice = db.get("SELECT MIN(price_cents) m FROM packages WHERE group_id = ?", g.id).m ?? g.rate_cents;
+      const fromPrice = db.get("SELECT MIN(price_cents) m FROM packages WHERE group_id = ? AND private_customer_id IS NULL", g.id).m ?? g.rate_cents;
       summary = `<div class="panel"><h1>${h(g.name)}</h1><p>${h(g.type)}${place ? " · " + h(place) : ""} · from $${Math.round(fromPrice / 100)}</p><p>${h(g.story)}</p></div>`;
     }
   } else if (kind === "c" && id === MARKET.key) {

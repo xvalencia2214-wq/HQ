@@ -1,11 +1,11 @@
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
-import { displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markFeaturePaid, newId, openSlots, refundBooking, requireOwner } from "../shared.js";
+import { RESCHED_TTL, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -27,6 +27,10 @@ export default function bookingRoutes(ctx, add) {
     if (body.packageId !== undefined && body.packageId !== null && body.packageId !== "") {
       pkg = db.get("SELECT * FROM packages WHERE id = ? AND group_id = ?", int(body.packageId, "Package", { min: 1 }), group.id);
       if (!pkg) throw new HttpError(400, "That package isn't offered by this group");
+      if (pkg.private_customer_id !== null) { // a custom offer: only for the customer it was made for, while it lasts
+        if (!user || pkg.private_customer_id !== user.id) throw new HttpError(400, "That package isn't offered by this group");
+        if (pkg.expires_at <= now()) throw new HttpError(400, "This custom offer has expired. Ask the group for a new one.");
+      }
     }
     const hours = pkg ? pkg.hours : int(body.hours, "Hours", { min: 1, max: 8 });
     if (requireSlot && !openSlots(db, group.id, date).includes(time)) throw new HttpError(409, "That time isn't available");
@@ -43,6 +47,15 @@ export default function bookingRoutes(ctx, add) {
   });
 
   // ---- views ----
+  // The balance can be paid in the app once the group has confirmed, until the event day, if it is still owed.
+  const canPayBalance = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && balanceCents(b) > 0 && b.date >= today;
+
+  // ---- rescheduling ----
+  const RESCHED_MIN_DAYS = 2, RESCHED_MAX = 2;
+  const reschedPending = (b) => b.resched_status === "pending" && b.resched_at > now() - RESCHED_TTL;
+  const canReschedule = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !reschedPending(b) && b.resched_count < RESCHED_MAX && daysBetween(today, b.date) >= RESCHED_MIN_DAYS;
+  const clearResched = (id, extraSql = "") => db.run(`UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = ''${extraSql}, updated_at = ? WHERE id = ?`, now(), id);
+
   function view(b, role) {
     const status = displayStatus(b);
     const today = todayStr();
@@ -50,7 +63,9 @@ export default function bookingRoutes(ctx, add) {
       id: b.id, group_id: b.group_id, group_name: b.group_name, date: b.date, time: b.time, hours: b.hours, package_name: b.package_name,
       event_type: b.event_type, guests: b.guests, event_zip: b.event_zip, address: b.address, message: b.message,
       subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
-      balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at
+      balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
+      balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
+      reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
     };
     if (role === "customer") {
       out.can_cancel = ["requested", "confirmed", "pending_payment"].includes(b.status) && b.date > today;
@@ -58,6 +73,8 @@ export default function bookingRoutes(ctx, add) {
       out.refund_percent_now = refundPercent(b.policy, daysBetween(today, b.date));
       out.can_review = b.status === "confirmed" && b.date < today && b.payment_status !== "unpaid" && !b.reviewed;
       out.reviewed = Boolean(b.reviewed);
+      out.can_pay_balance = canPayBalance(b, today);
+      out.can_reschedule = canReschedule(b, today);
       out.pay_url = b.status === "pending_payment" && !stripe.live ? `${config.baseUrl}/#/pay/booking/${b.id}` : undefined;
     } else {
       out.customer_name = b.name;
@@ -65,6 +82,8 @@ export default function bookingRoutes(ctx, add) {
       out.platform_fee_cents = b.platform_fee_cents;
       out.payout_cents = Math.max(0, b.deposit_cents - b.platform_fee_cents);
       out.can_respond = b.status === "requested";
+      out.can_respond_reschedule = b.status === "confirmed" && reschedPending(b);
+      out.can_mark_balance_offline = b.status === "confirmed" && balanceCents(b) > 0 && (b.balance_status === "unpaid" || b.balance_status === "offline");
     }
     return out;
   }
@@ -97,6 +116,90 @@ export default function bookingRoutes(ctx, add) {
     if (s && s.status === "open" && typeof s.url === "string" && s.url.startsWith("https://")) return { booking: view(row, "customer"), payment: { mode: "stripe", url: s.url } };
     return null;
   }
+
+  add("POST", "/api/bookings/:id/reschedule", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = mine(user, params.id), today = todayStr();
+    if (b.status !== "confirmed") throw new HttpError(400, "Only confirmed bookings can be moved.");
+    if (reschedPending(b)) throw new HttpError(400, "You already have a request waiting for the group's answer.");
+    if (b.resched_count >= RESCHED_MAX) throw new HttpError(400, `A booking can be moved at most ${RESCHED_MAX} times. Message the group instead.`);
+    if (daysBetween(today, b.date) < RESCHED_MIN_DAYS) throw new HttpError(400, "It's too close to the event to request a new date. Message the group directly.");
+    const date = body.date, time = oneOf(body.time, "Time", SLOTS);
+    if (!isDate(date) || date <= today || date > addDays(today, 730)) throw new HttpError(400, "Pick a future date");
+    if (date === b.date && time === b.time) throw new HttpError(400, "That's the time you already have.");
+    if (!openSlots(db, b.group_id, date).includes(time)) throw new HttpError(409, "That time isn't available.");
+    db.run("UPDATE bookings SET resched_status = 'pending', resched_date = ?, resched_time = ?, resched_note = ?, resched_at = ?, updated_at = ? WHERE id = ?", date, time, str(body.note, "Note", { max: 200 }), now(), now(), b.id);
+    const g = getGroup(db, b.group_id), fresh = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+    if (g.owner_id) notify.to(g.owner_id, "resched.requested.group", { ...notify.bookingVars(fresh, g), newDate: date, newTime: time, note: fresh.resched_note, url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
+  }), { auth: true });
+
+  add("DELETE", "/api/bookings/:id/reschedule", ({ params, user }) => withLock("booking:" + params.id, async () => {
+    const b = mine(user, params.id);
+    if (!reschedPending(b)) throw new HttpError(400, "There is no request to withdraw.");
+    clearResched(b.id);
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
+  }), { auth: true });
+
+  add("POST", "/api/bookings/:id/reschedule/respond", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
+    const g = b && getGroup(db, b.group_id);
+    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (b.status !== "confirmed" || !reschedPending(b)) throw new HttpError(400, "There is no pending request on this booking.");
+    const v = { ...notify.bookingVars(b, g), newDate: b.resched_date, newTime: b.resched_time, url: `${config.baseUrl}/#/booking/${b.id}` };
+    if (body.accept === true) {
+      const slotOk = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", g.id, b.resched_date);
+      if (!slotOk || !JSON.parse(slotOk.slots).includes(b.resched_time)) throw new HttpError(409, "That time is no longer on your calendar. Open it again, or decline.");
+      try {
+        db.tx(() => db.run(`UPDATE bookings SET date = ?, time = ?, resched_count = resched_count + 1, reminder7_sent = 0, reminder1_sent = 0,
+          resched_status = '', resched_date = '', resched_time = '', resched_note = '', updated_at = ? WHERE id = ?`, b.resched_date, b.resched_time, now(), b.id));
+      } catch (e) {
+        if (/UNIQUE/i.test(String(e.message))) throw new HttpError(409, "That time was just taken by another booking.");
+        throw e;
+      }
+      notify.to(b.customer_id, "resched.accepted.customer", v);
+    } else {
+      clearResched(b.id);
+      notify.to(b.customer_id, "resched.declined.customer", v);
+    }
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
+  }), { auth: true });
+
+  // ---- the balance ----
+  add("POST", "/api/bookings/:id/balance", ({ params, user }) => withLock("booking:" + params.id, async () => {
+    const b = mine(user, params.id);
+    if (!canPayBalance(b, todayStr())) throw new HttpError(400, b.balance_status === "offline" ? "The group already marked the balance as received." : b.balance_status !== "unpaid" ? "The balance is already paid." : "The balance can be paid once the group confirms, until the day of the event.");
+    const group = getGroup(db, b.group_id);
+    if (!stripe.live) return { payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/balance/${b.id}` } };
+    if (!group.stripe_ready) throw new HttpError(400, "This group can't take payments in the app right now. Pay the balance directly to the group.");
+    const session = await stripe.checkoutForBalance({ booking: b, group, successUrl: `${config.baseUrl}/#/booking/${b.id}?balance=1`, cancelUrl: `${config.baseUrl}/#/booking/${b.id}` });
+    db.run("UPDATE bookings SET balance_session_id = ? WHERE id = ?", session.id, b.id);
+    return { payment: { mode: "stripe", url: session.url } };
+  }), { auth: true });
+
+  add("POST", "/api/bookings/:id/simulate-pay-balance", async ({ params, user }) => {
+    if (stripe.live) throw new HttpError(400, "Simulated payments are off");
+    const b = mine(user, params.id);
+    await markBalancePaid(ctx, b.id, "sim_bal_" + b.id);
+    return { booking: view(mine(user, b.id), "customer") };
+  }, { auth: true });
+
+  // The group got the balance in cash or by Zelle: record it so the customer isn't asked to pay again. Reversible until the event.
+  add("POST", "/api/bookings/:id/balance-offline", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
+    const g = b && getGroup(db, b.group_id);
+    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (b.status !== "confirmed" || balanceCents(b) <= 0) throw new HttpError(400, "There is no balance to mark on this booking");
+    if (body.received === true) {
+      if (b.balance_status !== "unpaid") throw new HttpError(400, b.balance_status === "offline" ? "Already marked as received" : "The customer already paid the balance in the app");
+      db.run("UPDATE bookings SET balance_status = 'offline', updated_at = ? WHERE id = ?", now(), b.id);
+      // If the customer has a checkout open, close it so they can't pay twice.
+      if (stripe.live && b.balance_session_id) await stripe.expireCheckoutSession(b.balance_session_id).catch(() => {});
+    } else {
+      if (b.balance_status !== "offline") throw new HttpError(400, "It isn't marked as received");
+      db.run("UPDATE bookings SET balance_status = 'unpaid', updated_at = ? WHERE id = ?", now(), b.id);
+    }
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
+  }), { auth: true });
 
   // ---- add to calendar ----
   add("GET", "/api/bookings/:id/ics", ({ params, user, res }) => {
@@ -190,6 +293,10 @@ export default function bookingRoutes(ctx, add) {
       if (s.payment_status === "paid" && s.amount_total === b.deposit_cents) await markBookingPaid(ctx, b.id, String(s.payment_intent || ""));
       else if (s.status === "open" && typeof s.url === "string" && s.url.startsWith("https://")) resume = s.url; // lets the customer go back to checkout
     }
+    if (stripe.live && b.balance_status === "unpaid" && b.balance_session_id) {
+      const s = await stripe.getCheckoutSession(b.balance_session_id);
+      if (s.payment_status === "paid" && s.amount_total === balanceCents(b)) await markBalancePaid(ctx, b.id, String(s.payment_intent || ""));
+    }
     const out = view(mine(user, b.id), "customer");
     if (resume && out.status === "pending_payment") out.pay_url = resume;
     return { booking: out };
@@ -207,6 +314,14 @@ export default function bookingRoutes(ctx, add) {
     const today = todayStr();
     const setStatus = (s) => db.run("UPDATE bookings SET status = ?, updated_at = ? WHERE id = ?", s, now(), b.id);
 
+    // Refund down to a target for each payment. Targets are absolute, so retrying after a failure never refunds twice.
+    const settle = async (depositTarget, balanceTarget) => {
+      let cur = await refundBooking(ctx, b, Math.max(0, depositTarget - b.refund_cents)); // refund first: if it fails nothing else changes
+      cur = await refundBalance(ctx, cur, Math.max(0, balanceTarget - cur.balance_refund_cents));
+      return cur;
+    };
+    const balancePaid = b.balance_status === "paid" || b.balance_status === "partial_refund";
+
     if (action === "accept") {
       if (!isOwner) throw new HttpError(403, "Only the group can accept");
       if (b.status !== "requested" || b.payment_status !== "paid") throw new HttpError(400, "This request can't be accepted");
@@ -216,18 +331,19 @@ export default function bookingRoutes(ctx, add) {
     } else if (action === "decline") {
       if (!isOwner) throw new HttpError(403, "Only the group can decline");
       if (b.status !== "requested") throw new HttpError(400, "This request can't be declined");
-      await refundBooking(ctx, b, b.deposit_cents - b.refund_cents); // refund first: if it fails nothing else changes
+      await settle(b.deposit_cents, balanceCents(b));
       setStatus("declined");
       notify.to(b.customer_id, "booking.declined.customer", { ...bv, refund: usd(b.deposit_cents), url: `${base}/#/` });
     } else {
       if (!["pending_payment", "requested", "confirmed"].includes(b.status)) throw new HttpError(400, "This booking can't be cancelled");
       if (b.date <= today) throw new HttpError(400, "This event has already started or passed");
-      // The group cancelling always refunds in full; a customer's refund follows the policy they accepted.
-      const cents = isOwner ? b.deposit_cents - b.refund_cents : refundForCancel(b, today) - b.refund_cents;
-      await refundBooking(ctx, b, Math.max(0, cents));
+      // The group cancelling always refunds everything paid in the app; a customer's refund follows the policy they accepted.
+      const parts = isOwner ? { deposit: b.deposit_cents, balance: balancePaid ? balanceCents(b) : 0 } : refundParts(b, today);
+      const after = await settle(parts.deposit, parts.balance);
       setStatus("cancelled");
-      if (isOwner) notify.to(b.customer_id, "booking.cancelled.customer", { ...bv, refund: usd(b.deposit_cents), url: `${base}/#/` });
-      else if (g.owner_id) notify.to(g.owner_id, "booking.cancelled.group", { ...bv, refund: usd(Math.max(0, cents) + b.refund_cents), url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+      const refunded = after.refund_cents + after.balance_refund_cents;
+      if (isOwner) notify.to(b.customer_id, "booking.cancelled.customer", { ...bv, refund: usd(refunded), url: `${base}/#/` });
+      else if (g.owner_id) notify.to(g.owner_id, "booking.cancelled.group", { ...bv, refund: usd(refunded), url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     }
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), isOwner ? "owner" : "customer") };
   }), { auth: true });
@@ -245,6 +361,10 @@ export default function bookingRoutes(ctx, add) {
           const b = db.get("SELECT deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
           if (b && obj.amount_total === b.deposit_cents) await markBookingPaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));
           else console.error("webhook: amount mismatch or unknown booking", obj.metadata?.booking_id);
+        } else if (kind === "balance") {
+          const b = db.get("SELECT total_cents, deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
+          if (b && obj.amount_total === b.total_cents - b.deposit_cents) await markBalancePaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));
+          else console.error("webhook: amount mismatch or unknown booking (balance)", obj.metadata?.booking_id);
         } else if (kind === "feature") {
           const f = db.get("SELECT amount_cents FROM payments_feature WHERE id = ?", String(obj.metadata.feature_id));
           if (f && obj.amount_total === f.amount_cents) markFeaturePaid(ctx, String(obj.metadata.feature_id));

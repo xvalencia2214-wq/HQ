@@ -5,7 +5,7 @@ import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
-import { getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { activeOffers, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -65,6 +65,7 @@ export default function groupRoutes(ctx, add) {
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
       stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id) },
+      open_offers: db.all("SELECT p.id, p.name, p.hours, p.price_cents, p.expires_at, u.name AS customer FROM packages p JOIN users u ON u.id = p.private_customer_id WHERE p.group_id = ? AND p.expires_at > ? ORDER BY p.id DESC", g.id, now()).map((o) => ({ ...o, customer: o.customer.split(" ")[0] })),
       pending_requests: db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'requested'", g.id).c,
       unread_threads: db.get(
         `SELECT COUNT(DISTINCT m.customer_id) c FROM messages m
@@ -158,14 +159,14 @@ export default function groupRoutes(ctx, add) {
   }
   add("POST", "/api/groups/:id/packages", ({ params, body, user }) => {
     const g = requireOwner(db, user, params.id);
-    if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ?", g.id).c >= 12) throw new HttpError(400, "At most 12 packages");
+    if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ? AND private_customer_id IS NULL", g.id).c >= 12) throw new HttpError(400, "At most 12 packages");
     const f = packageFields(body);
     db.run("INSERT INTO packages (group_id, name, description, hours, price_cents) VALUES (?, ?, ?, ?, ?)", g.id, f.name, f.description, f.hours, f.price_cents);
     return manageView(getGroup(db, g.id));
   }, { auth: true });
   const ownedPackage = (user, id) => {
     const p = db.get("SELECT p.*, g.owner_id FROM packages p JOIN groups g ON g.id = p.group_id WHERE p.id = ?", id);
-    if (!p) throw new HttpError(404, "Package not found");
+    if (!p || p.private_customer_id !== null) throw new HttpError(404, "Package not found"); // custom offers have their own routes
     if (p.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
     return p;
   };
@@ -179,6 +180,38 @@ export default function groupRoutes(ctx, add) {
     const p = ownedPackage(user, params.pid);
     db.run("DELETE FROM packages WHERE id = ?", p.id);
     return manageView(getGroup(db, p.group_id));
+  }, { auth: true });
+
+  // ---- custom offers: a private, custom-priced package for one customer who has messaged the group ----
+  const OFFER_DAYS = 7;
+  add("POST", "/api/groups/:id/offers", ({ params, body, user }) => {
+    const g = requireOwner(db, user, params.id);
+    const customerId = int(body.customerId, "customer", { min: 1 });
+    if (!db.get("SELECT 1 AS x FROM messages WHERE group_id = ? AND customer_id = ? AND sender = 'customer'", g.id, customerId)) throw new HttpError(400, "You can only send offers to people who have messaged you.");
+    if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ? AND private_customer_id = ? AND expires_at > ?", g.id, customerId, now()).c >= 3) throw new HttpError(400, "That customer already has 3 open offers.");
+    const f = packageFields({ name: body.name, description: "", hours: body.hours, price: body.price });
+    const note = str(body.note, "Note", { max: 200 });
+    const expires = now() + OFFER_DAYS * 86400;
+    const info = db.run("INSERT INTO packages (group_id, name, description, hours, price_cents, private_customer_id, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)", g.id, f.name, note, f.hours, f.price_cents, customerId, expires);
+    const price = `$${(f.price_cents / 100).toLocaleString("en-US")}`;
+    // The offer also appears in the conversation, so both sides have a record of what was promised.
+    db.run("INSERT INTO messages (group_id, customer_id, sender, text, created_at) VALUES (?, ?, 'group', ?, ?)", g.id, customerId, `Custom offer: ${f.name}, ${f.hours} hr for ${price}.${note ? " " + note : ""} It's on my page under "Custom offer" for ${OFFER_DAYS} days.`, now());
+    ctx.notify.to(customerId, "offer.customer", { group: g.name, offer: f.name, hours: f.hours, price, note, days: OFFER_DAYS, url: `${config.baseUrl}/#/group/${g.id}` });
+    return { offer_id: Number(info.lastInsertRowid) };
+  }, { auth: true });
+
+  add("DELETE", "/api/groups/:id/offers/:pid", ({ params, user }) => {
+    const g = requireOwner(db, user, params.id);
+    const p = db.get("SELECT id FROM packages WHERE id = ? AND group_id = ? AND private_customer_id IS NOT NULL", params.pid, g.id);
+    if (!p) throw new HttpError(404, "Offer not found");
+    if (db.get("SELECT 1 AS x FROM bookings WHERE package_id = ? AND status IN ('pending_payment','requested','confirmed')", p.id)) throw new HttpError(400, "The customer already booked this offer.");
+    db.run("DELETE FROM packages WHERE id = ?", p.id);
+    return { ok: true };
+  }, { auth: true });
+
+  add("GET", "/api/groups/:id/offers", ({ params, user }) => {
+    const g = getVisibleGroup(db, params.id, user);
+    return { offers: activeOffers(db, g.id, user.id) };
   }, { auth: true });
 
   // ---- calendar ----
@@ -206,7 +239,8 @@ export default function groupRoutes(ctx, add) {
       const row = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", params.id, d);
       if (row) days[d] = safeJson(row.slots, []);
       const taken = db.all("SELECT time FROM bookings WHERE group_id = ? AND date = ? AND status IN ('pending_payment','requested','confirmed')", params.id, d);
-      if (taken.length) booked[d] = taken.map((t) => t.time);
+      const held = db.all("SELECT resched_time t FROM bookings WHERE group_id = ? AND resched_date = ? AND resched_status = 'pending' AND resched_at > ? AND status IN ('requested','confirmed')", params.id, d, now() - 72 * 3600).map((r) => r.t);
+      if (taken.length || held.length) booked[d] = [...taken.map((t) => t.time), ...held];
     }
     return { days, booked };
   }, { auth: true });

@@ -61,6 +61,7 @@ export async function fakeStripe() {
     calls.push({ method: req.method, url: req.url, form, auth: req.headers.authorization, idem: req.headers["idempotency-key"] });
     const send = (o) => { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify(o)); };
     if (req.method === "POST" && req.url === "/v1/checkout/sessions") return send({ id: "cs_test_" + calls.length, url: "https://checkout.stripe.test/pay/" + calls.length });
+    if (req.method === "POST" && /^\/v1\/checkout\/sessions\/[^/]+\/expire$/.test(req.url)) return send({ id: req.url.split("/")[4], status: "expired" });
     if (req.method === "GET" && req.url.startsWith("/v1/checkout/sessions/")) return send({ id: req.url.split("/").pop(), status: state.sessionPaid ? "complete" : "open", url: state.sessionPaid ? null : "https://checkout.stripe.test/resume", payment_status: state.sessionPaid ? "paid" : "unpaid", amount_total: state.sessionAmount, payment_intent: "pi_test_1" });
     if (req.method === "POST" && req.url === "/v1/refunds") {
       if (state.refundDelay) await new Promise((r) => setTimeout(r, state.refundDelay));
