@@ -5,6 +5,7 @@ import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
+import { maskContact } from "./messages.js";
 import { activeOffers, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
@@ -189,8 +190,9 @@ export default function groupRoutes(ctx, add) {
     const customerId = int(body.customerId, "customer", { min: 1 });
     if (!db.get("SELECT 1 AS x FROM messages WHERE group_id = ? AND customer_id = ? AND sender = 'customer'", g.id, customerId)) throw new HttpError(400, "You can only send offers to people who have messaged you.");
     if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ? AND private_customer_id = ? AND expires_at > ?", g.id, customerId, now()).c >= 3) throw new HttpError(400, "That customer already has 3 open offers.");
-    const f = packageFields({ name: body.name, description: "", hours: body.hours, price: body.price });
-    const note = str(body.note, "Note", { max: 200 });
+    // Offers are shown to the customer before any booking exists, so phone numbers and emails are stripped like in chat.
+    const f = packageFields({ name: maskContact(str(body.name, "Offer name", { min: 2, max: 60 })).text, description: "", hours: body.hours, price: body.price });
+    const note = maskContact(str(body.note, "Note", { max: 200 })).text;
     const expires = now() + OFFER_DAYS * 86400;
     const info = db.run("INSERT INTO packages (group_id, name, description, hours, price_cents, private_customer_id, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)", g.id, f.name, note, f.hours, f.price_cents, customerId, expires);
     const price = `$${(f.price_cents / 100).toLocaleString("en-US")}`;

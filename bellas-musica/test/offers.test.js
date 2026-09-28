@@ -35,6 +35,13 @@ test("custom offers: private to one customer, priced by the server, expire, and 
     assert.match(S.db.get("SELECT subject FROM email_log WHERE kind = 'offer.customer'").subject, /custom offer/);
     assert.match((await a.get(`/api/groups/${gid}/messages`)).json.messages.at(-1).text, /Custom offer: Wedding special, 3 hr for \$900/);
 
+    // contact details can't be smuggled in through the offer
+    const sneaky = await offer({ customerId: cid, name: "Call 312-555-0199", hours: 2, price: 400, note: "or email me@x.com" });
+    assert.equal(sneaky.status, 200);
+    const tail = (await a.get(`/api/groups/${gid}/messages`)).json.messages.at(-1).text; assert.doesNotMatch(tail, /555|me@x/);
+    const seen = (await a.get(`/api/groups/${gid}/offers`)).json.offers.find((o) => o.id === sneaky.json.offer_id); assert.doesNotMatch(JSON.stringify(seen), /555|me@x/);
+    await owner.del(`/api/groups/${gid}/offers/${sneaky.json.offer_id}`);
+
     // not in public listings, search prices, share pages or the owner's normal package list
     assert.equal((await anon.get(`/api/groups/${gid}`)).json.packages.length, publicBefore);
     assert.equal((await manage()).json.packages.some((p) => p.name === "Wedding special"), false);

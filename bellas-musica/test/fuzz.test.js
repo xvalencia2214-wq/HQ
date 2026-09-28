@@ -98,9 +98,18 @@ async function run(mode, seed, steps) {
       else if (roll < 83) { what = `cancel(cust) ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.2; ok(await b.cust.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); if (fake) fake.state.failRefunds = false; }
       else if (roll < 86) { what = `cancel(owner) ${b.id}`; if (fake) fake.state.failRefunds = R() < 0.2; ok(await b.group.owner.patch(`/api/bookings/${b.id}`, { action: "cancel" }), what); if (fake) fake.state.failRefunds = false; }
       else if (roll < 89) { what = `expire hold ${b.id}`; S.db.run("UPDATE bookings SET created_at = created_at - 4000 WHERE id = ? AND status = 'pending_payment'", b.id); ok(await b.cust.get("/api/my/bookings"), what); }
-      else if (roll < 92) { what = `time passes ${b.id}`; S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-2), b.id); }
-      else if (roll < 95) { what = `review ${b.id}`; ok(await b.cust.post(`/api/bookings/${b.id}/review`, { rating: 1 + Math.floor(R() * 5), text: "ok" }), what); }
-      else if (roll < 98) { // two identical requests at once (double-tap)
+      else if (roll < 91) { what = `time passes ${b.id}`; S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-2), b.id); }
+      else if (roll < 93) { what = `review ${b.id}`; ok(await b.cust.post(`/api/bookings/${b.id}/review`, { rating: 1 + Math.floor(R() * 5), text: "ok" }), what); }
+      else if (roll < 96) { // reschedule: ask, answer, withdraw. Refusals are fine; a 500 or a double-booked slot is not.
+        const sub = pick(["request", "request", "accept", "decline", "withdraw"]);
+        // aim at bookings where the action can actually happen, so the success paths get exercised too
+        const want = sub === "request" ? "status = 'confirmed' AND resched_status = ''" : "status = 'confirmed' AND resched_status = 'pending'";
+        const ids = S.db.all(`SELECT id FROM bookings WHERE ${want}`).map((x) => x.id);
+        const rb = (ids.length && R() < 0.85 ? bookings.find((x) => x.id === pick(ids)) : null) || b;
+        if (sub === "request") { const d = pick(dates), t = pick(["12:00 PM", "2:00 PM", "4:00 PM"]); what = `resched request ${rb.id} ${d} ${t}`; ok(await rb.cust.post(`/api/bookings/${rb.id}/reschedule`, { date: d, time: t }), what); }
+        else if (sub === "withdraw") { what = `resched withdraw ${rb.id}`; ok(await rb.cust.del(`/api/bookings/${rb.id}/reschedule`), what); }
+        else { what = `resched ${sub} ${rb.id}`; ok(await rb.group.owner.post(`/api/bookings/${rb.id}/reschedule/respond`, { accept: sub === "accept" }), what); }
+      } else if (roll < 98) { // two identical requests at once (double-tap)
         const act = pick(["cancel", "cancel", "accept", "decline", "balance"]); const who = act === "cancel" || act === "balance" ? b.cust : b.group.owner;
         what = `double ${act} ${b.id}`;
         if (fake) fake.state.refundDelay = 30;
@@ -109,6 +118,15 @@ async function run(mode, seed, steps) {
         if (fake) fake.state.refundDelay = 0;
         rs.forEach((r) => ok(r, what));
         if (act !== "balance") assert.ok(rs.filter((r) => r.status === 200).length <= 1, `both double-${act} requests succeeded: ${b.id}`);
+      } else if (roll < 99) { // a custom offer: the customer writes, the group offers a price, the customer books exactly that price
+        const g = b.group, c = b.cust, uid = (await c.get("/api/me")).json.user.id, price = 100 * (5 + Math.floor(R() * 20));
+        what = `offer ${g.id} $${price}`;
+        ok(await c.post(`/api/groups/${g.id}/messages`, { text: "Can you send me a price?" }), what);
+        const o = ok(await g.owner.post(`/api/groups/${g.id}/offers`, { customerId: uid, name: "Fuzz offer", hours: 2, price }), what);
+        if (o.status === 200) {
+          const r = ok(await c.post("/api/bookings", bookingBody(g.id, pick(dates), { time: pick(["12:00 PM", "2:00 PM", "4:00 PM"]), packageId: o.json.offer_id })), what + " (book)");
+          if (r.status === 200) { assert.equal(r.json.booking.total_cents, price * 100, `offer booked at the wrong price ${JSON.stringify(r.json.booking)}`); bookings.push({ id: r.json.booking.id, group: g, cust: c, deposit: r.json.booking.deposit_cents }); }
+        }
       } else { what = `chat ${b.group.id}`; ok(await b.cust.post(`/api/groups/${b.group.id}/messages`, { text: "Hola, tocan Volver Volver?" }), what); }
       log.push(what);
       checkInvariants(S.db, fake, log);
@@ -118,8 +136,14 @@ async function run(mode, seed, steps) {
       const days = (await client(S.base).get(`/api/groups/${g.id}/availability?month=${m}`)).json.days;
       for (const [d, slots] of Object.entries(days)) for (const t of slots) assert.equal(S.db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND date = ? AND time = ? AND status IN ('pending_payment','requested','confirmed')", g.id, d, t).c, 0, `offered a taken slot ${g.id} ${d} ${t}`);
     }
+    // a slot that someone asked to move into is held: the public calendar must not offer it
+    for (const r of S.db.all("SELECT group_id, resched_date d, resched_time t FROM bookings WHERE resched_status = 'pending' AND status = 'confirmed'")) {
+      const days = (await client(S.base).get(`/api/groups/${r.group_id}/availability?month=${r.d.slice(0, 7)}`)).json.days;
+      assert.ok(!(days[r.d] || []).includes(r.t), `held reschedule slot is still public: ${JSON.stringify(r)}`);
+    }
     const stats = S.db.all("SELECT status, COUNT(*) c FROM bookings GROUP BY status").map((r) => `${r.status}:${r.c}`).join(" ");
-    return stats;
+    const extra = S.db.get("SELECT COALESCE(SUM(resched_count), 0) moved, SUM(resched_status = 'pending') held, (SELECT COUNT(*) FROM packages WHERE private_customer_id IS NOT NULL) offers, SUM(balance_status = 'paid') bal FROM bookings");
+    return `${stats} | moved:${extra.moved} held:${extra.held} offers:${extra.offers} balances:${extra.bal}`;
   } finally { await S.close(); if (fake) await fake.close(); }
 }
 

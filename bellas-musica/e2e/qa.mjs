@@ -46,7 +46,7 @@ for (const [vpName, vp] of Object.entries(VP)) {
   await cust.fill("#b-guests", "120"); await cust.waitForSelector("#quote .sum"); await cust.waitForTimeout(400);
   await cust.screenshot({ path: path.join(out, `${vpName}-group-booking.png`), fullPage: true });
   await shoot(cust, vpName, "account", "#/account", "#pform");
-  for (const tab of ["requests", "calendar", "listing", "extras", "media", "payments", "messages"]) await shoot(own, vpName, `dash-${tab}`, `#/dashboard?g=${id}&tab=${tab}`, `.tabs`);
+  for (const tab of ["requests", "calendar", "listing", "extras", "media", "reviews", "payments", "messages"]) await shoot(own, vpName, `dash-${tab}`, `#/dashboard?g=${id}&tab=${tab}`, `.tabs`);
   for (const p of [anon, cust, own]) p.errs.forEach((e) => problems.push(`${vpName}: ${e}`));
 }
 console.log(problems.length ? "PAGE ERRORS:\n" + [...new Set(problems)].join("\n") : "no page errors while browsing");
