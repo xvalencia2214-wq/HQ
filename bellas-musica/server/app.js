@@ -40,7 +40,8 @@ function createRouter() {
         pathMatched = true;
         if (r.method !== method) continue;
         const params = {};
-        r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); });
+        try { r.keys.forEach((k, i) => { params[k] = decodeURIComponent(m[i + 1]); }); }
+        catch { throw new HttpError(400, "Bad URL"); } // a stray "%" in the path
         return { route: r, params };
       }
       return { pathMatched };
@@ -113,6 +114,7 @@ export function createApp(config) {
   }
 
   function serveStatic(req, res, pathname) {
+    if (pathname.includes("\0")) throw new HttpError(400, "Bad URL"); // a NUL byte would make the file system throw
     const share = /^\/(g|b)\/([\w-]+)\/?$/.exec(pathname);
     if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));

@@ -9,7 +9,7 @@ English and Spanish. Cream / gold / black theme.
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 48 tests: API, money, Stripe/Twilio against fakes, random stress test, time zones, i18n, share pages, ops
+npm test           # 49 tests: API, money, Stripe/Twilio against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
 node e2e/e2e.mjs [dir]                     # 46-step end-to-end run: manager sets up, customer books, chats, cancels, admin
 node e2e/qa.mjs <dir>                      # seeds a realistic marketplace and screenshots every screen (iPad + phone)

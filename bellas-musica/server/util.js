@@ -22,12 +22,18 @@ export function parseCookies(header) {
 
 export async function readBody(req, limit) {
   const chunks = [];
-  let size = 0;
+  let size = 0, tooBig = false;
   for await (const c of req) {
     size += c.length;
-    if (size > limit) throw new HttpError(413, "Request too large");
-    chunks.push(c);
+    if (size > limit) {
+      // Keep reading (and discarding) so the client can finish sending and receive our 413 instead of a dropped connection.
+      tooBig = true; chunks.length = 0;
+      if (size > 64 * 1024 * 1024) { req.destroy(); break; } // but never absorb an unbounded upload
+      continue;
+    }
+    if (!tooBig) chunks.push(c);
   }
+  if (tooBig) throw new HttpError(413, "Request too large");
   return Buffer.concat(chunks);
 }
 
