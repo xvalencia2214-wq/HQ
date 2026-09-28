@@ -1,0 +1,14 @@
+{
+  "name": "bellas-musica",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Marketplace for booking live Mexican music groups",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "backup": "node --disable-warning=ExperimentalWarning server/backup.js",
+    "admin": "node --disable-warning=ExperimentalWarning server/admin.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+  },
+  "engines": { "node": ">=22.13" }
+}

@@ -1,0 +1,21 @@
+# Render.com blueprint (Docker web service with a persistent disk for the database and photos).
+services:
+  - type: web
+    name: bellas-musica
+    runtime: docker
+    plan: starter            # a persistent disk needs a paid plan
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 2
+    envVars:
+      - { key: BASE_URL, sync: false }
+      - { key: SESSION_SECRET, generateValue: true }
+      - { key: STRIPE_SECRET_KEY, sync: false }
+      - { key: STRIPE_WEBHOOK_SECRET, sync: false }
+      - { key: TWILIO_ACCOUNT_SID, sync: false }
+      - { key: TWILIO_AUTH_TOKEN, sync: false }
+      - { key: TWILIO_FROM, sync: false }
+      - { key: PLATFORM_FEE_PCT, value: "10" }
+      - { key: DEMO_SEED, value: "1" }

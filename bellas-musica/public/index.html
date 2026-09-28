@@ -16,18 +16,14 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="#/"><img src="logo.svg" alt="" width="40" height="40"><span>Bella's Música<small>Book live Mexican music</small></span></a>
-    <nav id="nav">
-      <a href="#/" data-r="home">Find music</a>
-      <a href="#/requests" data-r="requests">My bookings</a>
-      <a href="#/dashboard" data-r="dashboard">For groups</a>
-    </nav>
+    <nav id="nav" aria-label="Main"></nav>
   </div>
   <div class="bunting alt" aria-hidden="true"></div>
 </header>
+<div id="banner" class="banner" hidden></div>
 <main id="app"></main>
-<footer>Demo with sample groups. No payments are taken and no messages are sent. USA only.</footer>
+<footer id="foot"></footer>
 <script src="vendor/leaflet/leaflet.js"></script>
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

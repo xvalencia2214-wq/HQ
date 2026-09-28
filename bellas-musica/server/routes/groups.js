@@ -1,0 +1,292 @@
+import fs from "node:fs";
+import path from "node:path";
+import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
+import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
+import { lookupZip } from "../geo.js";
+import { parseVideo, sniffImage } from "../media.js";
+import { getGroup, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { normalizePhone } from "../sms.js";
+
+const MAX_GROUPS_PER_USER = 5;
+const MAX_PHOTOS = 10;
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
+
+const slug = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "group";
+const dollarsToCents = (v, name, { min, max }) => int(v, name, { min, max }) * 100;
+
+function stringList(v, name, { maxItems, maxLen }) {
+  if (!Array.isArray(v)) throw new HttpError(400, `${name} must be a list`);
+  if (v.length > maxItems) throw new HttpError(400, `${name}: at most ${maxItems} items`);
+  return [...new Set(v.map((x) => str(x, name, { max: maxLen })).filter(Boolean))];
+}
+
+export default function groupRoutes(ctx, add) {
+  const { db, stripe, config, limiters } = ctx;
+
+  // Everything the owner may see about their own group (adds private fields).
+  function manageView(g) {
+    return {
+      ...groupDetail(ctx, g),
+      contact_phone: g.contact_phone, promoted_until: g.promoted_until,
+      stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
+      is_owner: true
+    };
+  }
+
+  add("POST", "/api/groups", ({ body, user }) => {
+    if (db.get("SELECT COUNT(*) c FROM groups WHERE owner_id = ?", user.id).c >= MAX_GROUPS_PER_USER) throw new HttpError(400, "Group limit reached");
+    const name = str(body.name, "Group name", { min: 2, max: 80 });
+    const zip = str(body.zip, "ZIP", { required: true, max: 5 });
+    if (!isZip(zip) || !lookupZip(zip)) throw new HttpError(400, "Enter a valid US ZIP code");
+    const id = `${slug(name)}-${rid(3).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
+    db.run(
+      `INSERT INTO groups (id, owner_id, name, type, zip, rate_cents, members, story, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, user.id, name, oneOf(body.type, "Type", GROUP_TYPES), zip, dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 }),
+      int(body.members ?? 1, "Musicians", { min: 1, max: 40 }), str(body.story, "Story", { max: 800 }), now());
+    // No payout account yet: in simulated mode this is instant; live mode requires Stripe onboarding.
+    if (!stripe.live) db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", id);
+    return manageView(getGroup(db, id));
+  }, { auth: true });
+
+  add("GET", "/api/my/groups", ({ user }) => ({ groups: db.all("SELECT * FROM groups WHERE owner_id = ? ORDER BY created_at", user.id).map(manageView) }), { auth: true });
+
+  add("GET", "/api/groups/:id", ({ params, user }) => {
+    const g = getGroup(db, params.id);
+    return { ...groupDetail(ctx, g), is_owner: Boolean(user && g.owner_id === user.id) };
+  });
+
+  add("PATCH", "/api/groups/:id", ({ params, body, user }) => {
+    const g = requireOwner(db, user, params.id);
+    const set = {};
+    if (body.name !== undefined) set.name = str(body.name, "Group name", { min: 2, max: 80 });
+    if (body.type !== undefined) set.type = oneOf(body.type, "Type", GROUP_TYPES);
+    if (body.zip !== undefined) { if (!isZip(body.zip) || !lookupZip(body.zip)) throw new HttpError(400, "Enter a valid US ZIP code"); set.zip = body.zip; }
+    if (body.rate !== undefined) set.rate_cents = dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 });
+    if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
+    if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
+    if (body.events !== undefined) set.events = JSON.stringify(stringList(body.events, "Events", { maxItems: 10, maxLen: 40 }).filter((e) => EVENT_TYPES.includes(e)));
+    if (body.songs !== undefined) set.songs = JSON.stringify(stringList(body.songs, "Songs", { maxItems: 80, maxLen: 60 }));
+    if (body.max_guests !== undefined) set.max_guests = int(body.max_guests, "Max guests", { min: 1, max: 5000 });
+    if (body.sound_system !== undefined) set.sound_system = body.sound_system === true ? 1 : 0;
+    if (body.dress_code !== undefined) set.dress_code = str(body.dress_code, "Dress code", { max: 120 });
+    if (body.set_minutes !== undefined) set.set_minutes = int(body.set_minutes, "Set length", { min: 10, max: 240 });
+    if (body.travel_miles !== undefined) set.travel_miles = int(body.travel_miles, "Free travel miles", { min: 0, max: 500 });
+    if (body.travel_fee !== undefined) set.travel_fee_cents = dollarsToCents(body.travel_fee, "Travel fee", { min: 0, max: 2000 });
+    if (body.deposit_pct !== undefined) set.deposit_pct = int(body.deposit_pct, "Deposit %", { min: 20, max: 50 });
+    if (body.cancel_policy !== undefined) set.cancel_policy = oneOf(body.cancel_policy, "Cancellation policy", Object.keys(POLICIES));
+    if (body.contact_phone !== undefined) {
+      const raw = str(body.contact_phone, "Phone", { max: 30 });
+      if (raw && !normalizePhone(raw)) throw new HttpError(400, "Enter a valid US phone number");
+      set.contact_phone = raw ? normalizePhone(raw) : "";
+    }
+    if (body.video_url !== undefined) {
+      const v = parseVideo(body.video_url);
+      if (!v) throw new HttpError(400, "Use a YouTube or Vimeo link");
+      set.video_provider = v.provider; set.video_id = v.id;
+    }
+    const keys = Object.keys(set);
+    if (keys.length) db.run(`UPDATE groups SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`, ...keys.map((k) => set[k]), g.id);
+    return manageView(getGroup(db, g.id));
+  }, { auth: true });
+
+  // ---- packages ----
+  function packageFields(body) {
+    return {
+      name: str(body.name, "Package name", { min: 2, max: 60 }),
+      description: str(body.description, "Description", { max: 200 }),
+      hours: int(body.hours, "Hours", { min: 1, max: 12 }),
+      price_cents: dollarsToCents(body.price, "Price", { min: 20, max: 50000 })
+    };
+  }
+  add("POST", "/api/groups/:id/packages", ({ params, body, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ?", g.id).c >= 12) throw new HttpError(400, "At most 12 packages");
+    const f = packageFields(body);
+    db.run("INSERT INTO packages (group_id, name, description, hours, price_cents) VALUES (?, ?, ?, ?, ?)", g.id, f.name, f.description, f.hours, f.price_cents);
+    return manageView(getGroup(db, g.id));
+  }, { auth: true });
+  const ownedPackage = (user, id) => {
+    const p = db.get("SELECT p.*, g.owner_id FROM packages p JOIN groups g ON g.id = p.group_id WHERE p.id = ?", id);
+    if (!p) throw new HttpError(404, "Package not found");
+    if (p.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
+    return p;
+  };
+  add("PATCH", "/api/packages/:pid", ({ params, body, user }) => {
+    const p = ownedPackage(user, params.pid);
+    const f = packageFields({ name: body.name ?? p.name, description: body.description ?? p.description, hours: body.hours ?? p.hours, price: body.price ?? p.price_cents / 100 });
+    db.run("UPDATE packages SET name = ?, description = ?, hours = ?, price_cents = ? WHERE id = ?", f.name, f.description, f.hours, f.price_cents, p.id);
+    return manageView(getGroup(db, p.group_id));
+  }, { auth: true });
+  add("DELETE", "/api/packages/:pid", ({ params, user }) => {
+    const p = ownedPackage(user, params.pid);
+    db.run("DELETE FROM packages WHERE id = ?", p.id);
+    return manageView(getGroup(db, p.group_id));
+  }, { auth: true });
+
+  // ---- calendar ----
+  const monthDays = (month) => {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || "")) throw new HttpError(400, "month must look like 2026-10");
+    const [y, m] = month.split("-").map(Number);
+    return Array.from({ length: new Date(Date.UTC(y, m, 0)).getUTCDate() }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+  };
+
+  // Public: open (still bookable) slots per day.
+  add("GET", "/api/groups/:id/availability", ({ params, query }) => {
+    getGroup(db, params.id);
+    expirePending(db);
+    const today = todayStr(), days = {};
+    for (const d of monthDays(query.month)) if (d > today) { const s = openSlots(db, params.id, d, { expire: false }); if (s.length) days[d] = s; }
+    return { days };
+  });
+
+  // Owner: the slots they configured, plus which are already taken.
+  add("GET", "/api/groups/:id/calendar", ({ params, query, user }) => {
+    requireOwner(db, user, params.id);
+    expirePending(db);
+    const days = {}, booked = {};
+    for (const d of monthDays(query.month)) {
+      const row = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", params.id, d);
+      if (row) days[d] = safeJson(row.slots, []);
+      const taken = db.all("SELECT time FROM bookings WHERE group_id = ? AND date = ? AND status IN ('pending_payment','requested','confirmed')", params.id, d);
+      if (taken.length) booked[d] = taken.map((t) => t.time);
+    }
+    return { days, booked };
+  }, { auth: true });
+
+  add("PUT", "/api/groups/:id/availability", ({ params, body, user }) => {
+    requireOwner(db, user, params.id);
+    const dates = body.dates;
+    if (!dates || typeof dates !== "object" || Array.isArray(dates)) throw new HttpError(400, "dates must be an object");
+    const entries = Object.entries(dates);
+    if (entries.length > 400) throw new HttpError(400, "Too many dates at once");
+    const today = todayStr();
+    db.tx(() => {
+      for (const [d, slots] of entries) {
+        if (!isDate(d) || d <= today || d > addDays(today, 730)) throw new HttpError(400, `Bad date: ${d}`);
+        if (!Array.isArray(slots) || slots.some((s) => !SLOTS.includes(s))) throw new HttpError(400, "Bad time slot");
+        const clean = SLOTS.filter((s) => slots.includes(s));
+        if (clean.length) db.run("INSERT INTO availability (group_id, date, slots) VALUES (?, ?, ?) ON CONFLICT(group_id, date) DO UPDATE SET slots = excluded.slots", params.id, d, JSON.stringify(clean));
+        else db.run("DELETE FROM availability WHERE group_id = ? AND date = ?", params.id, d);
+      }
+    });
+    return { ok: true };
+  }, { auth: true });
+
+  add("POST", "/api/groups/:id/availability/weekends", ({ params, body, user }) => {
+    requireOwner(db, user, params.id);
+    const weeks = int(body.weeks ?? 8, "weeks", { min: 1, max: 52 });
+    const today = todayStr();
+    let n = 0;
+    db.tx(() => {
+      for (let i = 1; i <= weeks * 7; i++) {
+        const d = addDays(today, i), dow = new Date(d + "T12:00:00Z").getUTCDay();
+        if (dow === 5 || dow === 6 || dow === 0) {
+          db.run("INSERT INTO availability (group_id, date, slots) VALUES (?, ?, ?) ON CONFLICT(group_id, date) DO UPDATE SET slots = excluded.slots", params.id, d, JSON.stringify(SLOTS));
+          n++;
+        }
+      }
+    });
+    return { opened: n };
+  }, { auth: true });
+
+  add("DELETE", "/api/groups/:id/availability", ({ params, user }) => {
+    requireOwner(db, user, params.id);
+    db.run("DELETE FROM availability WHERE group_id = ? AND date > ?", params.id, todayStr());
+    return { ok: true };
+  }, { auth: true });
+
+  // ---- photos (JSON body with base64; validated by file signature) ----
+  add("POST", "/api/groups/:id/photos", ({ params, body, user, ip }) => {
+    const g = requireOwner(db, user, params.id);
+    if (!limiters.upload.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many uploads. Try again later.");
+    if (db.get("SELECT COUNT(*) c FROM photos WHERE group_id = ?", g.id).c >= MAX_PHOTOS) throw new HttpError(400, `At most ${MAX_PHOTOS} photos`);
+    const b64 = typeof body.data === "string" ? body.data.replace(/^data:image\/[a-z+]+;base64,/i, "") : "";
+    if (!b64 || b64.length > MAX_PHOTO_BYTES * 1.4) throw new HttpError(413, "Photo is too large (max 4 MB)");
+    const buf = Buffer.from(b64, "base64");
+    if (buf.length > MAX_PHOTO_BYTES) throw new HttpError(413, "Photo is too large (max 4 MB)");
+    const kind = sniffImage(buf);
+    if (!kind) throw new HttpError(400, "Only JPG, PNG or WebP photos");
+    const file = `${rid(14)}.${kind.ext}`;
+    fs.writeFileSync(path.join(config.uploadDir, file), buf, { flag: "wx" });
+    const pos = (db.get("SELECT COALESCE(MAX(position), 0) m FROM photos WHERE group_id = ?", g.id).m || 0) + 1;
+    db.run("INSERT INTO photos (id, group_id, file, position, created_at) VALUES (?, ?, ?, ?, ?)", newId("p"), g.id, file, pos, now());
+    return manageView(getGroup(db, g.id));
+  }, { auth: true, limit: 6_500_000 });
+
+  const ownedPhoto = (user, gid, pid) => {
+    requireOwner(db, user, gid);
+    const p = db.get("SELECT * FROM photos WHERE id = ? AND group_id = ?", pid, gid);
+    if (!p) throw new HttpError(404, "Photo not found");
+    return p;
+  };
+  add("DELETE", "/api/groups/:id/photos/:pid", ({ params, user }) => {
+    const p = ownedPhoto(user, params.id, params.pid);
+    db.run("DELETE FROM photos WHERE id = ?", p.id);
+    fs.unlink(path.join(config.uploadDir, path.basename(p.file)), () => {});
+    return manageView(getGroup(db, params.id));
+  }, { auth: true });
+  add("POST", "/api/groups/:id/photos/:pid/cover", ({ params, user }) => {
+    const p = ownedPhoto(user, params.id, params.pid);
+    db.run("UPDATE photos SET position = (SELECT COALESCE(MIN(position), 1) - 1 FROM photos WHERE group_id = ?) WHERE id = ?", params.id, p.id);
+    return manageView(getGroup(db, params.id));
+  }, { auth: true });
+
+  // ---- payouts (Stripe Connect Express) ----
+  add("POST", "/api/groups/:id/stripe/onboard", async ({ params, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (!stripe.live) { db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", g.id); return { ready: true, simulated: true }; }
+    let account = g.stripe_account_id;
+    if (!account) {
+      account = (await stripe.createAccount(user.email)).id;
+      db.run("UPDATE groups SET stripe_account_id = ? WHERE id = ?", account, g.id);
+    }
+    const link = await stripe.accountLink(account, `${config.baseUrl}/#/dashboard?stripe=refresh`, `${config.baseUrl}/#/dashboard?stripe=return`);
+    return { url: link.url };
+  }, { auth: true });
+
+  add("POST", "/api/groups/:id/stripe/refresh", async ({ params, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (!stripe.live) return { ready: Boolean(g.stripe_ready) };
+    if (!g.stripe_account_id) return { ready: false };
+    const acct = await stripe.getAccount(g.stripe_account_id);
+    const transfersOk = acct.capabilities?.transfers === undefined || acct.capabilities.transfers === "active";
+    const ready = Boolean(acct.charges_enabled && acct.payouts_enabled && transfersOk);
+    db.run("UPDATE groups SET stripe_ready = ? WHERE id = ?", ready ? 1 : 0, g.id);
+    return { ready };
+  }, { auth: true });
+
+  // ---- paid featured placement (30 days) ----
+  add("POST", "/api/groups/:id/feature", async ({ params, user }) => {
+    const g = requireOwner(db, user, params.id);
+    const id = newId("f");
+    db.run("INSERT INTO payments_feature (id, group_id, amount_cents, created_at) VALUES (?, ?, ?, ?)", id, g.id, config.featurePriceCents, now());
+    if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/feature/${id}`, amount_cents: config.featurePriceCents };
+    const session = await stripe.checkoutForFeature({
+      feature: { id, amount_cents: config.featurePriceCents }, group: g,
+      successUrl: `${config.baseUrl}/#/dashboard?feature=${id}`, cancelUrl: `${config.baseUrl}/#/dashboard`
+    });
+    db.run("UPDATE payments_feature SET stripe_session_id = ? WHERE id = ?", session.id, id);
+    return { id, url: session.url, amount_cents: config.featurePriceCents };
+  }, { auth: true });
+
+  const ownedFeature = (user, id) => {
+    const f = db.get("SELECT f.*, g.owner_id FROM payments_feature f JOIN groups g ON g.id = f.group_id WHERE f.id = ?", id);
+    if (!f || f.owner_id !== user.id) throw new HttpError(404, "Not found");
+    return f;
+  };
+  add("POST", "/api/feature/:fid/simulate-pay", ({ params, user }) => {
+    if (stripe.live) throw new HttpError(400, "Simulated payments are off");
+    const f = ownedFeature(user, params.fid);
+    markFeaturePaid(ctx, f.id);
+    return { ok: true, group_id: f.group_id };
+  }, { auth: true });
+  add("POST", "/api/feature/:fid/refresh", async ({ params, user }) => {
+    const f = ownedFeature(user, params.fid);
+    if (f.status !== "paid" && stripe.live && f.stripe_session_id) {
+      const s = await stripe.getCheckoutSession(f.stripe_session_id);
+      if (s.payment_status === "paid") markFeaturePaid(ctx, f.id);
+    }
+    return { status: db.get("SELECT status FROM payments_feature WHERE id = ?", f.id).status, group_id: f.group_id };
+  }, { auth: true });
+
+}
