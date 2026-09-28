@@ -17,6 +17,7 @@ await owner.post(`/api/groups/${id}/packages`, { name: "Serenata", description: 
 await owner.post(`/api/groups/${id}/packages`, { name: "Quinceañera", description: "Waltz, entrance and 2 hours of music", hours: 3, price: 950 });
 await owner.post(`/api/groups/${id}/packages`, { name: "Full wedding", description: "Ceremony + cocktail hour + dinner, 4 hours", hours: 4, price: 1300 });
 await owner.post(`/api/groups/${id}/availability/weekends`, { weeks: 12 });
+const pub = await owner.post(`/api/groups/${id}/publish`); if (pub.status !== 200) throw new Error("publish failed " + JSON.stringify(pub.json)); // new listings start as drafts
 // bookings in each state
 const wk = (n) => { for (let i = 1; i < 200; i++) { const d = new Date(); d.setDate(d.getDate() + i); if ([5, 6].includes(d.getDay()) && n-- === 0) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; } };
 const book = async (c, date, time, o = {}) => (await c.post("/api/bookings", bookingBody(id, date, { time, ...o }))).json.booking;

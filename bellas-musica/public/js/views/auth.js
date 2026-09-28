@@ -21,7 +21,7 @@ export function authView(app, mode, params) {
       <button class="btn wide" type="submit">${esc(t(signup ? "nav.signup" : "nav.login"))}</button>
     </form>
     <p class="dim">${signup ? `${esc(t("auth.have"))} <a href="#/login?next=${encodeURIComponent(next)}">${esc(t("nav.login"))}</a>` : `${esc(t("auth.new"))} <a href="#/signup?next=${encodeURIComponent(next)}">${esc(t("nav.signup"))}</a>`}</p>
-    <p class="dim small">${esc(t("auth.noReset"))}</p></div>`;
+    ${signup ? "" : `<p class="dim"><a href="#/forgot">${esc(t("rec.forgotLink"))}</a></p>`}</div>`;
   document.getElementById("authform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("autherr");
@@ -44,6 +44,8 @@ export function accountView(app) {
     <label>${esc(t("auth.email"))}</label><input value="${esc(u.email)}" disabled aria-label="${esc(t("auth.email"))}">
     <label for="p-phone">${esc(t("auth.phone"))}</label><input id="p-phone" name="phone" inputmode="tel" maxlength="20" value="${esc(u.phone)}">
     <label class="chk"><input type="checkbox" name="sms"${u.sms_opt_in ? " checked" : ""}> <span>${esc(t("auth.smsConsent"))}</span></label>
+    <label class="chk"><input type="checkbox" name="emailnotify"${u.email_notify ? " checked" : ""}> <span>${esc(t("acct.emailNotify"))}</span></label>
+    <div class="dim small">${esc(t(u.email_verified ? "acct.verified" : "acct.unverified"))}</div>
     <div id="perr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>
     <div class="panel"><h2 class="sec">${esc(t("acct.password"))}</h2><form id="wform">
     <label for="w-cur">${esc(t("acct.current"))}</label><input id="w-cur" name="current" type="password" autocomplete="current-password" required>
@@ -56,7 +58,7 @@ export function accountView(app) {
   document.getElementById("pform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("perr"); err.textContent = "";
-    try { setUser((await api.patch("/api/me", { name: f.name, phone: f.phone, sms_opt_in: f.sms === "on" })).user); toast(t("common.saved")); accountView(app); }
+    try { setUser((await api.patch("/api/me", { name: f.name, phone: f.phone, sms_opt_in: f.sms === "on", email_notify: f.emailnotify === "on" })).user); toast(t("common.saved")); accountView(app); }
     catch (ex) { err.textContent = ex.message; }
   };
   document.getElementById("dform").onsubmit = async (e) => {

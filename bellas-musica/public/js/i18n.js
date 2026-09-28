@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 import { state } from "./state.js";
+import { EN2, ES2 } from "./i18n-new.js";
 
 const EN = {
   "cal.open": "available", "acct.delete": "Delete my account", "acct.deleteWarn": "This signs you out, removes your name, phone and messages, and takes your listings offline. Booking and payment records are kept without your personal details. You can't undo this.", "acct.deletePw": "Type your password to confirm", "acct.deleteBtn": "Delete my account", "acct.deleteConfirm": "Delete your account for good?", "acct.deleted": "Your account was deleted.",
@@ -163,6 +164,7 @@ const ES = {
   "event.Wedding": "Boda", "event.Quinceañera": "Quinceañera", "event.Birthday": "Cumpleaños", "event.Anniversary": "Aniversario", "event.Serenata": "Serenata", "event.Corporate / Restaurant": "Corporativo / Restaurante", "event.Other": "Otro"
 };
 
+Object.assign(EN, EN2); Object.assign(ES, ES2);
 export const DICT = { en: EN, es: ES };
 let current = "en";
 let onLang = () => {};

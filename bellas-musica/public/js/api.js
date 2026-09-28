@@ -8,13 +8,14 @@ async function call(method, url, body) {
     headers: body !== undefined ? { "Content-Type": "application/json" } : {},
     body: body !== undefined ? JSON.stringify(body) : undefined
   });
-  let json = null;
-  try { json = await res.json(); } catch { /* empty body */ }
+  let json = null, unreadable = false;
+  try { json = await res.json(); } catch { unreadable = res.ok && res.status !== 204; } // e.g. the page was reloaded mid-request
   if (!res.ok) {
     // A 401 on anything but the login form means the session ended: let the app send the user to log in.
     if (res.status === 401 && !url.startsWith("/api/auth/") && !url.startsWith("/api/me")) window.dispatchEvent(new CustomEvent("bm:unauth"));
     throw new ApiError(res.status, (json && json.error) || `Error ${res.status}`);
   }
+  if (unreadable) throw new ApiError(0, "Connection problem. Please try again.");
   return json;
 }
 

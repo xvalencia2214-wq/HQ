@@ -3,6 +3,7 @@ import { state } from "../state.js";
 import { t } from "../i18n.js";
 import { esc, money, sel, tomorrowKey, groupPhoto, shareButtons, wireShare, toast } from "../ui.js";
 import { drawMap } from "../map.js";
+import { waitlistBox } from "./waitlist.js";
 
 const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius"];
 
@@ -13,6 +14,8 @@ export function groupCard(g, i, ctx = "") {
   const tags = [];
   if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
+  if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
+  if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
   const href = `#/group/${esc(g.id)}${ctx ? "?" + esc(ctx) : ""}`;
   return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}
     <h3>${esc(g.name)}</h3>
@@ -72,7 +75,13 @@ export async function home(app, params) {
   };
 
   const box = document.getElementById("results");
-  if (!p.zip) { box.innerHTML = `<div class="panel empty">${esc(t("home.hint"))}</div>`; return; }
+  if (!p.zip) {
+    const m = meta.market;
+    box.innerHTML = `<div class="panel empty">${esc(t("home.hint"))}</div>
+      <div class="panel"><h2 class="sec">${esc(t("chi.hoods"))} · ${esc(m.name)}</h2><div class="chips">${m.neighborhoods.map((n) => `<a class="tag chip-link" href="#/?zip=${esc(n.zip)}">${esc(n.name)}</a>`).join("")}</div>
+      <p><a href="#/chicago">${esc(t("chi.title"))} →</a></p></div>`;
+    return;
+  }
   box.innerHTML = `<div class="panel empty">${esc(t("home.searching"))}</div>`;
 
   const sp = new URLSearchParams();
@@ -91,5 +100,6 @@ export async function home(app, params) {
       : view === "map" ? `<div id="map" class="map" role="region" aria-label="${esc(t("home.map"))}"></div><div class="legend">${esc(t("map.note"))}</div>`
         : `<div class="grid">${data.results.map((g, i) => groupCard(g, i, ctx)).join("")}</div>`);
   wireShare(box);
+  if (!data.results.length && !data.in_market) box.appendChild(waitlistBox(data.origin.zip, `${data.origin.city}, ${data.origin.state}`));
   if (data.results.length && view === "map") drawMap(document.getElementById("map"), data.results, data.origin);
 }

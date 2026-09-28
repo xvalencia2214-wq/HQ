@@ -287,3 +287,41 @@ main h1.sec { font-size: 1.5rem; margin: 14px 0 6px; }
 .danger summary { cursor: pointer; color: var(--bad); font-weight: 600; }
 .dangerbtn { background: var(--bad); color: #fff; }
 .dangerbtn:hover { background: #8c2727; }
+
+/* ---- launch-market features: trust badges, Chicago page, waitlist, publishing, offers, replies ---- */
+.tag.trust { background: #e6efdc; color: #2a5a2f; font-weight: 600; }
+a.chip-link { text-decoration: none; color: var(--ink); background: var(--cream-2); border: 1px solid var(--line); padding: 6px 12px; font-size: .9rem; }
+a.chip-link:hover, a.chip-link:focus-visible { border-color: var(--gold); background: #fbf1d7; }
+.three { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .three { grid-template-columns: repeat(3, 1fr); } }
+.three .panel { margin-bottom: 0; }
+.steps { margin: 16px 0; }
+details.faq { border-top: 1px solid var(--line); padding: 10px 0; }
+details.faq summary { cursor: pointer; font-weight: 600; }
+details.faq p { margin: 8px 0 0; color: var(--ink-2); }
+.cta-groups { background: var(--black); color: var(--cream); border-color: var(--black); }
+.cta-groups h2 { color: var(--gold-2); }
+.waitlist { border-color: var(--gold-2); }
+.banner.verify { background: #f8e6d0; color: #5b3a10; border-bottom-color: #e0a866; }
+.banner.verify .linkbtn { color: #5b3a10; text-decoration: underline; padding: 2px 6px; }
+.banner.verify .linkbtn:hover { background: transparent; color: var(--black); }
+.note.draft ul { margin: 8px 0 10px 18px; padding: 0; }
+.note.draft a { color: #5b3a10; }
+.statusline { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; font-size: .9rem; }
+.statusline .linkbtn { color: var(--ink-2); text-decoration: underline; padding: 2px 6px; }
+.statusline .linkbtn:hover { background: transparent; color: var(--ink); }
+.tiles.small { grid-template-columns: repeat(3, 1fr); margin-bottom: 12px; }
+.tiles.small .tile-l { font-size: .74rem; }
+.tiles.small .tile-v { font-size: 1.35rem; }
+@media (max-width: 480px) { .tiles.small { grid-template-columns: 1fr; } }
+.panel.offer { border-color: var(--gold); background: #fbf1d7; }
+details.quote-req { border: 1px dashed var(--gold-2); border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; background: var(--paper); }
+details.quote-req summary { cursor: pointer; font-weight: 600; color: var(--gold-ink); }
+.reply { margin: 8px 0 0 14px; padding: 6px 12px; border-left: 3px solid var(--gold-2); background: var(--cream-2); border-radius: 0 8px 8px 0; font-size: .92rem; }
+.reply p { margin: 2px 0 0; }
+.rv-actions { margin-top: 8px; }
+.rv-form textarea { min-height: 80px; }
+.resched-form { grid-column: 1 / -1; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--cream); }
+.resched-form[hidden] { display: none; }
+.note.small { font-size: .82rem; padding: 6px 10px; margin: 8px 0 0; }
+.rs-cal { max-width: 420px; }

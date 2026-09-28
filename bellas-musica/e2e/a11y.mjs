@@ -43,11 +43,11 @@ const anon = await person(null), cust = await person("ana@qa.test"), own = await
 const screens = [
   [anon, "home", "#/", ".hero"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
   [anon, "map", "#/?zip=60608&view=map", ".leaflet-marker-icon"], [anon, "best", "#/best/60608", ".card"], [anon, "group", `#/group/${id}`, "#calbox .cal"],
-  [anon, "login", "#/login", "#authform"], [anon, "signup", "#/signup", "#authform"],
+  [anon, "chicago", "#/chicago", ".card"], [anon, "waitlist", "#/?zip=90210", ".waitlist"], [anon, "forgot", "#/forgot", "#fform"], [anon, "reset", "#/reset/abc", "#rform"], [anon, "login", "#/login", "#authform"], [anon, "signup", "#/signup", "#authform"],
   [cust, "bookings", "#/bookings", ".req"], [cust, "messages", "#/messages", ".thread"], [cust, "account", "#/account", "#pform"],
   [own, "dash-requests", `#/dashboard?g=${id}&tab=requests`, ".tabs"], [own, "dash-calendar", `#/dashboard?g=${id}&tab=calendar`, ".cal"], [own, "dash-listing", `#/dashboard?g=${id}&tab=listing`, "#lform"],
   [own, "dash-extras", `#/dashboard?g=${id}&tab=extras`, "#pkform"], [own, "dash-media", `#/dashboard?g=${id}&tab=media`, "#vform"], [own, "dash-payments", `#/dashboard?g=${id}&tab=payments`, "#feature"],
-  [own, "dash-messages", `#/dashboard?g=${id}&tab=messages`, ".thread"], [own, "admin", "#/admin", ".hero-fig"]
+  [own, "dash-reviews", `#/dashboard?g=${id}&tab=reviews`, ".review"], [own, "dash-messages", `#/dashboard?g=${id}&tab=messages`, ".thread"], [own, "admin", "#/admin", ".hero-fig"]
 ];
 for (const [p, name, hash, ready] of screens) console.log(String(await audit(p, name, hash, ready)).padStart(2), "violation types on", name);
 // same screens in Spanish and on a phone

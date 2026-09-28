@@ -38,10 +38,10 @@ try {
   await O.click("#authform button[type=submit]");
   await O.waitForSelector("#cform");
   ok("after signup the manager lands on 'List your group'", O.url().includes("dashboard"));
-  await O.fill("#c-name", "E2E Mariachi"); await O.fill("#c-zip", "60608"); await O.fill("#c-rate", "300"); await O.fill("#c-story", "We started in a garage. <b>not bold</b>");
+  await O.fill("#c-name", "E2E Mariachi"); await O.fill("#c-zip", "60608"); await O.fill("#c-rate", "300"); await O.fill("#c-story", "We started in a garage in Pilsen. <b>not bold</b>");
   await O.click("#cform button[type=submit]");
   await O.waitForSelector("#fill");
-  ok("new group sees a launch checklist with next steps", (await O.locator(".checklist").innerText()).includes("Get ready to launch") && (await O.locator(".checklist li").count()) >= 5);
+  ok("a new group starts as a draft with the steps needed to publish", (await O.locator(".draft").innerText()).includes("Your listing is a draft") && (await O.locator(".draft li").count()) === 3 && await O.locator("#publish").isDisabled());
   await O.click("#fill");
   await O.waitForSelector(".day.open");
   ok("'open all weekends' opens dates and shows them", (await O.locator(".day.open").count()) >= 2);
@@ -67,6 +67,10 @@ try {
   await O.fill("#v-url", "https://evil.example/x"); await O.click("#vform button[type=submit]");
   await O.waitForSelector("#verr:not(:empty)");
   ok("non-YouTube/Vimeo link is refused", /YouTube or Vimeo/.test(await O.locator("#verr").innerText()));
+  await O.goto(S.base + "/#/dashboard?tab=requests"); await O.waitForSelector("#publish:not([disabled])");
+  ok("once photo, story, events and dates are in, Publish is enabled", (await O.locator(".draft li").count()) === 0);
+  await O.click("#publish"); await O.waitForSelector(".statusline");
+  ok("publishing makes the group live and shows the launch checklist", (await O.locator(".statusline").innerText()).includes("Live") && (await O.locator(".checklist").innerText()).includes("Get ready to launch") && (await O.locator(".checklist li").count()) >= 3);
 
   // ---------------- customer (Spanish) ----------------
   C = await newPerson("customer", { width: 420, height: 900 });
@@ -111,7 +115,7 @@ try {
   ok("phone number in chat is hidden", (await C.locator(".msg.me").innerText()).includes("hidden until a booking is confirmed"));
 
   // ---------------- manager accepts ----------------
-  await O.goto(S.base + "/#/dashboard?tab=requests"); await O.waitForSelector(".req");
+  await O.goto(S.base + "/#/dashboard?tab=requests&again=1"); await O.waitForSelector(".req");
   await O.waitForFunction(() => document.querySelector("#nav a[data-r=dashboard] .dot"));
   ok("manager sees a badge for the request and the unanswered message", Number(await O.locator("#nav a[data-r=dashboard] .dot").innerText()) >= 2);
   ok("requests tab shows a 'Needs your response' section", (await O.locator(".sec-h.hot").innerText()).includes("Needs your response"));

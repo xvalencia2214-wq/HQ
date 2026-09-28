@@ -10,9 +10,9 @@ function groupsTable(list, empty) {
   if (!list.length) return `<div class="panel empty small">${esc(empty)}</div>`;
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Group</th><th>Owner</th><th>Where</th><th>Status</th><th class="num">Active bookings</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
     ${list.map((g) => `<tr><td><a href="#/group/${esc(g.id)}">${esc(g.name)}</a></td><td>${esc(g.owner_email || "(sample)")}</td><td>${esc(g.type)} · ${esc(g.city)}</td>
-      <td>${g.demo ? '<span class="badge">sample</span> ' : ""}${g.hidden ? '<span class="badge cancelled">hidden</span> ' : ""}${g.promoted_until * 1000 > Date.now() ? '<span class="badge confirmed">featured</span> ' : ""}${!g.demo ? (g.stripe_ready ? '<span class="badge confirmed">payouts ready</span>' : '<span class="badge requested">no payouts yet</span>') : ""}</td>
+      <td>${g.demo ? '<span class="badge">sample</span> ' : ""}${g.status === "draft" ? '<span class="badge requested">draft</span> ' : ""}${g.status === "paused" ? '<span class="badge cancelled">paused</span> ' : ""}${g.verified ? '<span class="badge confirmed">verified</span> ' : ""}${g.insured ? '<span class="badge confirmed">insured</span> ' : ""}${g.hidden ? '<span class="badge cancelled">hidden</span> ' : ""}${g.promoted_until * 1000 > Date.now() ? '<span class="badge confirmed">featured</span> ' : ""}${!g.demo ? (g.stripe_ready ? '<span class="badge confirmed">payouts ready</span>' : '<span class="badge requested">no payouts yet</span>') : ""}</td>
       <td class="num">${g.active_bookings}</td>
-      <td class="acts"><button class="btn ghost small" data-hide="${esc(g.id)}" data-to="${g.hidden ? "0" : "1"}">${g.hidden ? "Unhide" : "Hide"}</button>${g.demo ? "" : ` <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="30">Feature 30 days</button> <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="0">Clear</button>`}</td></tr>`).join("")}
+      <td class="acts">${g.demo ? "" : `<button class="btn ghost small" data-badge="verified" data-g="${esc(g.id)}" data-to="${g.verified ? "0" : "1"}">${g.verified ? "Remove verified" : "Mark verified"}</button> <button class="btn ghost small" data-badge="insured" data-g="${esc(g.id)}" data-to="${g.insured ? "0" : "1"}">${g.insured ? "Remove insured" : "Mark insured"}</button> `}<button class="btn ghost small" data-hide="${esc(g.id)}" data-to="${g.hidden ? "0" : "1"}">${g.hidden ? "Unhide" : "Hide"}</button>${g.demo ? "" : ` <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="30">Feature 30 days</button> <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="0">Clear</button>`}</td></tr>`).join("")}
     </tbody></table></div>`;
 }
 
@@ -23,7 +23,7 @@ export async function admin(app) {
   const b = s.bookings.by_status, live = s.payments === "stripe";
   const statusLine = Object.entries(b).map(([k, v]) => `${v} ${k.replace("_", " ")}`).join(" · ") || "No bookings yet";
 
-  app.innerHTML = `<div class="titlebar"><h1>Owner dashboard</h1><div class="chips"><span class="tag">${live ? "Payments: live" : "Payments: test mode (simulated)"}</span><span class="tag">${s.texts === "twilio" ? "Texts: live" : "Texts: simulated"}</span><span class="tag">Day = ${esc(s.timezone)}</span></div></div>
+  app.innerHTML = `<div class="titlebar"><h1>Owner dashboard</h1><div class="chips"><span class="tag">${live ? "Payments: live" : "Payments: test mode (simulated)"}</span><span class="tag">${s.texts === "twilio" ? "Texts: live" : "Texts: simulated"}</span><span class="tag">${s.email === "resend" ? "Email: live" : "Email: simulated"}</span><span class="tag">Day = ${esc(s.timezone)}</span></div></div>
     ${live ? "" : `<div class="note">Test mode: the numbers below are from simulated payments, not real money.</div>`}
     <div class="hero-fig"><div class="tile-l">Platform fees kept</div><div class="hero-v">${cents(s.money.platform_fees_kept_cents)}</div>
       <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured placements add ${cents(s.money.featured_revenue_cents)}.</div></div>
@@ -36,6 +36,21 @@ export async function admin(app) {
       ${tile("Groups ready for payouts", `${s.groups.payouts_ready} of ${s.groups.real}`, `${s.groups.featured_now} featured now`)}
       ${tile("Texts, last 30 days", `${s.texts_30d.sent} sent`, `${s.texts_30d.failed} failed · ${s.texts_30d.logged_only} logged only`)}
     </div>
+
+    <h2 class="sec">Last 30 days</h2>
+    <div class="tiles">${tile("Searches", s.funnel_30d.searches)}${tile("Group pages viewed", s.funnel_30d.group_views)}${tile("Bookings started", s.funnel_30d.booking_started)}${tile("Deposits paid", s.funnel_30d.booking_paid)}${tile("Confirmed by groups", s.funnel_30d.booking_confirmed)}${tile("Sign-ups", s.funnel_30d.signups)}</div>
+    <div class="two"><div class="panel"><h2 class="sec">Where people search</h2>${s.top_zips.length ? `<table class="tbl"><thead><tr><th>ZIP</th><th>City</th><th class="num">Searches</th></tr></thead><tbody>${s.top_zips.map((z) => `<tr><td>${esc(z.zip)}</td><td>${esc(z.city)}</td><td class="num">${z.searches}</td></tr>`).join("")}</tbody></table>` : '<div class="dim">No searches yet.</div>'}</div>
+    <div class="panel"><h2 class="sec">Waitlist (${s.waitlist.total})</h2>${s.waitlist.by_city.length ? `<table class="tbl"><thead><tr><th>Place</th><th class="num">Customers</th><th class="num">Groups</th></tr></thead><tbody>${s.waitlist.by_city.map((w) => `<tr><td>${esc(w.place)}</td><td class="num">${w.customers}</td><td class="num">${w.groups}</td></tr>`).join("")}</tbody></table><p><a href="/api/admin/waitlist.csv" download>Download the full list (CSV)</a></p>` : '<div class="dim">Nobody outside your launch area has asked yet.</div>'}</div></div>
+
+    <h2 class="sec">Invite a group</h2>
+    <div class="two"><div class="panel"><p class="dim small">Type in what a group sent you (or what you found on their page). You get a private link: when they open it and sign up, the listing is theirs. It stays a draft until they publish.</p>
+      <form id="iform"><div class="row"><div><label for="i-name">Group name</label><input id="i-name" name="name" required maxlength="80"></div><div><label for="i-type">Type</label><select id="i-type" name="type">${["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"].map((x) => `<option>${x}</option>`).join("")}</select></div></div>
+      <div class="row"><div><label for="i-zip">ZIP</label><input id="i-zip" name="zip" inputmode="numeric" maxlength="5" required></div><div><label for="i-rate">Price per hour ($)</label><input id="i-rate" name="rate" type="number" min="50" max="5000" value="300"></div></div>
+      <label for="i-story">Story (optional)</label><textarea id="i-story" name="story" maxlength="800"></textarea><div id="ierr" class="err" role="alert"></div><button class="btn small" type="submit">Create invite link</button></form><div id="iresult"></div></div>
+    <div class="panel"><h2 class="sec">Waiting to be claimed (${s.invites.length})</h2>${s.invites.map((i) => `<div class="req"><div><strong>${esc(i.name)}</strong><br><span class="dim small">${esc(i.type)} · ${esc(i.city)} · ${when(i.created_at)}</span></div><div><button class="btn ghost small" data-newlink="${esc(i.id)}">New link</button> <button class="btn ghost small" data-delinv="${esc(i.id)}">Delete</button></div></div>`).join("") || '<div class="dim">None. Links are shown once when you create them; use "New link" if you lose one.</div>'}</div></div>
+
+    <h2 class="sec">Health</h2>
+    <div class="tiles">${tile("Email", s.email === "resend" ? "Live" : "Simulated", s.email === "resend" ? "sent through Resend" : "written to the log only")}${tile("Error alerts", s.alerts_on ? "On" : "Off", s.alerts_on ? "failures go to your webhook" : "set ALERT_WEBHOOK_URL")}${tile("Backups", s.backups.enabled ? `${s.backups.count} kept` : "Off", s.backups.enabled ? (s.backups.last_at ? `last: ${when(s.backups.last_at)}` : "none yet") : "set BACKUP_DIR")}</div>
 
     <h2 class="sec">Groups</h2>${groupsTable(s.groups_list.filter((g) => !g.demo), "No real groups yet. Share the link with your first groups.")}
     ${s.groups_list.some((g) => g.demo) ? `<details class="samples"><summary>${s.groups_list.filter((g) => g.demo).length} sample listings (fictional; set DEMO_SEED=0 to remove)</summary>${groupsTable(s.groups_list.filter((g) => g.demo), "")}</details>` : ""}
@@ -58,6 +73,21 @@ export async function admin(app) {
   app.querySelectorAll("[data-feat]").forEach((btn) => { btn.onclick = async () => {
     try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.feat)}/feature`, { days: Number(btn.dataset.days) }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
   }; });
+  app.querySelectorAll("[data-badge]").forEach((btn) => { btn.onclick = async () => {
+    try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.g)}/badges`, { [btn.dataset.badge]: btn.dataset.to === "1" }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
+  }; });
+  const showLink = (url) => {
+    document.getElementById("iresult").innerHTML = `<div class="note ok">Private link (shown once). Send it to the group:<br><code id="ilink">${esc(url)}</code><br><button type="button" class="btn small" id="icopy">Copy link</button></div>`;
+    document.getElementById("icopy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("Copied"); } catch { window.prompt("Copy this link", url); } };
+  };
+  document.getElementById("iform").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("ierr"); err.textContent = "";
+    try { const r = await api.post("/api/admin/invites", { name: f.name, type: f.type, zip: f.zip, rate: Number(f.rate), story: f.story }); e.target.reset(); showLink(r.claim_url); }
+    catch (ex) { err.textContent = ex.message; }
+  };
+  app.querySelectorAll("[data-newlink]").forEach((btn) => { btn.onclick = async () => { try { showLink((await api.post(`/api/admin/invites/${encodeURIComponent(btn.dataset.newlink)}/regenerate`)).claim_url); } catch (e) { toast(e.message, "error"); } }; });
+  app.querySelectorAll("[data-delinv]").forEach((btn) => { btn.onclick = async () => { if (!confirm("Delete this invitation and its draft listing?")) return; try { await api.del(`/api/admin/invites/${encodeURIComponent(btn.dataset.delinv)}`); reload(); } catch (e) { toast(e.message, "error"); } }; });
   const search = async (q) => {
     const { users } = await api.get("/api/admin/users?q=" + encodeURIComponent(q));
     document.getElementById("ures").innerHTML = users.length ? users.map((u) => `<div class="req"><div><strong>${esc(u.name)}</strong><br><span class="dim small">${esc(u.email)} · ${u.groups} groups · ${u.bookings} bookings</span></div><button class="btn ghost small" data-reset="${u.id}" data-email="${esc(u.email)}">Reset password</button></div>`).join("") : '<div class="dim">No match.</div>';

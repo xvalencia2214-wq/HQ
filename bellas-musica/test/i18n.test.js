@@ -28,6 +28,9 @@ test("every translation key used in the code exists", () => {
   for (const s of ["pending_payment", "requested", "confirmed", "declined", "cancelled", "completed", "expired"]) assert.ok(`status.${s}` in DICT.en);
   for (const s of ["unpaid", "paid", "refunded", "partial_refund"]) assert.ok(`pay.${s}` in DICT.en);
   for (const s of ["requests", "calendar", "listing", "extras", "media", "payments", "messages"]) assert.ok(`tab.${s}` in DICT.en);
+  for (const s of ["reviews"]) assert.ok(`tab.${s}` in DICT.en);
+  for (const s of ["photos", "story", "events", "dates", "payouts"]) assert.ok(`pub.${s}` in DICT.en, s); // publish checklist, keyed by what the server reports missing
+  for (const s of ["hour", "hours", "day"]) assert.ok(`resp.${s}` in DICT.en, s); // "usually replies within ..."
   for (const s of ["flexible", "moderate", "strict"]) assert.ok(`policy.${s}` in DICT.en);
   for (const e of EVENT_TYPES) assert.ok(`event.${e}` in DICT.en, e);
   for (const e of GROUP_TYPES) assert.ok(`type.${e}` in DICT.en, e);

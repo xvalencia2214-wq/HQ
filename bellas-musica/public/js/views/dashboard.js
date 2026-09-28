@@ -1,11 +1,11 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 
-const TABS = ["requests", "calendar", "listing", "extras", "media", "payments", "messages"];
+const TABS = ["requests", "calendar", "listing", "extras", "media", "reviews", "payments", "messages"];
 
 export async function dashboard(app, params) {
   const { groups } = await api.get("/api/my/groups");
@@ -17,7 +17,8 @@ export async function dashboard(app, params) {
   app.innerHTML = `<div class="titlebar"><h1>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h1>
     <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
     ${g.stripe.mode === "stripe" && !g.stripe.ready ? `<div class="note warn">${esc(t("dash.needPayout"))} <a href="${esc(link({ tab: "payments" }))}">${esc(t("dash.setUp"))}</a></div>` : ""}
-    ${checklistCard(g, link)}
+    ${statusBanner(g)}
+    ${g.status === "draft" ? "" : checklistCard(g, link)}
     <div class="tabs" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${k === "requests" && g.pending_requests ? `<span class="dot">${g.pending_requests}</span>` : ""}${k === "messages" && g.unread_threads ? `<span class="dot">${g.unread_threads}</span>` : ""}</a>`).join("")}</div>
     <div id="tabbody"></div>`;
   wireShare(app);
@@ -25,7 +26,30 @@ export async function dashboard(app, params) {
   const body = document.getElementById("tabbody");
   const refresh = () => dashboard(app, new URLSearchParams(location.hash.split("?")[1] || ""));
   const ctx = { g, body, refresh };
-  await ({ requests, calendar: calTab, listing, extras, media, payments, messages }[tab])(ctx);
+  wireStatus(app, g, refresh);
+  await ({ requests, calendar: calTab, listing, extras, media, reviews, payments, messages }[tab])(ctx);
+}
+
+// Draft / paused / live: what customers can see right now, and the one button that changes it.
+const PUB_TAB = { photos: "media", story: "listing", events: "listing", dates: "calendar", payouts: "payments" };
+function statusBanner(g) {
+  const link = (tab) => `#/dashboard?g=${encodeURIComponent(g.id)}&tab=${tab}`;
+  const outside = g.outside_market ? `<div class="note">${esc(t("pub.outside", { market: state.meta.market.name }))}</div>` : "";
+  if (g.status === "hidden") return `<div class="note warn" role="alert">${esc(t("pub.hidden"))}</div>`;
+  if (g.status === "draft") {
+    return `<div class="note warn draft"><strong>${esc(t("pub.draftTitle"))}</strong> ${esc(t("pub.draftText"))}
+      ${g.publish_missing.length ? `<ul>${g.publish_missing.map((k) => `<li><a href="${esc(link(PUB_TAB[k]))}">${esc(t("pub." + k))}</a></li>`).join("")}</ul>` : ""}
+      <button type="button" class="btn small" id="publish"${g.publish_missing.length ? " disabled" : ""}>${esc(t("pub.publish"))}</button></div>${outside}`;
+  }
+  if (g.status === "paused") return `<div class="note warn"><strong>${esc(t("pub.pausedTitle"))}</strong> ${esc(t("pub.pausedText"))} <button type="button" class="btn small" id="resume">${esc(t("pub.resume"))}</button></div>${outside}`;
+  return `<div class="statusline"><span class="tag trust">● ${esc(t("pub.live"))}</span> <button type="button" class="linkbtn" id="pause">${esc(t("pub.pause"))}</button></div>${outside}`;
+}
+function wireStatus(root, g, refresh) {
+  const gid = encodeURIComponent(g.id);
+  const on = (id, fn) => { const el = root.querySelector("#" + id); if (el) el.onclick = fn; };
+  on("publish", async () => { try { await api.post(`/api/groups/${gid}/publish`); toast(t("pub.published")); refresh(); } catch (e) { toast(e.message, "error"); } });
+  on("resume", async () => { try { await api.post(`/api/groups/${gid}/pause`, { paused: false }); refresh(); } catch (e) { toast(e.message, "error"); } });
+  on("pause", async () => { if (!confirm(t("pub.confirmPause"))) return; try { await api.post(`/api/groups/${gid}/pause`, { paused: true }); refresh(); } catch (e) { toast(e.message, "error"); } });
 }
 
 // Nudges a new group toward a profile that earns bookings.
@@ -69,16 +93,38 @@ async function requests({ g, body, refresh }) {
     ["dash.secPast", bookings.filter((b) => !["requested", "confirmed"].includes(b.status)).sort(byDate(-1)), false]
   ];
   const phone = (b) => (b.phone ? ` · <a href="tel:${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>` : b.status === "requested" ? ` · <span class="dim">${esc(t("dash.phoneLater"))}</span>` : "");
+  const balLine = (b) => (b.status === "confirmed" && b.balance_cents > 0
+    ? `<br><span class="dim small">${esc(t(b.balance_status === "paid" ? "bal.groupPaid" : b.balance_status === "offline" ? "bal.groupOffline" : "bal.groupOwed", { amount: money(b.balance_cents) }))}</span>` : "");
+  const rsBox = (b) => (b.reschedule && b.can_respond_reschedule
+    ? `<div class="note small"><strong>${esc(t("rs.asks", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</strong>${b.reschedule.note ? `<br>“${esc(b.reschedule.note)}”` : ""}<br>
+       <button class="btn small" data-rs="accept" data-id="${esc(b.id)}">${esc(t("rs.accept"))}</button> <button class="btn ghost small" data-rs="decline" data-id="${esc(b.id)}">${esc(t("rs.decline"))}</button></div>` : "");
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
-      ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}</div>
+      ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${rsBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
+      ${b.can_mark_balance_offline ? `<button class="btn ghost small" data-off="${b.balance_status === "offline" ? "undo" : "mark"}" data-id="${esc(b.id)}" data-amount="${b.balance_cents}">${esc(t(b.balance_status === "offline" ? "bal.undoOffline" : "bal.markOffline"))}</button> ` : ""}
       ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`;
-  body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.requests"))}</h2>${bookings.length
+  const st30 = g.stats_30d;
+  body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.requests"))}</h2>
+    <div class="tiles small" aria-label="${esc(t("stat.title"))}">${[["stat.views", st30.views], ["stat.requests", st30.requests], ["stat.confirmed", st30.confirmed]].map(([k, v]) => `<div class="tile"><div class="tile-l">${esc(t(k))} · ${esc(t("stat.title"))}</div><div class="tile-v">${v}</div></div>`).join("")}</div>${bookings.length
     ? sections.filter(([, list]) => list.length).map(([key, list, hot]) => `<div class="sec-h${hot ? " hot" : ""}"><strong>${esc(t(key))}</strong><span class="count">${list.length}</span></div>${list.map(row).join("")}`).join("")
     : `<div class="empty">${esc(t("dash.noReq"))}</div>`}</div>`;
+  body.querySelectorAll("[data-off]").forEach((b) => {
+    b.onclick = async () => {
+      const mark = b.dataset.off === "mark";
+      if (mark && !confirm(t("bal.confirmOffline", { amount: money(Number(b.dataset.amount)) }))) return;
+      try { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.id)}/balance-offline`, { received: mark }); toast(t("common.saved")); refresh(); } catch (e) { toast(e.message, "error"); }
+    };
+  });
+  body.querySelectorAll("[data-rs]").forEach((b) => {
+    b.onclick = async () => {
+      const accept = b.dataset.rs === "accept";
+      if (!accept && !confirm(t("rs.confirmDecline"))) return;
+      try { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.id)}/reschedule/respond`, { accept }); toast(t(accept ? "rs.accepted" : "rs.declined")); refresh(); } catch (e) { toast(e.message, "error"); }
+    };
+  });
   body.querySelectorAll("[data-act]").forEach((b) => {
     b.onclick = async () => {
       const act = b.dataset.act;
@@ -228,6 +274,27 @@ function media({ g, body, refresh }) {
   };
 }
 
+// ---- reviews: answer them in public ----
+function reviews({ g, body, refresh }) {
+  const list = g.recent_reviews;
+  const when = (ts) => new Date(ts * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US");
+  body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.reviews"))}</h2><p class="dim small">${esc(t("rv.noContact"))}</p>${list.length ? list.map((r) => `<div class="review" data-id="${r.id}">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(when(r.created_at))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}
+    ${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}
+    <div class="rv-actions"><button type="button" class="btn ghost small" data-edit="${r.id}">${esc(r.reply ? t("rv.edit") : t("rv.reply"))}</button>${r.reply ? ` <button type="button" class="btn ghost small" data-rm="${r.id}">${esc(t("rv.remove"))}</button>` : ""}</div><div class="rv-form"></div></div>`).join("") : `<div class="empty">${esc(t("rv.none"))}</div>`}</div>`;
+  body.querySelectorAll("[data-edit]").forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.edit, r = list.find((x) => String(x.id) === id), holder = b.closest(".review").querySelector(".rv-form");
+      holder.innerHTML = `<form><label for="rv-${id}">${esc(t("rv.replyTitle"))}</label><textarea id="rv-${id}" name="text" maxlength="500" required>${esc(r.reply ? r.reply.text : "")}</textarea><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("rv.replyBtn"))}</button></form>`;
+      holder.querySelector("form").onsubmit = async (e) => {
+        e.preventDefault();
+        try { await api.post(`/api/reviews/${id}/reply`, { text: new FormData(e.target).get("text") }); toast(t("rv.saved")); refresh(); }
+        catch (ex) { holder.querySelector(".err").textContent = ex.message; }
+      };
+    };
+  });
+  body.querySelectorAll("[data-rm]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del(`/api/reviews/${b.dataset.rm}/reply`); toast(t("rv.removed")); refresh(); } catch (e) { toast(e.message, "error"); } }; });
+}
+
 // ---- payouts + featured ----
 async function payments({ g, body, refresh }) {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
@@ -247,18 +314,31 @@ async function payments({ g, body, refresh }) {
   document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
 }
 
-// ---- messages ----
-async function messages({ g, body }) {
+// ---- messages (and custom offers) ----
+async function messages({ g, body, refresh }) {
   const gid = encodeURIComponent(g.id);
   const { threads } = await api.get(`/api/groups/${gid}/threads`);
-  body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("tab.messages"))}</h2>${threads.length ? threads.map((th) => `<button class="thread${th.unread ? " unread" : ""}" data-c="${th.customer_id}"><strong>${esc(th.name)}</strong>${th.unread ? `<span class="dot">${esc(t("msg.new"))}</span>` : ""}<br><span class="dim small">${esc(th.last.text.slice(0, 60))}</span></button>`).join("") : `<div class="empty small">${esc(t("dash.noThreads"))}</div>`}</div>
+  const until = (ts) => new Date(ts * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US");
+  body.innerHTML = `<div class="two"><div><div class="panel"><h2 class="sec">${esc(t("tab.messages"))}</h2>${threads.length ? threads.map((th) => `<button class="thread${th.unread ? " unread" : ""}" data-c="${th.customer_id}"><strong>${esc(th.name)}</strong>${th.unread ? `<span class="dot">${esc(t("msg.new"))}</span>` : ""}<br><span class="dim small">${esc(th.last.text.slice(0, 60))}</span></button>`).join("") : `<div class="empty small">${esc(t("dash.noThreads"))}</div>`}</div>
+    <div class="panel"><h2 class="sec">${esc(t("off.open"))}</h2>${g.open_offers.length ? g.open_offers.map((o) => `<div class="req"><div><strong>${esc(o.name)}</strong> · ${money(o.price_cents)}<br><span class="dim small">${esc(o.customer)} · ${esc(t("off.until", { date: until(o.expires_at) }))}</span></div><button class="btn ghost small" data-wd="${o.id}">${esc(t("off.withdraw"))}</button></div>`).join("") : `<div class="dim small">${esc(t("off.none"))}</div>`}</div></div>
     <div class="panel" id="conv" hidden></div></div>`;
+  body.querySelectorAll("[data-wd]").forEach((b) => { b.onclick = async () => { try { await api.del(`/api/groups/${gid}/offers/${b.dataset.wd}`); refresh(); } catch (e) { toast(e.message, "error"); } }; });
   body.querySelectorAll(".thread").forEach((b) => {
     b.onclick = async () => {
       const cid = b.dataset.c, conv = document.getElementById("conv");
       const { messages: ms } = await api.get(`/api/groups/${gid}/threads/${cid}`);
       conv.hidden = false;
-      renderChat(conv, { messages: ms, mine: "group", formId: "rform", inputId: "rin", send: (text) => api.post(`/api/groups/${gid}/threads/${cid}`, { text }) });
+      conv.innerHTML = `<div id="convchat"></div><details class="quote-req"><summary>${esc(t("off.send"))}</summary><p class="dim small">${esc(t("off.hint"))}</p>
+        <form novalidate><label for="of-name">${esc(t("off.name"))}</label><input id="of-name" name="name" required maxlength="60" placeholder="${esc(t("off.namePh"))}">
+        <div class="row"><div><label for="of-h">${esc(t("off.hours"))}</label><input id="of-h" name="hours" type="number" min="1" max="12" value="3" required></div><div><label for="of-p">${esc(t("off.price"))}</label><input id="of-p" name="price" type="number" min="20" max="50000" required></div></div>
+        <label for="of-n">${esc(t("off.note"))}</label><input id="of-n" name="note" maxlength="200"><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("off.submit"))}</button></form></details>`;
+      renderChat(document.getElementById("convchat"), { messages: ms, mine: "group", formId: "rform", inputId: "rin", send: (text) => api.post(`/api/groups/${gid}/threads/${cid}`, { text }) });
+      conv.querySelector("details form").onsubmit = async (e) => {
+        e.preventDefault();
+        const f = Object.fromEntries(new FormData(e.target)), err = conv.querySelector("details .err"); err.textContent = "";
+        try { await api.post(`/api/groups/${gid}/offers`, { customerId: Number(cid), name: f.name, hours: Number(f.hours), price: Number(f.price), note: f.note }); toast(t("off.sent")); refresh(); }
+        catch (ex) { err.textContent = ex.message; }
+      };
       b.classList.remove("unread"); b.querySelector(".dot")?.remove();
       window.dispatchEvent(new CustomEvent("bm:attention"));
     };

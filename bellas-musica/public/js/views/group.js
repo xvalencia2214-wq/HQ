@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone } from "../ui.js";
+import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 
@@ -13,6 +13,11 @@ export async function group(app, id, params = new URLSearchParams()) {
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Música`;
   const meta = state.meta, user = state.user;
+  // Private offers the group made this customer (if any).
+  let offers = [];
+  if (user && !g.is_owner) { try { offers = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/offers`)).offers; } catch { /* no offers */ } }
+  const badges = (g.verified ? `<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>` : "") + (g.insured ? `<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>` : "");
+  const replies = g.response ? `<span class="dim">${esc(t("resp." + g.response.bucket))}</span>` : "";
   const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {} };
   // What the customer already told us on the search page.
   const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: params.get("zip") || "", date: params.get("date") || "" };
@@ -26,7 +31,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
   <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1>${shareButtons(g.name, "#/group/" + g.id)}</div>
-    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span><span>${esc(g.city)}, ${esc(g.state)}</span></div>
+    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
     ${gallery}${video}
     <div class="facts">
       ${fact("g.members", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${fact("g.set", esc(t("g.minutes", { n: g.set_minutes })))}
@@ -39,12 +44,13 @@ export async function group(app, id, params = new URLSearchParams()) {
     ${g.events.length ? `<div class="chips">${g.events.map((e) => `<span class="tag">${esc(t("event." + e))}</span>`).join("")}</div>` : ""}
   </div>
   ${g.songs.length ? `<div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h2><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
+  ${offers.length ? `<div class="panel offer"><h2 class="sec">${esc(t("off.title"))}</h2><div class="pkgs">${offers.map((o) => `<div class="pkg"><div><span class="tag trust">${esc(t("off.tag"))}</span> <strong>${esc(o.name)}</strong><br><span class="dim">${o.description ? esc(o.description) + " · " : ""}${esc(t("g.hours", { n: o.hours }))} · ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div><div class="pkg-r"><strong>${money(o.price_cents)}</strong><br><button type="button" class="btn small" data-pkg="${o.id}">${esc(t("off.book"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
-  ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("")}</div>` : ""}
+  ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
     <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
     <div class="panel" id="bookpanel"><h2>${esc(t("g.request"))}</h2><div id="bookbox"></div></div>
-    <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="chatbox"></div></div>
+    <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="quotebox"></div><div id="chatbox"></div></div>
   </aside></div>
   ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(g.packages.length ? Math.min(...g.packages.map((p) => p.price_cents)) : g.rate_cents) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
   wireShare(app);
@@ -91,7 +97,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     const prev = box.querySelector("form") ? Object.fromEntries(new FormData(box.querySelector("form"))) : {};
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
-      <label for="b-pkg">${esc(t("g.package"))}</label><select id="b-pkg" name="packageId"><option value="">${esc(t("g.hourly", { price: money(g.rate_cents) }))}</option>${g.packages.map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
+      <label for="b-pkg">${esc(t("g.package"))}</label><select id="b-pkg" name="packageId"><option value="">${esc(t("g.hourly", { price: money(g.rate_cents) }))}</option>${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
       <div id="hrs-wrap"><label for="b-hrs">${esc(t("g.hoursLabel"))}</label><select id="b-hrs" name="hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === Number(prev.hours || 2) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
       <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
@@ -144,11 +150,31 @@ export async function group(app, id, params = new URLSearchParams()) {
     });
   }
 
+  // One-tap "ask for a quote": the event details go to the group as a chat message.
+  function drawQuoteRequest() {
+    const qb = document.getElementById("quotebox"); if (!qb || !user || g.is_owner) return;
+    const open = qb.querySelector("details")?.open;
+    qb.innerHTML = `<details class="quote-req"${open ? " open" : ""}><summary>${esc(t("quote.ask"))}</summary><p class="dim small">${esc(t("quote.text"))}</p>
+      <form novalidate><label for="qr-ev">${esc(t("f.event"))}</label><select id="qr-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${sel(e, ctx.event)}>${esc(t("event." + e))}</option>`).join("")}</select>
+      <div class="row"><div><label for="qr-date">${esc(t("f.date"))}</label><input id="qr-date" name="date" type="date" min="${tomorrowKey()}" value="${esc(st.date || ctx.date || "")}" required></div>
+      <div><label for="qr-guests">${esc(t("f.guests"))}</label><input id="qr-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" value="${esc(ctx.guests)}" required></div></div>
+      <label for="qr-hrs">${esc(t("g.hoursLabel"))}</label><select id="qr-hrs" name="hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === 2 ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select>
+      <label for="qr-note">${esc(t("quote.note"))}</label><input id="qr-note" name="note" maxlength="200"><div class="err" role="alert"></div>
+      <button class="btn small" type="submit">${esc(t("quote.send"))}</button></form></details>`;
+    qb.querySelector("form").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target)), err = qb.querySelector(".err"); err.textContent = "";
+      try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/quote-request`, { event: f.event, date: f.date, guests: Number(f.guests), hours: Number(f.hours), note: f.note }); toast(t("quote.sent")); await drawChat(); }
+      catch (ex) { err.textContent = ex.message; }
+    };
+  }
+
   // chat
   async function drawChat() {
     const box = document.getElementById("chatbox");
     if (g.is_owner) { document.getElementById("chatpanel").hidden = true; return; }
     if (!user) { box.innerHTML = `<div class="dim">${esc(t("g.loginToChat"))}</div>`; return; }
+    drawQuoteRequest();
     let msgs = [];
     try { msgs = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/messages`)).messages; } catch { /* empty */ }
     renderChat(box, { messages: msgs, mine: "customer", send: (text) => api.post(`/api/groups/${encodeURIComponent(g.id)}/messages`, { text }), note: `<div class="note">${esc(t("g.privacy"))}</div>` });
