@@ -249,3 +249,11 @@ a.btn { text-decoration: none; display: inline-block; text-align: center; }
 @media (min-width: 900px) { .cta-bar { display: none; } }
 .cta-space { height: 72px; }
 @media (min-width: 900px) { .cta-space { display: none; } }
+.dot { background: var(--bad); color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; margin-left: 6px; font-weight: 700; display: inline-block; line-height: 1.5; }
+.thread.unread { background: #fbf1d7; border: 1px solid var(--gold-2); }
+.checklist { background: #fbf1d7; border: 1px solid var(--gold-2); border-radius: 12px; padding: 10px 14px; margin: 10px 0; }
+.checklist summary { cursor: pointer; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.checklist .bar { flex: 1; min-width: 80px; height: 8px; background: #e6d7ae; border-radius: 999px; overflow: hidden; }
+.checklist .bar i { display: block; height: 100%; background: var(--gold); }
+.checklist ul { margin: 8px 0 2px 18px; padding: 0; }
+.checklist li { margin: 3px 0; }

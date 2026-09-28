@@ -46,7 +46,9 @@ export function goto(url) {
 }
 
 export function shareLinks(name, path) {
-  const url = location.origin + "/" + path;
+  // Group and best-of links point at the server-rendered preview routes so chat apps show a photo card.
+  const pretty = path.replace(/^#\/group\//, "g/").replace(/^#\/best\//, "b/");
+  const url = location.origin + "/" + pretty;
   const text = `${name} · Bella's Música`;
   return { url, text, wa: `https://wa.me/?text=${encodeURIComponent(text + " " + url)}` };
 }

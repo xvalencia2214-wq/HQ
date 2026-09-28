@@ -2,6 +2,11 @@ import { api } from "./api.js";
 import { state } from "./state.js";
 
 const EN = {
+  "chk.title": "Get ready to launch", "chk.progress": "{done} of {total} done", "chk.complete": "Your profile is complete. Share it with your customers!",
+  "chk.photos": "Add at least 3 photos", "chk.video": "Add a video link", "chk.story": "Write your story (80+ characters)", "chk.events": "Pick the events you play", "chk.songs": "List at least 5 songs",
+  "chk.packages": "Add a package", "chk.dates": "Open at least 4 dates", "chk.payouts": "Set up payouts", "chk.alerts": "Turn on text alerts (add your phone and agree to texts)",
+  "bk.ics": "Add to calendar",
+  "nav.messages": "Messages", "msg.title": "Messages", "msg.none": "No conversations yet. Message a group from its page.", "msg.open": "Open group page", "msg.new": "new", "msg.you": "You",
   "f.more": "More filters", "f.radius": "Distance", "f.miles": "Within {n} miles", "f.clear": "Clear filters", "f.locate": "Use my location", "f.locating": "Finding your ZIP…", "f.locFail": "Couldn't find your location. Type your ZIP instead.",
   "home.searching": "Searching…", "common.loading": "Loading…", "common.sessionExpired": "Your session expired. Please log in again.", "card.nearby": "In your area", "g.checkDates": "Check dates", "nav.menu": "Menu",
   "dash.secNew": "Needs your response", "dash.secUpcoming": "Upcoming", "dash.secPast": "Past & closed", "dash.emptySec": "Nothing here.",
@@ -76,6 +81,11 @@ const EN = {
 };
 
 const ES = {
+  "chk.title": "Prepárate para lanzar", "chk.progress": "{done} de {total} listos", "chk.complete": "Tu perfil está completo. ¡Compártelo con tus clientes!",
+  "chk.photos": "Agrega al menos 3 fotos", "chk.video": "Agrega un enlace de video", "chk.story": "Escribe tu historia (80+ caracteres)", "chk.events": "Elige los eventos que tocas", "chk.songs": "Lista al menos 5 canciones",
+  "chk.packages": "Agrega un paquete", "chk.dates": "Abre al menos 4 fechas", "chk.payouts": "Configura tus pagos", "chk.alerts": "Activa los avisos por texto (agrega tu teléfono y acepta los textos)",
+  "bk.ics": "Agregar al calendario",
+  "nav.messages": "Mensajes", "msg.title": "Mensajes", "msg.none": "Aún no tienes conversaciones. Escríbele a un grupo desde su página.", "msg.open": "Abrir página del grupo", "msg.new": "nuevo", "msg.you": "Tú",
   "f.more": "Más filtros", "f.radius": "Distancia", "f.miles": "A menos de {n} millas", "f.clear": "Quitar filtros", "f.locate": "Usar mi ubicación", "f.locating": "Buscando tu código postal…", "f.locFail": "No pudimos encontrar tu ubicación. Escribe tu código postal.",
   "home.searching": "Buscando…", "common.loading": "Cargando…", "common.sessionExpired": "Tu sesión expiró. Inicia sesión de nuevo.", "card.nearby": "En tu zona", "g.checkDates": "Ver fechas", "nav.menu": "Menú",
   "dash.secNew": "Esperan tu respuesta", "dash.secUpcoming": "Próximas", "dash.secPast": "Pasadas y cerradas", "dash.emptySec": "Nada aquí.",

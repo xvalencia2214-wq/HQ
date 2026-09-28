@@ -1,6 +1,6 @@
 import { api } from "./api.js";
 
-export const state = { user: null, meta: null, metaAt: 0 };
+export const state = { user: null, meta: null, metaAt: 0, attention: null };
 const listeners = new Set();
 export const onChange = (fn) => listeners.add(fn);
 const emit = () => listeners.forEach((fn) => fn());
@@ -19,3 +19,10 @@ export async function refreshMetaIfStale() {
   try { state.meta = await api.get("/api/meta"); state.metaAt = Date.now(); } catch { /* keep the old value */ }
 }
 export function setUser(u) { state.user = u; emit(); }
+
+// Counts for the badges in the top bar (unread replies, requests waiting on a group).
+export async function refreshAttention() {
+  if (!state.user) { state.attention = null; emit(); return; }
+  try { state.attention = await api.get("/api/my/attention"); } catch { return; }
+  emit();
+}

@@ -2,16 +2,17 @@ import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, days
 import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
+import { bookingToIcs } from "../ics.js";
 import { verifyWebhook } from "../stripe.js";
-import { displayStatus, expirePending, getGroup, isBookable, markBookingPaid, markFeaturePaid, newId, openSlots, refundBooking, requireOwner } from "../shared.js";
+import { displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markFeaturePaid, newId, openSlots, refundBooking, requireOwner } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
   const { db, stripe, sms, config, limiters } = ctx;
 
   // Validate the request and price it. Used for the quote shown before paying and again when booking.
-  function priceRequest(body, { requireSlot }) {
-    const group = getGroup(db, str(body.groupId, "Group", { required: true, max: 80 }));
+  function priceRequest(body, { requireSlot }, user) {
+    const group = getVisibleGroup(db, str(body.groupId, "Group", { required: true, max: 80 }), user);
     const date = body.date;
     if (!isDate(date) || date <= todayStr() || date > addDays(todayStr(), 730)) throw new HttpError(400, "Pick a future date");
     const time = oneOf(body.time, "Time", SLOTS);
@@ -34,8 +35,8 @@ export default function bookingRoutes(ctx, add) {
 
   const policyInfo = (key) => ({ key, text: POLICIES[key].text, rows: POLICIES[key].rows.map(([days, pct]) => ({ days, pct })) });
 
-  add("POST", "/api/quote", ({ body }) => {
-    const r = priceRequest(body, { requireSlot: false });
+  add("POST", "/api/quote", ({ body, user }) => {
+    const r = priceRequest(body, { requireSlot: false }, user);
     const { platform_fee_cents, ...quote } = r.quote; // customers don't need the fee breakdown
     return { quote, policy: policyInfo(r.quote.policy), bookable: isBookable(ctx, r.group), payments: stripe.mode };
   });
@@ -96,11 +97,30 @@ export default function bookingRoutes(ctx, add) {
     return null;
   }
 
+  // ---- add to calendar ----
+  add("GET", "/api/bookings/:id/ics", ({ params, user, res }) => {
+    const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
+    const g = b && db.get("SELECT owner_id FROM groups WHERE id = ?", b.group_id);
+    const isCustomer = b && b.customer_id === user.id, isOwner = b && g && g.owner_id === user.id;
+    if (!b || (!isCustomer && !isOwner)) throw new HttpError(404, "Booking not found");
+    if (!["requested", "confirmed"].includes(b.status)) throw new HttpError(400, "Only active bookings can be added to a calendar");
+    const money = (c) => `$${(c / 100).toFixed(2)}`;
+    const description = isCustomer
+      ? `${b.event_type} with ${b.group_name}. Deposit paid: ${money(b.deposit_cents)}. Balance due to the group at the event: ${money(b.total_cents - b.deposit_cents)}. ${b.status === "requested" ? "Waiting for the group to confirm." : "Confirmed."} Booking ${b.id}`
+      : `${b.event_type} for ${b.name}, ${b.guests} guests. Deposit ${money(b.deposit_cents)}, balance due at the event ${money(b.total_cents - b.deposit_cents)}.${b.status === "confirmed" ? " Phone: " + b.phone : ""}${b.message ? " Request: " + b.message : ""}`;
+    const body = bookingToIcs({
+      id: b.id, date: b.date, time: b.time, hours: b.hours, status: b.status, location: b.address, description,
+      summary: isCustomer ? `${b.group_name}: ${b.event_type}` : `${b.event_type} for ${b.name} (${b.group_name})`
+    });
+    res.writeHead(200, { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-musica-${b.date}.ics"`, "Cache-Control": "no-store" });
+    res.end(body);
+  }, { auth: true });
+
   // ---- create ----
   add("POST", "/api/bookings", async ({ body, user, ip }) => {
     if (!limiters.booking.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many booking attempts. Try again later.");
     if (body.acceptPolicy !== true) throw new HttpError(400, "Please accept the deposit and cancellation policy");
-    const target = getGroup(db, str(body.groupId, "Group", { required: true, max: 80 }));
+    const target = getVisibleGroup(db, str(body.groupId, "Group", { required: true, max: 80 }), user);
     if (target.owner_id === user.id) throw new HttpError(400, "You can't book your own group");
     if (!isBookable(ctx, target)) throw new HttpError(400, "This group isn't taking online deposits yet. Send them a message instead.");
 
@@ -108,7 +128,7 @@ export default function bookingRoutes(ctx, add) {
     expirePending(db);
     const old = db.get("SELECT * FROM bookings WHERE customer_id = ? AND group_id = ? AND date = ? AND time = ? AND status = 'pending_payment'", user.id, target.id, body.date, body.time);
     if (old) {
-      const again = priceRequest(body, { requireSlot: false });
+      const again = priceRequest(body, { requireSlot: false }, user);
       if (again.quote.total_cents === old.total_cents && again.quote.deposit_cents === old.deposit_cents) {
         const resumed = await resumePayment(old);
         if (resumed) return resumed;
@@ -119,7 +139,7 @@ export default function bookingRoutes(ctx, add) {
     if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status = 'pending_payment'", user.id).c >= 3) {
       throw new HttpError(429, "You have several unpaid holds. Pay for or cancel one before holding another.");
     }
-    const r = priceRequest(body, { requireSlot: true });
+    const r = priceRequest(body, { requireSlot: true }, user);
     const phone = normalizePhone(str(body.phone, "Phone", { required: true, max: 30 }));
     if (!phone) throw new HttpError(400, "Enter a valid US phone number");
     const id = newId("b"), q = r.quote, t = now();

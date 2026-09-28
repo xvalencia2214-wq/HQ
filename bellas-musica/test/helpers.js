@@ -32,6 +32,7 @@ export function client(base) {
     return { status: res.status, json, headers: res.headers };
   }
   return {
+    cookie: () => cookie,
     get: (u) => call("GET", u),
     post: (u, b = {}) => call("POST", u, b),
     put: (u, b = {}) => call("PUT", u, b),

@@ -41,6 +41,7 @@ try {
   await O.fill("#c-name", "E2E Mariachi"); await O.fill("#c-zip", "60608"); await O.fill("#c-rate", "300"); await O.fill("#c-story", "We started in a garage. <b>not bold</b>");
   await O.click("#cform button[type=submit]");
   await O.waitForSelector("#fill");
+  ok("new group sees a launch checklist with next steps", (await O.locator(".checklist").innerText()).includes("Get ready to launch") && (await O.locator(".checklist li").count()) >= 5);
   await O.click("#fill");
   await O.waitForSelector(".day.open");
   ok("'open all weekends' opens dates and shows them", (await O.locator(".day.open").count()) >= 2);
@@ -111,6 +112,9 @@ try {
 
   // ---------------- manager accepts ----------------
   await O.goto(S.base + "/#/dashboard?tab=requests"); await O.waitForSelector(".req");
+  await O.waitForFunction(() => document.querySelector("#nav a[data-r=dashboard] .dot"));
+  ok("manager sees a badge for the request and the unanswered message", Number(await O.locator("#nav a[data-r=dashboard] .dot").innerText()) >= 2);
+  ok("requests tab shows a 'Needs your response' section", (await O.locator(".sec-h.hot").innerText()).includes("Needs your response"));
   ok("manager sees the request, phone hidden", (await O.locator(".req").innerText()).includes("Carlos Cliente") && !(await O.locator(".req").innerText()).includes("555"));
   await shot(O, "2-dashboard-requests.png");
   await O.click("[data-act=accept]"); await O.waitForSelector(".req a[href^='tel:']");
@@ -119,10 +123,18 @@ try {
   await O.click(".thread"); await O.waitForSelector("#rform");
   await O.fill("#rin", "Claro que si, tocamos Volver Volver"); await O.click("#rform button"); await O.waitForSelector(".msg.me");
   ok("manager can reply in the thread", (await O.locator(".msg.me").count()) === 1);
+  await C.goto(S.base + "/#/messages"); await C.waitForSelector(".thread");
+  await C.waitForFunction(() => document.querySelectorAll("#convchat .msg").length >= 2);
+  ok("customer inbox lists the conversation and opens the manager's reply", (await C.locator(".thread").innerText()).includes("E2E Mariachi") && (await C.locator("#convchat").innerText()).includes("Volver Volver"));
+  await C.waitForFunction(() => !document.querySelector("#nav a[data-r=messages] .dot"));
+  ok("reading the reply clears the unread badge", true);
 
   // ---------------- customer: bookings, Spanish, cancel ----------------
   ok("phone header collapses into a menu", await C.locator("#nav").isHidden());
   await C.goto(S.base + "/#/bookings"); await C.waitForSelector(".req");
+  const icsHref = await C.locator("a[href$='/ics']").first().getAttribute("href");
+  const icsRes = await C.request.get(S.base + icsHref);
+  ok("'Add to calendar' downloads a valid .ics", icsRes.status() === 200 && (await icsRes.text()).startsWith("BEGIN:VCALENDAR") && /text\/calendar/.test(icsRes.headers()["content-type"]));
   ok("customer sees Confirmed and the refund preview", (await C.locator(".req").innerText()).includes("Confirmed") && /get back \$/.test(await C.locator(".req").innerText()));
   await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h2:has-text(\"Mis reservas\")"); await C.click("#navtoggle");
   ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").innerText()).includes("Buscar música"));
@@ -134,6 +146,11 @@ try {
   await shot(C, "4-group-es-phone.png");
   await C.goto(S.base + "/#/best/60608"); await C.waitForSelector(".card");
   ok("'Lo mejor de Chicago' page lists groups", (await C.locator("h2").first().innerText()).includes("Lo mejor de Chicago"));
+  const shared = await newPerson("shared-link");
+  await shared.goto(S.base + `/g/${gid}`); await shared.waitForSelector("#calbox .cal");
+  ok("a shared /g/<id> link opens the group inside the app", shared.url().includes(`#/group/${gid}`) && (await shared.locator("h2").first().innerText()).includes("E2E Mariachi"));
+  const waHref = await shared.locator("a:has-text('WhatsApp')").first().getAttribute("href");
+  ok("WhatsApp share uses the preview-friendly link", decodeURIComponent(waHref).includes(`/g/${gid}`) && !decodeURIComponent(waHref).includes("#/group"));
   await O.goto(S.base + "/#/dashboard?tab=payments"); await O.waitForSelector("#feature");
   await O.click("#feature"); await O.waitForSelector("#paybtn"); await O.click("#paybtn"); await O.waitForSelector("text=Featured until");
   ok("manager can buy featured placement (test mode)", true);

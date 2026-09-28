@@ -1,8 +1,9 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
+import { renderChat } from "../chat.js";
 
 const TABS = ["requests", "calendar", "listing", "extras", "media", "payments", "messages"];
 
@@ -16,13 +17,24 @@ export async function dashboard(app, params) {
   app.innerHTML = `<div class="titlebar"><h2>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h2>
     <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
     ${g.stripe.mode === "stripe" && !g.stripe.ready ? `<div class="note warn">${esc(t("dash.needPayout"))} <a href="${esc(link({ tab: "payments" }))}">${esc(t("dash.setUp"))}</a></div>` : ""}
-    <div class="tabs" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}</a>`).join("")}</div>
+    ${checklistCard(g, link)}
+    <div class="tabs" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${k === "requests" && g.pending_requests ? `<span class="dot">${g.pending_requests}</span>` : ""}${k === "messages" && g.unread_threads ? `<span class="dot">${g.unread_threads}</span>` : ""}</a>`).join("")}</div>
     <div id="tabbody"></div>`;
+  wireShare(app);
   const pick = document.getElementById("gpick"); if (pick) pick.onchange = () => { location.hash = `#/dashboard?g=${pick.value}`; };
   const body = document.getElementById("tabbody");
   const refresh = () => dashboard(app, new URLSearchParams(location.hash.split("?")[1] || ""));
   const ctx = { g, body, refresh };
   await ({ requests, calendar: calTab, listing, extras, media, payments, messages }[tab])(ctx);
+}
+
+// Nudges a new group toward a profile that earns bookings.
+function checklistCard(g, link) {
+  const ck = g.checklist, pct = Math.round((ck.done / ck.total) * 100);
+  if (ck.done === ck.total) return `<div class="note ok">✓ ${esc(t("chk.complete"))} ${shareButtons(g.name, "#/group/" + g.id)}</div>`;
+  const todo = ck.items.filter((i) => !i.done);
+  return `<details class="checklist"${pct < 70 ? " open" : ""}><summary><strong>${esc(t("chk.title"))}</strong> · ${esc(t("chk.progress", { done: ck.done, total: ck.total }))}<span class="bar" aria-hidden="true"><i style="width:${pct}%"></i></span></summary>
+    <ul>${todo.map((i) => `<li><a href="${i.key === "alerts" ? "#/account" : esc(link({ tab: i.tab }))}">${esc(t("chk." + i.key))}</a></li>`).join("")}</ul></details>`;
 }
 
 export function newGroup(app) { createForm(app); }
@@ -62,6 +74,7 @@ async function requests({ g, body, refresh }) {
       ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
+      ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
       ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`;
   body.innerHTML = `<div class="panel"><h3 class="sec">${esc(t("tab.requests"))}</h3>${bookings.length
     ? sections.filter(([, list]) => list.length).map(([key, list, hot]) => `<div class="sec-h${hot ? " hot" : ""}"><strong>${esc(t(key))}</strong><span class="count">${list.length}</span></div>${list.map(row).join("")}`).join("")
@@ -238,23 +251,16 @@ async function payments({ g, body, refresh }) {
 async function messages({ g, body }) {
   const gid = encodeURIComponent(g.id);
   const { threads } = await api.get(`/api/groups/${gid}/threads`);
-  body.innerHTML = `<div class="two"><div class="panel"><h3 class="sec">${esc(t("tab.messages"))}</h3>${threads.length ? threads.map((th) => `<button class="thread" data-c="${th.customer_id}"><strong>${esc(th.name)}</strong><br><span class="dim small">${esc(th.last.text.slice(0, 60))}</span></button>`).join("") : `<div class="empty small">${esc(t("dash.noThreads"))}</div>`}</div>
+  body.innerHTML = `<div class="two"><div class="panel"><h3 class="sec">${esc(t("tab.messages"))}</h3>${threads.length ? threads.map((th) => `<button class="thread${th.unread ? " unread" : ""}" data-c="${th.customer_id}"><strong>${esc(th.name)}</strong>${th.unread ? `<span class="dot">${esc(t("msg.new"))}</span>` : ""}<br><span class="dim small">${esc(th.last.text.slice(0, 60))}</span></button>`).join("") : `<div class="empty small">${esc(t("dash.noThreads"))}</div>`}</div>
     <div class="panel" id="conv" hidden></div></div>`;
   body.querySelectorAll(".thread").forEach((b) => {
     b.onclick = async () => {
       const cid = b.dataset.c, conv = document.getElementById("conv");
-      async function load() {
-        const { messages: ms } = await api.get(`/api/groups/${gid}/threads/${cid}`);
-        conv.hidden = false;
-        conv.innerHTML = `<div class="chat" id="chat">${ms.map((m) => `<div class="msg ${m.sender === "group" ? "me" : "them"}">${esc(m.text)}</div>`).join("")}</div>
-          <form class="chat-form" id="rform"><input id="rin" maxlength="500" aria-label="${esc(t("g.message"))}"><button class="btn dark" type="submit">${esc(t("common.send"))}</button></form>`;
-        const c = document.getElementById("chat"); c.scrollTop = c.scrollHeight;
-        document.getElementById("rform").onsubmit = async (e) => {
-          e.preventDefault(); const v = document.getElementById("rin").value.trim(); if (!v) return;
-          try { const r = await api.post(`/api/groups/${gid}/threads/${cid}`, { text: v }); if (r.masked) toast(t("g.masked")); await load(); } catch (ex) { toast(ex.message, "error"); }
-        };
-      }
-      await load();
+      const { messages: ms } = await api.get(`/api/groups/${gid}/threads/${cid}`);
+      conv.hidden = false;
+      renderChat(conv, { messages: ms, mine: "group", formId: "rform", inputId: "rin", send: (text) => api.post(`/api/groups/${gid}/threads/${cid}`, { text }) });
+      b.classList.remove("unread"); b.querySelector(".dot")?.remove();
+      window.dispatchEvent(new CustomEvent("bm:attention"));
     };
   });
 }

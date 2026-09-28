@@ -37,7 +37,7 @@ export default function searchRoutes(ctx, add) {
     const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages GROUP BY group_id").map((r) => [r.group_id, r.m]));
 
     let list = [];
-    for (const g of db.all("SELECT * FROM groups")) {
+    for (const g of db.all("SELECT * FROM groups WHERE hidden = 0")) {
       const z = lookupZip(g.zip);
       if (!z) continue;
       const distance = miles(origin, z);

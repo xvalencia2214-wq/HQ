@@ -3,6 +3,7 @@ import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
 import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
+import { renderChat } from "../chat.js";
 
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
 
@@ -150,19 +151,8 @@ export async function group(app, id, params = new URLSearchParams()) {
     if (!user) { box.innerHTML = `<div class="dim">${esc(t("g.loginToChat"))}</div>`; return; }
     let msgs = [];
     try { msgs = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/messages`)).messages; } catch { /* empty */ }
-    box.innerHTML = `<div class="chat" id="chat">${msgs.length ? msgs.map((m) => `<div class="msg ${m.sender === "customer" ? "me" : "them"}">${esc(m.text)}</div>`).join("") : `<div class="empty small">${esc(t("g.noMsgs"))}</div>`}</div>
-      <form class="chat-form" id="chatform"><input id="chatin" maxlength="500" placeholder="${esc(t("g.msgHint"))}" aria-label="${esc(t("g.message"))}"><button class="btn dark" type="submit">${esc(t("common.send"))}</button></form>
-      <div class="note">${esc(t("g.privacy"))}</div>`;
-    const c = document.getElementById("chat"); c.scrollTop = c.scrollHeight;
-    document.getElementById("chatform").onsubmit = async (e) => {
-      e.preventDefault();
-      const inp = document.getElementById("chatin"), text = inp.value.trim(); if (!text) return;
-      try {
-        const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/messages`, { text });
-        if (r.masked) toast(t("g.masked"));
-        await drawChat();
-      } catch (ex) { toast(ex.message, "error"); }
-    };
+    renderChat(box, { messages: msgs, mine: "customer", send: (text) => api.post(`/api/groups/${encodeURIComponent(g.id)}/messages`, { text }), note: `<div class="note">${esc(t("g.privacy"))}</div>` });
+    window.dispatchEvent(new CustomEvent("bm:attention"));
   }
 
   // Open on a month that has something to click, or on the date the customer searched for.

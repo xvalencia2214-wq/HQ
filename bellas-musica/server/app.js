@@ -9,6 +9,7 @@ import { HttpError, readBody, readJson, createLimiter, setTimezone } from "./uti
 import { MIME_BY_EXT } from "./media.js";
 import { expirePending } from "./shared.js";
 import { seedDemo } from "./seed.js";
+import { renderSharePage, robotsTxt, sitemapXml } from "./share.js";
 import { startJobs } from "./jobs.js";
 import authRoutes from "./routes/auth.js";
 import searchRoutes from "./routes/search.js";
@@ -19,7 +20,7 @@ import reviewRoutes from "./routes/reviews.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
-  ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon"
+  ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json"
 };
 
 function createRouter() {
@@ -81,7 +82,7 @@ export function createApp(config) {
       "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
       "frame-src https://www.youtube-nocookie.com https://player.vimeo.com",
-      "connect-src 'self'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'", "object-src 'none'"
+      "connect-src 'self'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'", "object-src 'none'"
     ].join("; "));
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -105,7 +106,16 @@ export function createApp(config) {
     });
   }
 
+  function sendText(res, type, body) {
+    res.writeHead(200, { "Content-Type": type, "Cache-Control": "no-cache" });
+    res.end(body);
+  }
+
   function serveStatic(req, res, pathname) {
+    const share = /^\/(g|b)\/([\w-]+)\/?$/.exec(pathname);
+    if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
+    if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));
+    if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
     let root = config.publicDir, rel = pathname, cache = "no-cache";
     if (pathname.startsWith("/uploads/")) { root = config.uploadDir; rel = pathname.slice("/uploads".length); cache = "public, max-age=86400"; }
     else if (pathname.startsWith("/vendor/")) cache = "public, max-age=604800";

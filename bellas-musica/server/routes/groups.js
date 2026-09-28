@@ -4,7 +4,7 @@ import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str,
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { parseVideo, sniffImage } from "../media.js";
-import { getGroup, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { getGroup, getVisibleGroup, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -23,13 +23,38 @@ function stringList(v, name, { maxItems, maxLen }) {
 export default function groupRoutes(ctx, add) {
   const { db, stripe, config, limiters } = ctx;
 
+  // What a group still needs to look trustworthy and be bookable. `tab` says where to fix it in the dashboard.
+  function checklist(g, detail) {
+    const owner = g.owner_id ? db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", g.owner_id) : null;
+    const openDates = db.get("SELECT COUNT(*) c FROM availability WHERE group_id = ? AND date > ?", g.id, todayStr()).c;
+    const items = [
+      { key: "photos", done: detail.photos.length >= 3, tab: "media" },
+      { key: "video", done: Boolean(g.video_provider), tab: "media" },
+      { key: "story", done: g.story.trim().length >= 80, tab: "listing" },
+      { key: "events", done: detail.events.length >= 1, tab: "listing" },
+      { key: "songs", done: detail.songs.length >= 5, tab: "extras" },
+      { key: "packages", done: detail.packages.length >= 1, tab: "extras" },
+      { key: "dates", done: openDates >= 4, tab: "calendar" },
+      { key: "payouts", done: Boolean(g.stripe_ready), tab: "payments" },
+      { key: "alerts", done: Boolean(owner && owner.sms_opt_in && (g.contact_phone || owner.phone)), tab: "listing" }
+    ];
+    return { items, done: items.filter((i) => i.done).length, total: items.length };
+  }
+
   // Everything the owner may see about their own group (adds private fields).
   function manageView(g) {
+    const detail = groupDetail(ctx, g);
     return {
-      ...groupDetail(ctx, g),
+      ...detail,
+      checklist: checklist(g, detail),
       contact_phone: g.contact_phone, promoted_until: g.promoted_until,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
-      is_owner: true
+      is_owner: true,
+      pending_requests: db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'requested'", g.id).c,
+      unread_threads: db.get(
+        `SELECT COUNT(DISTINCT m.customer_id) c FROM messages m
+         LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'group'
+         WHERE m.group_id = ? AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, g.id).c
     };
   }
 
@@ -51,7 +76,7 @@ export default function groupRoutes(ctx, add) {
   add("GET", "/api/my/groups", ({ user }) => ({ groups: db.all("SELECT * FROM groups WHERE owner_id = ? ORDER BY created_at", user.id).map(manageView) }), { auth: true });
 
   add("GET", "/api/groups/:id", ({ params, user }) => {
-    const g = getGroup(db, params.id);
+    const g = getVisibleGroup(db, params.id, user);
     return { ...groupDetail(ctx, g), is_owner: Boolean(user && g.owner_id === user.id) };
   });
 
@@ -131,8 +156,8 @@ export default function groupRoutes(ctx, add) {
   };
 
   // Public: open (still bookable) slots per day.
-  add("GET", "/api/groups/:id/availability", ({ params, query }) => {
-    getGroup(db, params.id);
+  add("GET", "/api/groups/:id/availability", ({ params, query, user }) => {
+    getVisibleGroup(db, params.id, user);
     expirePending(db);
     const today = todayStr(), days = {};
     for (const d of monthDays(query.month)) if (d > today) { const s = openSlots(db, params.id, d, { expire: false }); if (s.length) days[d] = s; }

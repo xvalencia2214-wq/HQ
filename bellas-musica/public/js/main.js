@@ -1,4 +1,4 @@
-import { init, state, onChange, setUser, refreshMetaIfStale } from "./state.js";
+import { init, state, onChange, setUser, refreshMetaIfStale, refreshAttention } from "./state.js";
 import { api } from "./api.js";
 import { t, lang, setLang, initLang } from "./i18n.js";
 import { esc, toast } from "./ui.js";
@@ -9,16 +9,24 @@ import { group } from "./views/group.js";
 import { authView, accountView } from "./views/auth.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
+import { messagesView } from "./views/messages.js";
+
+// Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
+const landing = /^\/(g|b)\/([\w-]+)\/?$/.exec(location.pathname);
+if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group/" : "best/") + landing[2]);
 
 const app = document.getElementById("app");
 let routeToken = 0;
 
 function renderChrome() {
   const u = state.user;
+  const a = state.attention;
+  const dot = (n) => (n > 0 ? `<span class="dot" aria-label="${n}">${n}</span>` : "");
+  const managerCount = a ? a.manager.requests + a.manager.messages : 0;
   document.getElementById("nav").innerHTML =
     `<a href="#/" data-r="home">${esc(t("nav.find"))}</a>` +
-    (u ? `<a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a>` : "") +
-    `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}</a>` +
+    (u ? `<a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
+    `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}${dot(managerCount)}</a>` +
     (u ? `<a href="#/account" data-r="account">${esc(u.name.split(" ")[0])}</a><button type="button" id="logout" class="linkbtn">${esc(t("nav.logout"))}</button>`
       : `<a href="#/login" data-r="login">${esc(t("nav.login"))}</a><a href="#/signup" data-r="signup" class="cta">${esc(t("nav.signup"))}</a>`) +
     `<button type="button" id="langbtn" class="linkbtn" aria-label="Español / English">${lang() === "es" ? "EN" : "ES"}</button>`;
@@ -35,7 +43,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "pay", "dashboard", "account"]);
+const needsLogin = new Set(["bookings", "booking", "pay", "dashboard", "account", "messages"]);
 
 async function route() {
   const token = ++routeToken;
@@ -49,6 +57,7 @@ async function route() {
   await refreshMetaIfStale();
   if (token !== routeToken) return;
   renderChrome();
+  refreshAttention();
   window.scrollTo(0, 0);
   if (needsLogin.has(seg[0]) && !state.user) { location.hash = "#/login?next=" + encodeURIComponent(location.hash); return; }
   const box = document.createElement("div");
@@ -58,6 +67,7 @@ async function route() {
     else if (seg[0] === "best" && seg[1]) await best(box, seg[1]);
     else if (seg[0] === "login" || seg[0] === "signup") authView(box, seg[0], params);
     else if (seg[0] === "bookings") await myBookings(box);
+    else if (seg[0] === "messages") await messagesView(box, params);
     else if (seg[0] === "booking" && seg[1]) await bookingPage(box, seg[1], params);
     else if (seg[0] === "pay" && seg[1] && seg[2]) await simulatedPay(box, seg[1], seg[2]);
     else if (seg[0] === "dashboard") { if (params.get("new")) newGroup(box); else await dashboard(box, params); }
@@ -85,5 +95,8 @@ initLang(() => { renderChrome(); route(); });
 await init();
 if (state.user && state.user.lang && !localStorage.getItem("bm_lang")) setLang(state.user.lang, { persist: false });
 onChange(renderChrome);
+window.addEventListener("bm:attention", () => refreshAttention());
+setInterval(() => { if (!document.hidden) refreshAttention(); }, 60_000);
+refreshAttention();
 window.addEventListener("hashchange", route);
 route();

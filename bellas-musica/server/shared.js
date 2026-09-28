@@ -97,6 +97,12 @@ export function getGroup(db, id) {
   if (!g) throw new HttpError(404, "Group not found");
   return g;
 }
+// A group that the site owner has hidden looks like it doesn't exist to everyone except its own manager.
+export function getVisibleGroup(db, id, user) {
+  const g = getGroup(db, id);
+  if (g.hidden && !(user && g.owner_id === user.id)) throw new HttpError(404, "Group not found");
+  return g;
+}
 export function requireOwner(db, user, groupId) {
   const g = getGroup(db, groupId);
   if (!user || g.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");

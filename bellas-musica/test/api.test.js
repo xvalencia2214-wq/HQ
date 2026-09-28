@@ -349,3 +349,59 @@ test("group page tells the calendar where the first free date is; nearest-ZIP lo
   assert.equal((await c.get("/api/nearest-zip?lat=0&lon=0")).status, 404); // middle of the ocean
   assert.equal((await c.get("/api/nearest-zip?lat=abc&lon=1")).status, 400);
 });
+
+test("inbox and badges: unread counts clear once you actually read the thread", async () => {
+  const owner = client(S.base), cust = client(S.base), cust2 = client(S.base);
+  await owner.signup("in1@example.com", "Inbox Owner"); await cust.signup("in2@example.com", "Inbox Cust"); await cust2.signup("in3@example.com", "Inbox Two");
+  const d = inDays(33);
+  const gid = await makeGroup(owner, { name: "Inbox Band", dates: [d] });
+  const gid2 = await makeGroup(owner, { name: "Inbox Band Two", dates: [d] });
+  assert.deepEqual((await owner.get("/api/my/attention")).json.manager, { owns: true, requests: 0, messages: 0 });
+  assert.deepEqual((await cust.get("/api/my/attention")).json, { messages: 0, manager: { owns: false, requests: 0, messages: 0 } });
+  await cust.post(`/api/groups/${gid}/messages`, { text: "Hi there" }); await cust2.post(`/api/groups/${gid}/messages`, { text: "Hello" }); await cust.post(`/api/groups/${gid2}/messages`, { text: "Hey two" });
+  assert.equal((await owner.get("/api/my/attention")).json.manager.messages, 3); // three conversations waiting on the group
+  const ths = (await owner.get(`/api/groups/${gid}/threads`)).json.threads;
+  assert.deepEqual(ths.map((t) => t.unread), [1, 1]);
+  await owner.get(`/api/groups/${gid}/threads/${ths[0].customer_id}`); // opening a thread reads it
+  assert.equal((await owner.get("/api/my/attention")).json.manager.messages, 2);
+  await owner.post(`/api/groups/${gid}/threads/${ths[1].customer_id}`, { text: "Reply" }); // replying reads it too
+  assert.equal((await owner.get("/api/my/attention")).json.manager.messages, 1);
+  // ths[1] is the older conversation, which belongs to `cust`: they see the reply as unread until they open it
+  assert.equal((await cust.get("/api/my/attention")).json.messages, 1);
+  assert.equal((await cust2.get("/api/my/attention")).json.messages, 0); // cust2 was not answered
+  const inbox = (await cust.get("/api/my/threads")).json.threads;
+  assert.equal(inbox.length, 2); // Inbox Band and Inbox Band Two
+  const replied = inbox.find((t) => t.group_id === gid);
+  assert.equal(replied.unread, 1); assert.equal(replied.group_name, "Inbox Band"); assert.equal(replied.last.sender, "group");
+  assert.equal(inbox.find((t) => t.group_id === gid2).unread, 0);
+  await cust.get(`/api/groups/${gid}/messages`);
+  assert.equal((await cust.get("/api/my/attention")).json.messages, 0);
+  assert.equal((await cust.get("/api/my/threads")).json.threads.find((t) => t.group_id === gid).unread, 0);
+  // booking requests show up in the manager badge
+  const b = (await cust.post("/api/bookings", bookingBody(gid, d))).json.booking;
+  await cust.post(`/api/bookings/${b.id}/simulate-pay`);
+  assert.equal((await owner.get("/api/my/attention")).json.manager.requests, 1);
+  assert.equal((await client(S.base).get("/api/my/attention")).status, 401);
+});
+
+test("launch checklist reflects what the group has finished", async () => {
+  const owner = client(S.base);
+  await owner.signup("ck@example.com", "Check Owner", { phone: "312-555-0166", sms_opt_in: true });
+  const id = await makeGroup(owner, { name: "Checklist Band" });
+  const items = async () => Object.fromEntries((await owner.get("/api/my/groups")).json.groups.find((g) => g.id === id).checklist.items.map((i) => [i.key, i.done]));
+  let c = await items();
+  assert.deepEqual(c, { photos: false, video: false, story: false, events: false, songs: false, packages: false, dates: false, payouts: true, alerts: true }); // simulated mode: payouts ready; owner opted in to texts
+  await owner.patch(`/api/groups/${id}`, { story: "x".repeat(80), events: ["Wedding"], songs: ["a", "b", "c", "d", "e"], video_url: "https://youtu.be/dQw4w9WgXcQ" });
+  await owner.post(`/api/groups/${id}/packages`, { name: "Party", hours: 2, price: 500 });
+  await owner.post(`/api/groups/${id}/availability/weekends`, { weeks: 4 });
+  for (let i = 0; i < 3; i++) await owner.post(`/api/groups/${id}/photos`, { data: PNG });
+  c = await items();
+  assert.ok(Object.values(c).every(Boolean), JSON.stringify(c));
+  const g = (await owner.get("/api/my/groups")).json.groups.find((x) => x.id === id);
+  assert.deepEqual([g.checklist.done, g.checklist.total], [9, 9]);
+  // a group manager who has not opted in to texts is told to
+  const o2 = client(S.base); await o2.signup("ck2@example.com", "No Texts");
+  const id2 = await makeGroup(o2, { name: "Silent Band" });
+  assert.equal((await o2.get("/api/my/groups")).json.groups[0].checklist.items.find((i) => i.key === "alerts").done, false);
+  void id2;
+});

@@ -1,5 +1,5 @@
 import { HttpError, int, now, str } from "../util.js";
-import { getGroup, requireOwner } from "../shared.js";
+import { getGroup, getVisibleGroup, requireOwner } from "../shared.js";
 
 const HIDDEN = "[hidden until a booking is confirmed]";
 // Phone numbers, emails and "text me on WhatsApp" style contact details stay out of chat until a booking is confirmed.
@@ -16,6 +16,14 @@ export default function messageRoutes(ctx, add) {
   const { db, sms, config, limiters } = ctx;
 
   const hasConfirmed = (groupId, customerId) => Boolean(db.get("SELECT 1 AS x FROM bookings WHERE group_id = ? AND customer_id = ? AND status = 'confirmed'", groupId, customerId));
+  const markRead = (groupId, customerId, side) => db.run(
+    `INSERT INTO thread_reads (group_id, customer_id, side, last_id)
+     VALUES (?, ?, ?, COALESCE((SELECT MAX(id) FROM messages WHERE group_id = ? AND customer_id = ?), 0))
+     ON CONFLICT(group_id, customer_id, side) DO UPDATE SET last_id = excluded.last_id`, groupId, customerId, side, groupId, customerId);
+  const unreadFor = (groupId, customerId, side) => db.get(
+    `SELECT COUNT(*) c FROM messages m WHERE m.group_id = ? AND m.customer_id = ? AND m.sender = ?
+       AND m.id > COALESCE((SELECT last_id FROM thread_reads WHERE group_id = ? AND customer_id = ? AND side = ?), 0)`,
+    groupId, customerId, side === "customer" ? "group" : "customer", groupId, customerId, side).c;
   const thread = (groupId, customerId) => db.all("SELECT id, sender, text, created_at FROM messages WHERE group_id = ? AND customer_id = ? ORDER BY id LIMIT 300", groupId, customerId);
 
   function post({ group, customerId, sender, body, user, ip }) {
@@ -38,13 +46,36 @@ export default function messageRoutes(ctx, add) {
         sms.notifyPhone(c?.phone, c?.sms_opt_in, `Bella's Música: ${group.name} replied to your message. Open the app to read it: ${config.baseUrl}/#/group/${group.id}`);
       }
     }
+    markRead(group.id, customerId, sender);
     return { messages: thread(group.id, customerId), masked };
   }
 
   // Customer side
-  add("GET", "/api/groups/:id/messages", ({ params, user }) => { getGroup(db, params.id); return { messages: thread(params.id, user.id) }; }, { auth: true });
+  add("GET", "/api/groups/:id/messages", ({ params, user }) => { getGroup(db, params.id); markRead(params.id, user.id, "customer"); return { messages: thread(params.id, user.id) }; }, { auth: true });
+
+  // Customer inbox: every conversation, newest first, with unread counts.
+  add("GET", "/api/my/threads", ({ user }) => {
+    const rows = db.all(`SELECT m.group_id, g.name AS group_name, MAX(m.id) AS last_id FROM messages m JOIN groups g ON g.id = m.group_id
+                         WHERE m.customer_id = ? GROUP BY m.group_id ORDER BY last_id DESC LIMIT 50`, user.id);
+    return { threads: rows.map((r) => ({ group_id: r.group_id, group_name: r.group_name, last: db.get("SELECT text, sender, created_at FROM messages WHERE id = ?", r.last_id), unread: unreadFor(r.group_id, user.id, "customer") })) };
+  }, { auth: true });
+
+  // Numbers for the badges in the top bar.
+  add("GET", "/api/my/attention", ({ user }) => {
+    const customerUnread = db.get(
+      `SELECT COUNT(DISTINCT m.group_id) c FROM messages m
+       LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'customer'
+       WHERE m.customer_id = ? AND m.sender = 'group' AND m.id > COALESCE(r.last_id, 0)`, user.id).c;
+    const owns = db.get("SELECT COUNT(*) c FROM groups WHERE owner_id = ?", user.id).c > 0;
+    const requests = owns ? db.get("SELECT COUNT(*) c FROM bookings b JOIN groups g ON g.id = b.group_id WHERE g.owner_id = ? AND b.status = 'requested'", user.id).c : 0;
+    const managerUnread = owns ? db.get(
+      `SELECT COUNT(DISTINCT m.group_id || '-' || m.customer_id) c FROM messages m JOIN groups g ON g.id = m.group_id
+       LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'group'
+       WHERE g.owner_id = ? AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, user.id).c : 0;
+    return { messages: customerUnread, manager: { owns, requests, messages: managerUnread } };
+  }, { auth: true });
   add("POST", "/api/groups/:id/messages", ({ params, body, user, ip }) => {
-    const group = getGroup(db, params.id);
+    const group = getVisibleGroup(db, params.id, user);
     if (group.owner_id === user.id) throw new HttpError(400, "You can't message your own group");
     return post({ group, customerId: user.id, sender: "customer", body, user, ip });
   }, { auth: true });
@@ -54,11 +85,13 @@ export default function messageRoutes(ctx, add) {
     requireOwner(db, user, params.id);
     const rows = db.all(
       `SELECT m.customer_id, u.name, MAX(m.id) AS last_id FROM messages m JOIN users u ON u.id = m.customer_id WHERE m.group_id = ? GROUP BY m.customer_id ORDER BY last_id DESC LIMIT 50`, params.id);
-    return { threads: rows.map((r) => ({ customer_id: r.customer_id, name: shortName(r.name), last: db.get("SELECT text, sender, created_at FROM messages WHERE id = ?", r.last_id) })) };
+    return { threads: rows.map((r) => ({ customer_id: r.customer_id, name: shortName(r.name), last: db.get("SELECT text, sender, created_at FROM messages WHERE id = ?", r.last_id), unread: unreadFor(params.id, r.customer_id, "group") })) };
   }, { auth: true });
   add("GET", "/api/groups/:id/threads/:cid", ({ params, user }) => {
     requireOwner(db, user, params.id);
-    return { messages: thread(params.id, int(params.cid, "customer", { min: 1 })) };
+    const cid = int(params.cid, "customer", { min: 1 });
+    markRead(params.id, cid, "group");
+    return { messages: thread(params.id, cid) };
   }, { auth: true });
   add("POST", "/api/groups/:id/threads/:cid", ({ params, body, user, ip }) => {
     const group = requireOwner(db, user, params.id);

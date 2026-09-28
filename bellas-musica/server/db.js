@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS groups (
   promoted_until INTEGER NOT NULL DEFAULT 0,
   stripe_account_id TEXT NOT NULL DEFAULT '',
   stripe_ready INTEGER NOT NULL DEFAULT 0,
+  hidden INTEGER NOT NULL DEFAULT 0,
   seed_rating REAL NOT NULL DEFAULT 0,
   seed_reviews INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
@@ -114,6 +115,13 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(group_id, customer_id, id);
+CREATE TABLE IF NOT EXISTS thread_reads (
+  group_id TEXT NOT NULL,
+  customer_id INTEGER NOT NULL,
+  side TEXT NOT NULL CHECK (side IN ('customer','group')),
+  last_id INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (group_id, customer_id, side)
+);
 CREATE TABLE IF NOT EXISTS reviews (
   id INTEGER PRIMARY KEY,
   booking_id TEXT NOT NULL UNIQUE REFERENCES bookings(id),
@@ -149,6 +157,11 @@ export function openDb(config) {
   const db = new DatabaseSync(config.dbPath || path.join(config.dataDir, "app.db"));
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  // Databases created before a column existed get it added (CREATE TABLE IF NOT EXISTS never alters).
+  const ensureColumn = (table, column, ddl) => {
+    if (!db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  };
+  ensureColumn("groups", "hidden", "INTEGER NOT NULL DEFAULT 0");
   const q = {
     all: (sql, ...p) => db.prepare(sql).all(...p),
     get: (sql, ...p) => db.prepare(sql).get(...p),
