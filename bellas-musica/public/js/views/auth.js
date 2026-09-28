@@ -9,7 +9,7 @@ const safeNext = (n) => (n && n.startsWith("#/") ? n : "#/");
 export function authView(app, mode, params) {
   const next = safeNext(params.get("next"));
   const signup = mode === "signup";
-  app.innerHTML = `<div class="panel narrow"><h2>${esc(t(signup ? "auth.signupTitle" : "auth.loginTitle"))}</h2>
+  app.innerHTML = `<div class="panel narrow"><h1>${esc(t(signup ? "auth.signupTitle" : "auth.loginTitle"))}</h1>
     <form id="authform" novalidate>
       ${signup ? `<label for="a-name">${esc(t("auth.name"))}</label><input id="a-name" name="name" required maxlength="80" autocomplete="name">` : ""}
       <label for="a-email">${esc(t("auth.email"))}</label><input id="a-email" name="email" type="email" required maxlength="254" autocomplete="email">
@@ -39,21 +39,31 @@ export function authView(app, mode, params) {
 
 export function accountView(app) {
   const u = state.user;
-  app.innerHTML = `<h2 class="sec">${esc(t("acct.title"))}</h2><div class="two"><div class="panel"><h3 class="sec">${esc(t("acct.profile"))}</h3>
+  app.innerHTML = `<h1 class="sec">${esc(t("acct.title"))}</h1><div class="two"><div class="panel"><h2 class="sec">${esc(t("acct.profile"))}</h2>
     <form id="pform"><label for="p-name">${esc(t("auth.name"))}</label><input id="p-name" name="name" required maxlength="80" value="${esc(u.name)}">
-    <label>${esc(t("auth.email"))}</label><input value="${esc(u.email)}" disabled>
+    <label>${esc(t("auth.email"))}</label><input value="${esc(u.email)}" disabled aria-label="${esc(t("auth.email"))}">
     <label for="p-phone">${esc(t("auth.phone"))}</label><input id="p-phone" name="phone" inputmode="tel" maxlength="20" value="${esc(u.phone)}">
     <label class="chk"><input type="checkbox" name="sms"${u.sms_opt_in ? " checked" : ""}> <span>${esc(t("auth.smsConsent"))}</span></label>
     <div id="perr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>
-    <div class="panel"><h3 class="sec">${esc(t("acct.password"))}</h3><form id="wform">
+    <div class="panel"><h2 class="sec">${esc(t("acct.password"))}</h2><form id="wform">
     <label for="w-cur">${esc(t("acct.current"))}</label><input id="w-cur" name="current" type="password" autocomplete="current-password" required>
     <label for="w-new">${esc(t("acct.new"))}</label><input id="w-new" name="next" type="password" minlength="8" autocomplete="new-password" required>
     <div id="werr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("acct.change"))}</button></form>
-    <p class="dim small">${esc(t("acct.others"))}</p></div></div>`;
+    <p class="dim small">${esc(t("acct.others"))}</p></div></div>
+    <details class="panel danger"><summary>${esc(t("acct.delete"))}</summary><p class="dim">${esc(t("acct.deleteWarn"))}</p>
+    <form id="dform"><label for="d-pw">${esc(t("acct.deletePw"))}</label><input id="d-pw" name="password" type="password" autocomplete="current-password" required>
+    <div id="derr" class="err" role="alert"></div><button class="btn dangerbtn" type="submit">${esc(t("acct.deleteBtn"))}</button></form></details>`;
   document.getElementById("pform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("perr"); err.textContent = "";
     try { setUser((await api.patch("/api/me", { name: f.name, phone: f.phone, sms_opt_in: f.sms === "on" })).user); toast(t("common.saved")); accountView(app); }
+    catch (ex) { err.textContent = ex.message; }
+  };
+  document.getElementById("dform").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!confirm(t("acct.deleteConfirm"))) return;
+    const err = document.getElementById("derr"); err.textContent = "";
+    try { await api.post("/api/me/delete", { password: new FormData(e.target).get("password") }); setUser(null); location.hash = "#/"; toast(t("acct.deleted")); }
     catch (ex) { err.textContent = ex.message; }
   };
   document.getElementById("wform").onsubmit = async (e) => {

@@ -10,7 +10,7 @@ const { chromium } = createRequire(import.meta.url)("playwright");
 const shots = process.argv[2] || "";
 if (shots) fs.mkdirSync(shots, { recursive: true });
 
-const S = await startApp();
+const S = await startApp({ ADMIN_EMAILS: "olga@example.com" });
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 const problems = [];
 let step = 0, failed = 0, O, C;
@@ -136,7 +136,7 @@ try {
   const icsRes = await C.request.get(S.base + icsHref);
   ok("'Add to calendar' downloads a valid .ics", icsRes.status() === 200 && (await icsRes.text()).startsWith("BEGIN:VCALENDAR") && /text\/calendar/.test(icsRes.headers()["content-type"]));
   ok("customer sees Confirmed and the refund preview", (await C.locator(".req").innerText()).includes("Confirmed") && /get back \$/.test(await C.locator(".req").innerText()));
-  await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h2:has-text(\"Mis reservas\")"); await C.click("#navtoggle");
+  await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h1:has-text(\"Mis reservas\")"); await C.click("#navtoggle");
   ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").innerText()).includes("Buscar música"));
   await shot(C, "3-bookings-es-phone.png");
   C.once("dialog", (d) => d.accept());
@@ -145,10 +145,10 @@ try {
   await C.goto(S.base + `/#/group/${gid}`); await C.waitForSelector("#calbox .cal");
   await shot(C, "4-group-es-phone.png");
   await C.goto(S.base + "/#/best/60608"); await C.waitForSelector(".card");
-  ok("'Lo mejor de Chicago' page lists groups", (await C.locator("h2").first().innerText()).includes("Lo mejor de Chicago"));
+  ok("'Lo mejor de Chicago' page lists groups", (await C.locator("h1").first().innerText()).includes("Lo mejor de Chicago"));
   const shared = await newPerson("shared-link");
   await shared.goto(S.base + `/g/${gid}`); await shared.waitForSelector("#calbox .cal");
-  ok("a shared /g/<id> link opens the group inside the app", shared.url().includes(`#/group/${gid}`) && (await shared.locator("h2").first().innerText()).includes("E2E Mariachi"));
+  ok("a shared /g/<id> link opens the group inside the app", shared.url().includes(`#/group/${gid}`) && (await shared.locator("h1").first().innerText()).includes("E2E Mariachi"));
   const waHref = await shared.locator("a:has-text('WhatsApp')").first().getAttribute("href");
   ok("WhatsApp share uses the preview-friendly link", decodeURIComponent(waHref).includes(`/g/${gid}`) && !decodeURIComponent(waHref).includes("#/group"));
   await O.goto(S.base + "/#/dashboard?tab=payments"); await O.waitForSelector("#feature");
@@ -156,6 +156,34 @@ try {
   ok("manager can buy featured placement (test mode)", true);
   await C.goto(S.base + "/#/?zip=60608"); await C.waitForSelector(".card");
   ok("featured group is first with a badge", (await C.locator(".card").first().innerText()).includes("Destacado") && (await C.locator(".card h3").first().innerText()) === "E2E Mariachi");
+  // ---------------- account deletion ----------------
+  const D = await newPerson("deleter");
+  await D.goto(S.base + "/#/signup"); await D.fill("#a-name", "Dana Delete"); await D.fill("#a-email", "dana@example.com"); await D.fill("#a-pw", "a long password 3"); await D.click("#authform button[type=submit]");
+  await D.waitForSelector("#nav a[data-r=account]"); await D.goto(S.base + "/#/account"); await D.waitForSelector("#dform", { state: "attached" });
+  await D.click(".danger summary"); D.once("dialog", (d) => d.accept());
+  await D.fill("#d-pw", "wrong password"); await D.click("#dform button"); await D.waitForSelector("#derr:not(:empty)");
+  ok("deleting with the wrong password is refused", /Wrong password/.test(await D.locator("#derr").innerText()));
+  D.once("dialog", (d) => d.accept());
+  await D.fill("#d-pw", "a long password 3"); await D.click("#dform button"); await D.waitForSelector("#nav a[data-r=login]", { state: "attached" });
+  ok("account deleted: logged out and back on the home page", D.url().endsWith("/#/") && (await D.locator("#nav a[data-r=login]").count()) === 1);
+
+  // ---------------- owner/admin page ----------------
+  await O.goto(S.base + "/#/admin"); await O.waitForSelector(".hero-fig");
+  ok("admin sees the owner dashboard with the fee headline and tiles", (await O.locator(".hero-fig").innerText()).includes("Platform fees kept") && (await O.locator(".tile").count()) >= 6);
+  await shot(O, "5-admin.png");
+  ok("test mode is labelled on the admin page", (await O.locator("#app").innerText()).includes("simulated"));
+  ok("admin link only appears for the admin", (await O.locator("#nav a[data-r=admin]").count()) === 1 && (await C.locator("#nav a[data-r=admin]").count()) === 0);
+  await C.goto(S.base + "/#/admin"); await C.waitForSelector("#app .panel.empty");
+  ok("a normal user opening /admin just sees 'not found'", (await C.locator("#app").innerText()).toLowerCase().includes("not found") || (await C.locator("#app").innerText()).includes("No se encontró"));
+  O.once("dialog", (d) => d.accept());
+  await O.locator("tr", { hasText: "E2E Mariachi" }).locator("[data-hide]").click();
+  await O.waitForSelector("tr:has-text('E2E Mariachi') .badge:has-text('hidden')");
+  await C.goto(S.base + "/#/?zip=60608"); await C.waitForSelector(".card");
+  ok("hiding a group removes it from search", !(await C.locator(".card h3").allInnerTexts()).includes("E2E Mariachi"));
+  await O.locator("tr", { hasText: "E2E Mariachi" }).locator("[data-hide]").click();
+  await O.waitForSelector("tr:has-text('E2E Mariachi') [data-hide]:has-text('Hide')");
+  await C.goto(S.base + "/#/?zip=60608&x=1"); await C.waitForSelector(".card");
+  ok("unhiding brings it back", (await C.locator(".card h3").allInnerTexts()).includes("E2E Mariachi"));
 } catch (e) {
   failed++;
   console.log("CRASH", e.message.split("\n").slice(0, 6).join(" | "));

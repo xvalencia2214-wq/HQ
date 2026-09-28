@@ -4,6 +4,7 @@
   --paper: #fffaf0;
   --gold: #b8892b;
   --gold-2: #d4a84a;
+  --gold-ink: #7d5a10; /* gold as TEXT on light backgrounds (6:1), the plain gold is only for fills and borders */
   --black: #141210;
   --ink: #1d1a16;
   --ink-2: #5d564a;
@@ -56,7 +57,7 @@ textarea { min-height: 90px; resize: vertical; }
 input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 label { display: block; font-size: .85rem; color: var(--ink-2); margin: 12px 0 4px; }
 
-.btn { background: var(--gold); color: #fff; border: 0; border-radius: 10px; padding: 11px 18px; font-weight: 600; white-space: nowrap; }
+.btn { background: var(--gold); color: var(--black); border: 0; border-radius: 10px; padding: 11px 18px; font-weight: 600; white-space: nowrap; }
 .btn:hover { background: #a27722; }
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .btn.dark { background: var(--black); color: var(--gold-2); }
@@ -73,7 +74,7 @@ label { display: block; font-size: .85rem; color: var(--ink-2); margin: 12px 0 4
 .rank { position: absolute; top: -10px; left: 12px; background: var(--black); color: var(--gold-2); font-family: Georgia, serif; font-size: .85rem; padding: 2px 10px; border-radius: 999px; }
 .card h3 { font-size: 1.2rem; margin-top: 6px; }
 .meta { color: var(--ink-2); font-size: .9rem; display: flex; gap: 10px; flex-wrap: wrap; }
-.stars { color: var(--gold); font-weight: 700; }
+.stars { color: var(--gold-ink); font-weight: 700; }
 .price { font-weight: 700; }
 .tag { background: var(--cream-2); border-radius: 999px; padding: 2px 10px; font-size: .8rem; }
 .card p { margin: 0; color: var(--ink-2); font-size: .95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -126,7 +127,7 @@ footer { text-align: center; color: var(--ink-2); font-size: .8rem; padding: 10p
 .seg button { background: transparent; border: 0; padding: 7px 18px; color: var(--ink); }
 .seg button.on { background: var(--black); color: var(--gold-2); }
 .map { height: 460px; border-radius: var(--radius); border: 1px solid var(--line); z-index: 0; }
-.feat { position: absolute; top: -10px; right: 12px; background: var(--gold); color: #fff; font-size: .75rem; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.feat { position: absolute; top: -10px; right: 12px; background: var(--gold); color: var(--black); font-size: .75rem; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
 .feat.inline { position: static; vertical-align: middle; font-family: system-ui, sans-serif; margin-left: 6px; }
 .dim { color: var(--ink-2); font-weight: 400; font-size: .9rem; }
 h2 small.dim { font-family: system-ui, sans-serif; }
@@ -141,7 +142,7 @@ h2 small.dim { font-family: system-ui, sans-serif; }
 
 /* ---- marketplace additions ---- */
 nav { align-items: center; }
-nav a.cta { background: var(--gold); color: #fff; }
+nav a.cta { background: var(--gold); color: var(--black); font-weight: 600; }
 .linkbtn { background: none; border: 0; color: var(--cream); padding: 8px 10px; border-radius: 999px; font-size: .92rem; }
 .linkbtn:hover { background: #2a2620; color: var(--gold-2); }
 .banner { background: #fbf1d7; color: #5b4514; text-align: center; font-size: .85rem; padding: 6px 12px; border-bottom: 1px solid var(--gold-2); }
@@ -184,7 +185,7 @@ nav a.cta { background: var(--gold); color: #fff; }
 .pkg-r { text-align: right; }
 .review { padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .review p { margin: 4px 0 0; }
-.stars { color: var(--gold); }
+.stars { color: var(--gold-ink); }
 .quote { margin: 10px 0; }
 .sum.strong { font-weight: 700; }
 .policy { background: var(--cream-2); border-radius: 10px; padding: 10px 12px; font-size: .85rem; margin: 10px 0; }
@@ -257,3 +258,32 @@ a.btn { text-decoration: none; display: inline-block; text-align: center; }
 .checklist .bar i { display: block; height: 100%; background: var(--gold); }
 .checklist ul { margin: 8px 0 2px 18px; padding: 0; }
 .checklist li { margin: 3px 0; }
+
+/* ---- admin: stat tiles (proportional figures for big numbers, tabular only in columns) ---- */
+.hero-fig { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.hero-v { font-size: 3.25rem; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin-bottom: 8px; }
+.tile { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.tile-l { font-size: .82rem; color: var(--ink-2); }
+.tile-v { font-size: 1.7rem; font-weight: 600; line-height: 1.2; }
+.tile-s { font-size: .8rem; color: var(--ink-2); margin-top: 2px; }
+.tbl-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.tbl { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tbl th, .tbl td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl th { color: var(--ink-2); font-weight: 600; font-size: .8rem; white-space: nowrap; }
+.tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl .acts { display: flex; gap: 6px; flex-wrap: wrap; min-width: 150px; }
+.samples { margin: 12px 0; }
+.samples summary { cursor: pointer; color: var(--ink-2); padding: 6px 0; }
+code { background: var(--cream-2); padding: 1px 6px; border-radius: 6px; }
+
+.day.idle { background: var(--paper); color: var(--ink-2); }
+.day.idle:hover { background: #fbf1d7; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+main h1 { font-size: 1.5rem; }
+main h1.sec { font-size: 1.5rem; margin: 14px 0 6px; }
+.danger { border-color: #d9a3a3; margin-top: 16px; }
+.danger summary { cursor: pointer; color: var(--bad); font-weight: 600; }
+.dangerbtn { background: var(--bad); color: #fff; }
+.dangerbtn:hover { background: #8c2727; }

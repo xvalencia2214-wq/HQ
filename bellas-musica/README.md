@@ -9,8 +9,11 @@ English and Spanish. Cream / gold / black theme.
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 33 tests: API, money, Stripe/Twilio against fakes, i18n, ops
-NODE_PATH=$(npm root -g) node e2e/e2e.mjs [screenshot-dir]   # 29-step browser test (needs Playwright + Chromium)
+npm test           # 48 tests: API, money, Stripe/Twilio against fakes, random stress test, time zones, i18n, share pages, ops
+# Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
+node e2e/e2e.mjs [dir]                     # 46-step end-to-end run: manager sets up, customer books, chats, cancels, admin
+node e2e/qa.mjs <dir>                      # seeds a realistic marketplace and screenshots every screen (iPad + phone)
+AXE=/path/axe.min.js node e2e/a11y.mjs     # accessibility audit (axe-core, WCAG 2.2 AA) of every screen
 ```
 
 In test mode payments and texts are **simulated** (a banner says so), and fictional sample groups fill the search.
@@ -25,14 +28,19 @@ In test mode payments and texts are **simulated** (a banner says so), and fictio
 | Privacy | Phone numbers and emails are masked in chat and hidden until a booking is confirmed; texts come from the platform number |
 | Reviews | Only after the event, only from a paid, confirmed booking, once |
 | Groups | Dashboard: requests, calendar, listing, packages and songs, photos and video, payouts, paid featuring, messages |
-| Accounts | Sign-up, login, sessions, password change, English/Spanish, optional text alerts (opt-in) |
+| Accounts | Sign-up, login, sessions, password change, self-serve account deletion (anonymizes, keeps payment records), English/Spanish, optional text alerts (opt-in) |
+| Inbox | Customers see every conversation in one place; unread badges for customers and managers |
+| Calendar | "Add to calendar" (.ics) for customers and groups |
+| Launch checklist | Tells a new group exactly what's missing (photos, video, story, songs, package, dates, payouts, text alerts) |
+| Sharing | `/g/<id>` links show a photo card in WhatsApp/iMessage/Facebook (Open Graph), plus robots.txt, sitemap.xml, home-screen icon |
+| Owner page | `#/admin` for you: fees kept, deposits, refunds, users, groups; hide a group, comp a featured spot, reset a password; every action is logged |
 
 ## Money model
 
 - The customer pays a **deposit** (group sets 20–50% of the total) at booking time. The rest is paid to the group directly.
 - **Your fee** is `PLATFORM_FEE_PCT` (default 10%) of the booking **total**, taken out of the deposit; the rest of the deposit is transferred to the group's Stripe account. Example: $600 booking, 25% deposit = $150 charged, $60 is your fee, $90 goes to the group.
 - Refunds reverse the transfer and refund your fee too. Group declines or cancels = full refund. Customer cancels = by the group's policy (Flexible / Moderate / Strict, see `server/pricing.js`).
-- Featured placement is a separate $49 (`FEATURE_PRICE_CENTS`) charge for 30 days.
+- Featured placement (or a free one you grant from the owner page) is a separate $49 (`FEATURE_PRICE_CENTS`) charge for 30 days.
 - All amounts are computed on the server; nothing the browser sends can change a price.
 
 ## Going live checklist
@@ -49,6 +57,11 @@ You do these once; I could not do them for you because they need your accounts.
 4. **Legal**: `public/terms.html` and `public/privacy.html` are **templates**. Fill in the brackets and have a lawyer review them. Also ask an accountant about sales/payments reporting for a marketplace, and consider whether groups need insurance or licenses.
 5. **Real groups**: set `DEMO_SEED=0` when you have enough real listings to remove the fictional samples.
 6. **Backups**: back up `DATA_DIR` (database and `uploads/`). `npm run backup -- /path/copy.db` makes a safe copy while the server is running.
+
+## Owner page
+
+Set `ADMIN_EMAILS=you@example.com` (comma-separated) and log in with that email; an **Admin** link appears in the top bar. Everyone else gets a plain "not found".
+It shows fees kept, deposits collected and refunded, booking counts, users, and groups. In test mode the numbers come from simulated payments and say so.
 
 ## Operating it
 
@@ -69,10 +82,10 @@ npm run admin -- stats                                  # users, groups, booking
 
 - **Not verified against live Stripe or Twilio.** They are tested against fakes that check the exact requests this code sends. Test with Stripe test mode before real money.
 - **No email**: no password-reset email, no email verification, no booking emails (texts only, opt-in). Adding an email provider is the next infrastructure step.
-- One server process with SQLite: fine for a few thousand bookings, and it keeps rate limits in memory. Move to Postgres and shared limits before serious scale.
+- One server process with SQLite: fine for a few thousand bookings, and it keeps rate limits in memory. Search takes ~30 ms with 3,000 groups and ~70-130 ms with 20,000. Move to Postgres and shared limits before serious scale.
 - US only (ZIP codes, US phone numbers). Group-authored text (stories, song names) is not translated.
 - Groups aren't vetted. Decide how you'll verify groups and handle no-shows and disputes before promoting it.
-- Search reads all groups in memory: fine for thousands of listings, not hundreds of thousands.
+- Search loads the groups in the ZIP codes inside the radius: fine for tens of thousands of listings, not millions.
 
 ## Layout
 

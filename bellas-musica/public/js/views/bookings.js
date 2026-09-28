@@ -24,7 +24,7 @@ function card(b) {
 
 export async function myBookings(app) {
   const { bookings } = await api.get("/api/my/bookings");
-  app.innerHTML = `<h2 class="sec">${esc(t("bk.title"))}</h2><div class="panel">${bookings.length ? bookings.map(card).join("") : `<div class="empty">${esc(t("bk.none"))} <a href="#/">${esc(t("nav.find"))}</a></div>`}</div>`;
+  app.innerHTML = `<h1 class="sec">${esc(t("bk.title"))}</h1><div class="panel">${bookings.length ? bookings.map(card).join("") : `<div class="empty">${esc(t("bk.none"))} <a href="#/">${esc(t("nav.find"))}</a></div>`}</div>`;
   wire(app, () => myBookings(app));
 }
 
@@ -59,7 +59,7 @@ export async function bookingPage(app, id, params) {
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
   const msg = b.payment_status !== "unpaid" ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t("bk.paidText"))}</div>`
     : params.get("cancelled") ? `<div class="note">${esc(t("bk.payCancelled"))}</div>` : "";
-  app.innerHTML = `<h2 class="sec">${esc(t("bk.detail"))}</h2>${msg}<div class="panel">${card(b)}
+  app.innerHTML = `<h1 class="sec">${esc(t("bk.detail"))}</h1>${msg}<div class="panel">${card(b)}
     ${b.status === "pending_payment" && b.pay_url ? `<a class="btn" href="${esc(b.pay_url)}">${esc(t("bk.payNow"))}</a>` : ""}
     <p><a href="#/bookings">${esc(t("bk.all"))}</a></p></div>`;
   wire(app, () => bookingPage(app, id, new URLSearchParams()));
@@ -75,7 +75,7 @@ export async function simulatedPay(app, kind, id) {
     title = t("pay.depositFor", { name: b.group_name }); amount = b.deposit_cents;
     summary = `${esc(fmtDate(b.date))} · ${esc(b.time)}`;
   } else { title = t("pay.featureTitle"); amount = state.meta.feature_price_cents; summary = esc(t("pay.featureText")); }
-  app.innerHTML = `<div class="panel narrow"><h2>${esc(title)}</h2><p>${summary}</p><div class="sum strong"><span>${esc(t("pay.amount"))}</span><span>${money(amount)}</span></div>
+  app.innerHTML = `<div class="panel narrow"><h1>${esc(title)}</h1><p>${summary}</p><div class="sum strong"><span>${esc(t("pay.amount"))}</span><span>${money(amount)}</span></div>
     <div class="note">${esc(t("pay.testMode"))}</div><div id="payerr" class="err" role="alert"></div><button class="btn wide" id="paybtn">${esc(t("pay.button", { amount: money(amount) }))}</button></div>`;
   document.getElementById("paybtn").onclick = async () => {
     document.getElementById("paybtn").disabled = true;

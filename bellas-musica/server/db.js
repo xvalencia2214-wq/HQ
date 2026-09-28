@@ -115,6 +115,14 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(group_id, customer_id, id);
+CREATE TABLE IF NOT EXISTS admin_log (
+  id INTEGER PRIMARY KEY,
+  admin_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target TEXT NOT NULL DEFAULT '',
+  details TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS thread_reads (
   group_id TEXT NOT NULL,
   customer_id INTEGER NOT NULL,

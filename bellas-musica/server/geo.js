@@ -30,3 +30,14 @@ export function nearestZip(lat, lon) {
   }
   return best;
 }
+
+// Every ZIP within `radius` miles of `origin`, so a search only has to look at groups in those ZIPs.
+export function zipsWithin(origin, radius) {
+  const dLat = radius / 69, dLon = radius / (69 * Math.max(0.2, Math.cos((origin.lat * Math.PI) / 180)));
+  const out = [];
+  for (const z of zips.values()) {
+    if (Math.abs(z.lat - origin.lat) > dLat || Math.abs(z.lon - origin.lon) > dLon) continue; // cheap box first
+    if (miles(origin, z) <= radius) out.push(z.zip);
+  }
+  return out;
+}

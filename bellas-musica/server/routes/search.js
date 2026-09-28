@@ -1,6 +1,6 @@
 import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
-import { lookupZip, miles, zipCount, nearestZip } from "../geo.js";
+import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf } from "../shared.js";
 
 // Which music suits which event when a group hasn't said what it plays.
@@ -37,7 +37,10 @@ export default function searchRoutes(ctx, add) {
     const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages GROUP BY group_id").map((r) => [r.group_id, r.m]));
 
     let list = [];
-    for (const g of db.all("SELECT * FROM groups WHERE hidden = 0")) {
+    // Only groups whose ZIP is inside the radius can match, so let SQL skip everything else.
+    const nearby = zipsWithin(origin, radius);
+    const candidates = nearby.length ? db.all(`SELECT * FROM groups WHERE hidden = 0 AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby) : [];
+    for (const g of candidates) {
       const z = lookupZip(g.zip);
       if (!z) continue;
       const distance = miles(origin, z);

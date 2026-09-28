@@ -10,12 +10,16 @@ import { authView, accountView } from "./views/auth.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
+import { admin } from "./views/admin.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b)\/([\w-]+)\/?$/.exec(location.pathname);
 if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group/" : "best/") + landing[2]);
 
 const app = document.getElementById("app");
+// Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.
+const ensureH1 = () => { if (!app.querySelector("h1")) { const h = app.querySelector("h2"); if (h && h.getAttribute("aria-level") !== "1") { h.setAttribute("role", "heading"); h.setAttribute("aria-level", "1"); } } };
+new MutationObserver(ensureH1).observe(app, { childList: true, subtree: true });
 let routeToken = 0;
 
 function renderChrome() {
@@ -27,6 +31,7 @@ function renderChrome() {
     `<a href="#/" data-r="home">${esc(t("nav.find"))}</a>` +
     (u ? `<a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
     `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}${dot(managerCount)}</a>` +
+    (u && u.is_admin ? `<a href="#/admin" data-r="admin">${esc(t("nav.admin"))}</a>` : "") +
     (u ? `<a href="#/account" data-r="account">${esc(u.name.split(" ")[0])}</a><button type="button" id="logout" class="linkbtn">${esc(t("nav.logout"))}</button>`
       : `<a href="#/login" data-r="login">${esc(t("nav.login"))}</a><a href="#/signup" data-r="signup" class="cta">${esc(t("nav.signup"))}</a>`) +
     `<button type="button" id="langbtn" class="linkbtn" aria-label="Español / English">${lang() === "es" ? "EN" : "ES"}</button>`;
@@ -43,7 +48,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "pay", "dashboard", "account", "messages"]);
+const needsLogin = new Set(["bookings", "booking", "pay", "dashboard", "account", "messages", "admin"]);
 
 async function route() {
   const token = ++routeToken;
@@ -68,6 +73,7 @@ async function route() {
     else if (seg[0] === "login" || seg[0] === "signup") authView(box, seg[0], params);
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);
+    else if (seg[0] === "admin") await admin(box);
     else if (seg[0] === "booking" && seg[1]) await bookingPage(box, seg[1], params);
     else if (seg[0] === "pay" && seg[1] && seg[2]) await simulatedPay(box, seg[1], seg[2]);
     else if (seg[0] === "dashboard") { if (params.get("new")) newGroup(box); else await dashboard(box, params); }

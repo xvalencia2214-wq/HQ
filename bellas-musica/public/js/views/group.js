@@ -25,7 +25,7 @@ export async function group(app, id, params = new URLSearchParams()) {
 
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
-  <div class="panel"><div class="titlebar"><h2>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h2>${shareButtons(g.name, "#/group/" + g.id)}</div>
+  <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1>${shareButtons(g.name, "#/group/" + g.id)}</div>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span><span>${esc(g.city)}, ${esc(g.state)}</span></div>
     ${gallery}${video}
     <div class="facts">
@@ -35,12 +35,12 @@ export async function group(app, id, params = new URLSearchParams()) {
       ${fact("g.deposit", `${g.deposit_pct}%`)}${fact("g.policy", esc(t("policy." + g.cancel_policy)))}
     </div>
     <p class="dim">${esc(policy[lang()] || "")}</p>
-    <h3 class="sec">${esc(t("g.story"))}</h3><p>${esc(g.story || t("g.noStory"))}</p>
+    <h2 class="sec">${esc(t("g.story"))}</h2><p>${esc(g.story || t("g.noStory"))}</p>
     ${g.events.length ? `<div class="chips">${g.events.map((e) => `<span class="tag">${esc(t("event." + e))}</span>`).join("")}</div>` : ""}
   </div>
-  ${g.songs.length ? `<div class="panel"><h3 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h3><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
-  ${g.packages.length ? `<div class="panel"><h3 class="sec">${esc(t("g.packages"))}</h3><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
-  ${g.recent_reviews.length ? `<div class="panel"><h3 class="sec">${esc(t("g.reviewsTitle"))}</h3>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("")}</div>` : ""}
+  ${g.songs.length ? `<div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h2><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
+  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
     <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
     <div class="panel" id="bookpanel"><h2>${esc(t("g.request"))}</h2><div id="bookbox"></div></div>

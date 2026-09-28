@@ -32,6 +32,7 @@ export function loadConfig(env = process.env) {
     trustProxy: env.TRUST_PROXY === "1",
     secret,
     demoSeed: env.DEMO_SEED !== "0",
+    adminEmails: String(env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean), // who may open the admin page
     timezone: env.BUSINESS_TZ || "America/Chicago", // the calendar day used for "today", holds and refund windows
     // Rate limits (max requests per window per client); tests raise these
     limits: {

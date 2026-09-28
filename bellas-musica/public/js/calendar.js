@@ -1,4 +1,4 @@
-import { dowLetters, dkey, fmtMonth } from "./ui.js";
+import { dowLetters, dkey, fmtMonth, fmtDate } from "./ui.js";
 import { t } from "./i18n.js";
 
 // Month grid used by customers and by group managers.
@@ -11,7 +11,7 @@ export function calendar(box, st, cfg) {
   for (let b = 0; b < first.getDay(); b++) html += '<div class="day blank"></div>';
   for (let d = 1; d <= days; d++) {
     const date = new Date(m.getFullYear(), m.getMonth(), d), s = cfg.dayState(date), k = dkey(date);
-    html += `<button type="button" class="day${s.open ? " open" : ""}${st.date === k ? " sel" : ""}" data-d="${k}"${s.enabled ? "" : " disabled"}>${d}</button>`;
+    html += `<button type="button" class="day${s.open ? " open" : s.enabled ? " idle" : ""}${st.date === k ? " sel" : ""}" data-d="${k}" aria-label="${fmtDate(k)}${s.open ? ", " + t("cal.open") : ""}"${s.enabled ? "" : " disabled"}>${d}</button>`;
   }
   box.innerHTML = html + "</div>";
   box.querySelectorAll("[data-nav]").forEach((btn) => {

@@ -405,3 +405,32 @@ test("launch checklist reflects what the group has finished", async () => {
   assert.equal((await o2.get("/api/my/groups")).json.groups[0].checklist.items.find((i) => i.key === "alerts").done, false);
   void id2;
 });
+
+test("delete account: needs the password, blocked by upcoming bookings, anonymizes but keeps financial records", async () => {
+  const owner = client(S.base), a = client(S.base);
+  await owner.signup("del-o@example.com", "Del Owner");
+  await a.signup("del-a@example.com", "Delia Deleter", { phone: "312-555-0188", sms_opt_in: true });
+  const d = inDays(35), d2 = inDays(36);
+  const gid = await makeGroup(owner, { name: "Delete Band", dates: [d, d2] });
+  await a.post(`/api/groups/${gid}/messages`, { text: "hello" });
+  const b = (await a.post("/api/bookings", bookingBody(gid, d))).json.booking; await a.post(`/api/bookings/${b.id}/simulate-pay`);
+  const hold = (await a.post("/api/bookings", bookingBody(gid, d2))).json.booking; // an unpaid hold
+  assert.equal((await a.post("/api/me/delete", { password: "wrong" })).status, 401);
+  assert.equal((await a.post("/api/me/delete", { password: "correct horse battery" })).status, 409); // upcoming paid booking
+  await a.patch(`/api/bookings/${b.id}`, { action: "cancel" });
+  assert.equal((await a.post("/api/me/delete", { password: "correct horse battery" })).status, 200);
+  assert.equal((await a.get("/api/me")).json.user, null);
+  const u = S.db.get("SELECT email, name, phone, sms_opt_in, pass_hash FROM users WHERE email LIKE 'deleted-%' AND id = (SELECT customer_id FROM bookings WHERE id = ?)", b.id);
+  assert.deepEqual({ ...u }, { email: u.email, name: "Deleted user", phone: "", sms_opt_in: 0, pass_hash: "deleted" });
+  const bk = S.db.get("SELECT name, phone, address, message, deposit_cents, refund_cents, status FROM bookings WHERE id = ?", b.id);
+  assert.deepEqual({ ...bk }, { name: "Deleted user", phone: "", address: "", message: "", deposit_cents: 15000, refund_cents: 15000, status: "cancelled" }); // money trail stays
+  assert.equal(S.db.get("SELECT status FROM bookings WHERE id = ?", hold.id).status, "cancelled"); // unpaid hold released
+  assert.equal(S.db.get("SELECT COUNT(*) c FROM messages WHERE customer_id = (SELECT customer_id FROM bookings WHERE id = ?)", b.id).c, 0);
+  assert.equal((await client(S.base).post("/api/auth/login", { email: "del-a@example.com", password: "correct horse battery" })).status, 401);
+  assert.equal((await client(S.base).post("/api/auth/register", { email: "del-a@example.com", password: "brand new password", name: "Delia Again" })).status, 200); // the email can be reused
+  // a group manager who deletes their account takes their listing offline
+  const b2 = client(S.base); await b2.signup("del-g@example.com", "Del Group");
+  const g2 = await makeGroup(b2, { name: "Vanishing Band" });
+  assert.equal((await b2.post("/api/me/delete", { password: "correct horse battery" })).status, 200);
+  assert.equal((await client(S.base).get(`/api/groups/${g2}`)).status, 404);
+});

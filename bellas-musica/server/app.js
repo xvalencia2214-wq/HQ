@@ -17,6 +17,7 @@ import groupRoutes from "./routes/groups.js";
 import bookingRoutes from "./routes/bookings.js";
 import messageRoutes from "./routes/messages.js";
 import reviewRoutes from "./routes/reviews.js";
+import adminRoutes from "./routes/admin.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -64,7 +65,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {

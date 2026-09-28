@@ -2,6 +2,8 @@ import { api } from "./api.js";
 import { state } from "./state.js";
 
 const EN = {
+  "cal.open": "available", "acct.delete": "Delete my account", "acct.deleteWarn": "This signs you out, removes your name, phone and messages, and takes your listings offline. Booking and payment records are kept without your personal details. You can't undo this.", "acct.deletePw": "Type your password to confirm", "acct.deleteBtn": "Delete my account", "acct.deleteConfirm": "Delete your account for good?", "acct.deleted": "Your account was deleted.",
+  "nav.admin": "Admin",
   "chk.title": "Get ready to launch", "chk.progress": "{done} of {total} done", "chk.complete": "Your profile is complete. Share it with your customers!",
   "chk.photos": "Add at least 3 photos", "chk.video": "Add a video link", "chk.story": "Write your story (80+ characters)", "chk.events": "Pick the events you play", "chk.songs": "List at least 5 songs",
   "chk.packages": "Add a package", "chk.dates": "Open at least 4 dates", "chk.payouts": "Set up payouts", "chk.alerts": "Turn on text alerts (add your phone and agree to texts)",
@@ -81,6 +83,8 @@ const EN = {
 };
 
 const ES = {
+  "cal.open": "disponible", "acct.delete": "Eliminar mi cuenta", "acct.deleteWarn": "Se cierra tu sesión, se borran tu nombre, teléfono y mensajes, y tus perfiles dejan de mostrarse. Los registros de reservas y pagos se conservan sin tus datos personales. No se puede deshacer.", "acct.deletePw": "Escribe tu contraseña para confirmar", "acct.deleteBtn": "Eliminar mi cuenta", "acct.deleteConfirm": "¿Eliminar tu cuenta definitivamente?", "acct.deleted": "Tu cuenta fue eliminada.",
+  "nav.admin": "Admin",
   "chk.title": "Prepárate para lanzar", "chk.progress": "{done} de {total} listos", "chk.complete": "Tu perfil está completo. ¡Compártelo con tus clientes!",
   "chk.photos": "Agrega al menos 3 fotos", "chk.video": "Agrega un enlace de video", "chk.story": "Escribe tu historia (80+ caracteres)", "chk.events": "Elige los eventos que tocas", "chk.songs": "Lista al menos 5 canciones",
   "chk.packages": "Agrega un paquete", "chk.dates": "Abre al menos 4 fechas", "chk.payouts": "Configura tus pagos", "chk.alerts": "Activa los avisos por texto (agrega tu teléfono y acepta los textos)",

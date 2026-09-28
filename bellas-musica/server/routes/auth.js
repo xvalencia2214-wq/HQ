@@ -1,11 +1,11 @@
-import { HttpError, now, str } from "../util.js";
+import { HttpError, now, str, todayStr } from "../util.js";
 import { hashPassword, verifyPassword, createSession, destroySession, sessionCookie } from "../auth.js";
 import { normalizePhone } from "../sms.js";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
 
-export const publicUser = (u) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), lang: u.lang };
+export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), lang: u.lang, is_admin: admins.includes(String(u.email).toLowerCase()) };
 
 function phoneField(v) {
   const raw = str(v, "Phone", { max: 30 });
@@ -17,6 +17,7 @@ function phoneField(v) {
 
 export default function authRoutes(ctx, add) {
   const { db, limiters } = ctx;
+  const pub = (u) => publicUser(u, ctx.config.adminEmails);
   const startSession = (res, req, userId) => res.setHeader("Set-Cookie", sessionCookie(createSession(db, userId), { secure: ctx.isSecure(req) }));
 
   add("POST", "/api/auth/register", async ({ req, res, body, ip }) => {
@@ -31,7 +32,7 @@ export default function authRoutes(ctx, add) {
     if (db.get("SELECT 1 AS x FROM users WHERE email = ?", email)) throw new HttpError(409, "That email already has an account. Try logging in.");
     const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, pass_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)", email, name, phone, sms, await hashPassword(password), now());
     startSession(res, req, Number(info.lastInsertRowid));
-    return { user: publicUser(db.get("SELECT * FROM users WHERE id = ?", info.lastInsertRowid)) };
+    return { user: pub(db.get("SELECT * FROM users WHERE id = ?", info.lastInsertRowid)) };
   });
 
   add("POST", "/api/auth/login", async ({ req, res, body, ip }) => {
@@ -41,7 +42,7 @@ export default function authRoutes(ctx, add) {
     const ok = await verifyPassword(typeof body.password === "string" ? body.password : "", u ? u.pass_hash : DUMMY_HASH);
     if (!u || !ok) throw new HttpError(401, "Wrong email or password");
     startSession(res, req, u.id);
-    return { user: publicUser(u) };
+    return { user: pub(u) };
   });
 
   add("POST", "/api/auth/logout", ({ req, res }) => {
@@ -50,7 +51,7 @@ export default function authRoutes(ctx, add) {
     return { ok: true };
   });
 
-  add("GET", "/api/me", ({ user }) => ({ user: publicUser(user) }));
+  add("GET", "/api/me", ({ user }) => ({ user: pub(user) }));
 
   add("PATCH", "/api/me", ({ body, user }) => {
     const name = body.name !== undefined ? str(body.name, "Name", { min: 1, max: 80 }) : user.name;
@@ -58,7 +59,7 @@ export default function authRoutes(ctx, add) {
     const sms = body.sms_opt_in !== undefined ? (body.sms_opt_in === true && phone ? 1 : 0) : (phone ? user.sms_opt_in : 0);
     const lang = body.lang === "es" || body.lang === "en" ? body.lang : user.lang;
     db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ? WHERE id = ?", name, phone, sms, lang, user.id);
-    return { user: publicUser(db.get("SELECT * FROM users WHERE id = ?", user.id)) };
+    return { user: pub(db.get("SELECT * FROM users WHERE id = ?", user.id)) };
   }, { auth: true });
 
   add("POST", "/api/me/password", async ({ req, res, body, user, ip }) => {
@@ -72,6 +73,31 @@ export default function authRoutes(ctx, add) {
     destroySession(db, req);
     db.run("DELETE FROM sessions WHERE user_id = ?", user.id);
     startSession(res, req, user.id);
+    return { ok: true };
+  }, { auth: true });
+
+  // Delete my account. Booking records must be kept (payments, taxes), so the person is anonymized rather than erased.
+  add("POST", "/api/me/delete", async ({ req, res, body, user, ip }) => {
+    if (!limiters.auth.check(`${ip}|del|${user.id}`)) throw new HttpError(429, "Too many attempts. Try again later.");
+    const row = db.get("SELECT pass_hash FROM users WHERE id = ?", user.id);
+    if (!(await verifyPassword(typeof body.password === "string" ? body.password : "", row.pass_hash))) throw new HttpError(401, "Wrong password");
+    const today = todayStr();
+    if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status IN ('requested','confirmed') AND date >= ?", user.id, today).c) {
+      throw new HttpError(409, "You have upcoming bookings. Cancel them first, then delete your account.");
+    }
+    if (db.get("SELECT COUNT(*) c FROM bookings b JOIN groups g ON g.id = b.group_id WHERE g.owner_id = ? AND b.status IN ('requested','confirmed') AND b.date >= ?", user.id, today).c) {
+      throw new HttpError(409, "Your group has upcoming bookings. Decline or cancel them first, then delete your account.");
+    }
+    db.tx(() => {
+      db.run("UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE customer_id = ? AND status = 'pending_payment'", now(), user.id); // unpaid holds
+      db.run("UPDATE users SET email = ?, name = 'Deleted user', phone = '', sms_opt_in = 0, pass_hash = 'deleted' WHERE id = ?", `deleted-${user.id}@deleted.invalid`, user.id);
+      db.run("DELETE FROM sessions WHERE user_id = ?", user.id);
+      db.run("UPDATE bookings SET name = 'Deleted user', phone = '', address = '', message = '' WHERE customer_id = ?", user.id);
+      db.run("DELETE FROM messages WHERE customer_id = ?", user.id);
+      db.run("DELETE FROM thread_reads WHERE customer_id = ?", user.id);
+      db.run("UPDATE groups SET hidden = 1, contact_phone = '' WHERE owner_id = ?", user.id); // their listings disappear
+    });
+    res.setHeader("Set-Cookie", sessionCookie("", { secure: ctx.isSecure(req), clear: true }));
     return { ok: true };
   }, { auth: true });
 }
