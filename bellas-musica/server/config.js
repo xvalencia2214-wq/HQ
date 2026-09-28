@@ -36,7 +36,7 @@ export function loadConfig(env = process.env) {
     timezone: env.BUSINESS_TZ || "America/Chicago", // the calendar day used for "today", holds and refund windows
     // Rate limits (max requests per window per client); tests raise these
     limits: {
-      api: int(env.RATE_API, 300), register: int(env.RATE_REGISTER, 10), auth: int(env.RATE_AUTH, 10),
+      api: int(env.RATE_API, 300), register: int(env.RATE_REGISTER, 10), forgot: int(env.RATE_FORGOT, 5), waitlist: int(env.RATE_WAITLIST, 5), auth: int(env.RATE_AUTH, 10),
       chat: int(env.RATE_CHAT, 20), upload: int(env.RATE_UPLOAD, 30), booking: int(env.RATE_BOOKING, 20)
     },
     // Money
@@ -46,6 +46,19 @@ export function loadConfig(env = process.env) {
     stripeKey: env.STRIPE_SECRET_KEY || "",
     stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET || "",
     stripeApi: env.STRIPE_API_BASE || "https://api.stripe.com",
+    // Email (Resend). Leave the key empty to only log emails (simulated).
+    resendKey: env.RESEND_API_KEY || "",
+    emailFrom: env.EMAIL_FROM || "",            // e.g. Bella's Música <hello@yourdomain.com>
+    emailReplyTo: env.EMAIL_REPLY_TO || "",
+    emailApi: env.EMAIL_API_BASE || "https://api.resend.com",
+    // Operations
+    alertWebhook: env.ALERT_WEBHOOK_URL || "",  // Slack/Discord/any JSON webhook: told when something breaks
+    backupDir: env.BACKUP_DIR ? path.resolve(env.BACKUP_DIR) : "", // daily database copies go here (empty = off)
+    backupKeep: int(env.BACKUP_KEEP, 14),
+    // Who is sending (shown in email footers; commercial email must include a postal address)
+    businessName: env.BUSINESS_NAME || "Bella's Música",
+    businessAddress: env.BUSINESS_ADDRESS || "",
+    supportEmail: env.SUPPORT_EMAIL || "",
     // Twilio SMS (leave unset to log messages instead of sending)
     twilioSid: env.TWILIO_ACCOUNT_SID || "",
     twilioToken: env.TWILIO_AUTH_TOKEN || "",

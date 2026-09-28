@@ -21,11 +21,13 @@ const lastCall = (pred) => [...F.calls].reverse().find(pred);
 const state = (id) => S.db.get("SELECT status, payment_status, refund_cents, stripe_payment_intent FROM bookings WHERE id = ?", id);
 
 test("live mode: sample groups and groups without payout setup cannot take deposits", async () => {
-  const demo = await cust.post("/api/bookings", bookingBody("dj-fiesta-latina", day(20)));
+  const demo = await cust.post("/api/bookings", bookingBody("dj-fiesta-chicago", day(20)));
   assert.equal(demo.status, 400);
-  assert.equal((await client(S.base).get("/api/search?zip=77003")).json.results.find((g) => g.id === "dj-fiesta-latina").bookable, false);
+  assert.equal((await client(S.base).get("/api/search?zip=60647")).json.results.find((g) => g.id === "dj-fiesta-chicago").bookable, false);
+  S.db.run("UPDATE groups SET stripe_ready = 0 WHERE id = ?", gid); // e.g. Stripe later disabled their payouts
   const blocked = await cust.post("/api/bookings", bookingBody(gid, day(30)));
   assert.equal(blocked.status, 400); assert.match(blocked.json.error, /online deposits/);
+  S.db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", gid);
 });
 
 test("payout onboarding uses Stripe Connect Express and checks readiness", async () => {

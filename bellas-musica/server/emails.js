@@ -1,0 +1,86 @@
+// Every notification the app sends, in English and Spanish. Each template returns
+// { subject, lines, cta?, sms? }: lines are paragraphs, cta is the button, sms is the (optional) text message.
+// `transactional` messages (receipts, security, booking status) are always sent; the rest respect the user's email preference.
+
+const h = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+export const usd = (c) => "$" + (c / 100).toLocaleString("en-US", { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+export const longDate = (d, lang) => new Date(d + "T12:00:00Z").toLocaleDateString(lang === "es" ? "es-US" : "en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+
+const B = "Bella's Música";
+
+export const TEMPLATES = {
+  "auth.verify": { transactional: true,
+    en: (v) => ({ subject: "Confirm your email", lines: [`Hi ${v.name},`, `Welcome to ${B}! Please confirm your email address so we can send you booking updates.`, "This link works for 24 hours. If you didn't create an account, you can ignore this message."], cta: { label: "Confirm my email", url: v.url } }),
+    es: (v) => ({ subject: "Confirma tu correo", lines: [`Hola ${v.name},`, `¡Bienvenido a ${B}! Confirma tu correo para que podamos enviarte avisos de tus reservas.`, "Este enlace funciona por 24 horas. Si no creaste una cuenta, ignora este mensaje."], cta: { label: "Confirmar mi correo", url: v.url } }) },
+
+  "auth.reset": { transactional: true,
+    en: (v) => ({ subject: "Reset your password", lines: [`Hi ${v.name},`, "Someone asked to reset the password for your account. Tap the button to choose a new one.", "This link works for 1 hour and can be used once. If it wasn't you, ignore this message; your password stays the same."], cta: { label: "Choose a new password", url: v.url } }),
+    es: (v) => ({ subject: "Restablece tu contraseña", lines: [`Hola ${v.name},`, "Alguien pidió restablecer la contraseña de tu cuenta. Toca el botón para elegir una nueva.", "Este enlace funciona por 1 hora y solo se puede usar una vez. Si no fuiste tú, ignora este mensaje; tu contraseña no cambia."], cta: { label: "Elegir una contraseña nueva", url: v.url } }) },
+
+  "auth.reset_done": { transactional: true,
+    en: (v) => ({ subject: "Your password was changed", lines: [`Hi ${v.name},`, "Your password was just changed and you were signed out everywhere. If this was you, no action is needed.", `If it wasn't you, reply to this email${v.support ? ` or write to ${v.support}` : ""} right away.`] }),
+    es: (v) => ({ subject: "Tu contraseña fue cambiada", lines: [`Hola ${v.name},`, "Tu contraseña se cambió y se cerró tu sesión en todos los dispositivos. Si fuiste tú, no necesitas hacer nada.", `Si no fuiste tú, responde a este correo${v.support ? ` o escribe a ${v.support}` : ""} de inmediato.`] }) },
+
+  "booking.requested.group": { transactional: true,
+    en: (v) => ({ subject: `New booking request for ${longDate(v.date, "en")}`, lines: [`Hi ${v.name},`, `${v.customer} wants to book ${v.group} for a ${v.event} on ${longDate(v.date, "en")} at ${v.time} (${v.hours} hr, ${v.guests} guests) at ${v.address}.`, `They paid the ${v.deposit} deposit. After the platform fee you receive ${v.payout} now, and the customer pays you ${v.balance} at the event.`, "Please accept or decline soon so they can plan."], cta: { label: "Review the request", url: v.url }, sms: `${B}: new booking request for ${v.date} ${v.time}. Open your dashboard to accept: ${v.url}` }),
+    es: (v) => ({ subject: `Nueva solicitud de reserva para el ${longDate(v.date, "es")}`, lines: [`Hola ${v.name},`, `${v.customer} quiere contratar a ${v.group} para ${v.event} el ${longDate(v.date, "es")} a las ${v.time} (${v.hours} h, ${v.guests} invitados) en ${v.address}.`, `Pagó el depósito de ${v.deposit}. Después de la comisión de la plataforma recibes ${v.payout} ahora, y el cliente te paga ${v.balance} el día del evento.`, "Acepta o rechaza pronto para que puedan planear."], cta: { label: "Ver la solicitud", url: v.url }, sms: `${B}: nueva solicitud de reserva para ${v.date} ${v.time}. Abre tu panel para aceptar: ${v.url}` }) },
+
+  "booking.received.customer": { transactional: true,
+    en: (v) => ({ subject: `We got your request for ${v.group}`, lines: [`Hi ${v.name},`, `Your deposit of ${v.deposit} was received and ${v.group} has your request for ${longDate(v.date, "en")} at ${v.time}.`, `They will accept or decline soon. If they decline, your deposit is refunded in full. The balance of ${v.balance} is paid at the event.`, `Cancellation policy: ${v.policy}`], cta: { label: "See my booking", url: v.url } }),
+    es: (v) => ({ subject: `Recibimos tu solicitud para ${v.group}`, lines: [`Hola ${v.name},`, `Recibimos tu depósito de ${v.deposit} y ${v.group} tiene tu solicitud para el ${longDate(v.date, "es")} a las ${v.time}.`, `Pronto aceptarán o rechazarán. Si rechazan, te devolvemos todo el depósito. El saldo de ${v.balance} se paga en el evento.`, `Política de cancelación: ${v.policy}`], cta: { label: "Ver mi reserva", url: v.url } }) },
+
+  "booking.confirmed.customer": { transactional: true,
+    en: (v) => ({ subject: `Confirmed: ${v.group} on ${longDate(v.date, "en")}`, lines: [`Hi ${v.name},`, `Great news: ${v.group} confirmed your ${v.event} on ${longDate(v.date, "en")} at ${v.time}.`, `Location: ${v.address}`, `Balance due: ${v.balance}. You can pay it in the app anytime before the event, or directly to the group.`, "Phone numbers can now be shared in your messages with the group."], cta: { label: "See my booking", url: v.url }, sms: `${B}: ${v.group} confirmed your booking for ${v.date} at ${v.time}.` }),
+    es: (v) => ({ subject: `Confirmado: ${v.group} el ${longDate(v.date, "es")}`, lines: [`Hola ${v.name},`, `Buenas noticias: ${v.group} confirmó tu ${v.event} el ${longDate(v.date, "es")} a las ${v.time}.`, `Lugar: ${v.address}`, `Saldo pendiente: ${v.balance}. Puedes pagarlo en la app cuando quieras antes del evento, o directamente al grupo.`, "Ahora pueden compartir teléfonos en sus mensajes con el grupo."], cta: { label: "Ver mi reserva", url: v.url }, sms: `${B}: ${v.group} confirmó tu reserva para el ${v.date} a las ${v.time}.` }) },
+
+  "booking.declined.customer": { transactional: true,
+    en: (v) => ({ subject: `${v.group} can't take your ${longDate(v.date, "en")} booking`, lines: [`Hi ${v.name},`, `Unfortunately ${v.group} can't take your booking on ${longDate(v.date, "en")}. Your deposit of ${v.refund} is being refunded in full; it usually reaches your card in 5 to 10 business days.`, "Other groups may be free that day."], cta: { label: "Find another group", url: v.url }, sms: `${B}: ${v.group} can't take your ${v.date} booking. Your deposit is being refunded.` }),
+    es: (v) => ({ subject: `${v.group} no puede tomar tu reserva del ${longDate(v.date, "es")}`, lines: [`Hola ${v.name},`, `Lamentablemente ${v.group} no puede tomar tu reserva del ${longDate(v.date, "es")}. Tu depósito de ${v.refund} se está reembolsando completo; normalmente llega a tu tarjeta en 5 a 10 días hábiles.`, "Otros grupos pueden estar libres ese día."], cta: { label: "Buscar otro grupo", url: v.url }, sms: `${B}: ${v.group} no puede tomar tu reserva del ${v.date}. Tu depósito se está reembolsando.` }) },
+
+  "booking.cancelled.customer": { transactional: true,
+    en: (v) => ({ subject: `${v.group} cancelled your ${longDate(v.date, "en")} booking`, lines: [`Hi ${v.name},`, `We're sorry: ${v.group} cancelled your booking on ${longDate(v.date, "en")}. Everything you paid (${v.refund}) is being refunded in full.`], cta: { label: "Find another group", url: v.url }, sms: `${B}: ${v.group} cancelled your ${v.date} booking. You are being refunded in full.` }),
+    es: (v) => ({ subject: `${v.group} canceló tu reserva del ${longDate(v.date, "es")}`, lines: [`Hola ${v.name},`, `Lo sentimos: ${v.group} canceló tu reserva del ${longDate(v.date, "es")}. Todo lo que pagaste (${v.refund}) se está reembolsando completo.`], cta: { label: "Buscar otro grupo", url: v.url }, sms: `${B}: ${v.group} canceló tu reserva del ${v.date}. Te reembolsamos todo.` }) },
+
+  "booking.cancelled.group": { transactional: true,
+    en: (v) => ({ subject: `Booking cancelled by the customer: ${longDate(v.date, "en")}`, lines: [`Hi ${v.name},`, `${v.customer} cancelled the booking on ${longDate(v.date, "en")} at ${v.time}. Refund to the customer: ${v.refund}. That time is open again on your calendar.`], cta: { label: "Open my dashboard", url: v.url }, sms: `${B}: the ${v.date} ${v.time} booking was cancelled by the customer.` }),
+    es: (v) => ({ subject: `Reserva cancelada por el cliente: ${longDate(v.date, "es")}`, lines: [`Hola ${v.name},`, `${v.customer} canceló la reserva del ${longDate(v.date, "es")} a las ${v.time}. Reembolso al cliente: ${v.refund}. Ese horario vuelve a estar libre en tu calendario.`], cta: { label: "Abrir mi panel", url: v.url }, sms: `${B}: el cliente canceló la reserva del ${v.date} ${v.time}.` }) },
+
+  "message.group": {
+    en: (v) => ({ subject: `New message about ${v.group}`, lines: [`Hi ${v.name},`, `You have a new message from a customer about ${v.group}. Reply in the app to keep the conversation moving.`], cta: { label: "Open messages", url: v.url }, sms: `${B}: new message about ${v.group}. Reply in the app: ${v.url}` }),
+    es: (v) => ({ subject: `Nuevo mensaje sobre ${v.group}`, lines: [`Hola ${v.name},`, `Tienes un mensaje nuevo de un cliente sobre ${v.group}. Responde en la app para no perder la conversación.`], cta: { label: "Abrir mensajes", url: v.url }, sms: `${B}: nuevo mensaje sobre ${v.group}. Responde en la app: ${v.url}` }) },
+
+  "message.customer": {
+    en: (v) => ({ subject: `${v.group} replied to your message`, lines: [`Hi ${v.name},`, `${v.group} answered your message. Open the app to read it.`], cta: { label: "Read the reply", url: v.url }, sms: `${B}: ${v.group} replied to your message. Open the app to read it: ${v.url}` }),
+    es: (v) => ({ subject: `${v.group} respondió a tu mensaje`, lines: [`Hola ${v.name},`, `${v.group} contestó tu mensaje. Abre la app para leerlo.`], cta: { label: "Leer la respuesta", url: v.url }, sms: `${B}: ${v.group} respondió a tu mensaje. Ábrelo en la app: ${v.url}` }) },
+
+  "review.reminder": {
+    en: (v) => ({ subject: `How was ${v.group}?`, lines: [`Hi ${v.name},`, `We hope ${v.group} made your event special. A quick review helps other families choose, and it means a lot to the group.`], cta: { label: "Leave a review", url: v.url }, sms: `How was ${v.group}? Leave a quick review: ${v.url}` }),
+    es: (v) => ({ subject: `¿Cómo estuvo ${v.group}?`, lines: [`Hola ${v.name},`, `Esperamos que ${v.group} haya hecho especial tu evento. Una reseña rápida ayuda a otras familias a elegir y significa mucho para el grupo.`], cta: { label: "Dejar una reseña", url: v.url }, sms: `¿Cómo estuvo ${v.group}? Deja una reseña rápida: ${v.url}` }) },
+
+  "event.reminder.customer": { transactional: true,
+    en: (v) => ({ subject: `${v.when === "tomorrow" ? "Tomorrow" : "In a week"}: ${v.group} at your ${v.event}`, lines: [`Hi ${v.name},`, `A reminder that ${v.group} plays at your ${v.event} ${v.when === "tomorrow" ? "tomorrow" : "in 7 days"}: ${longDate(v.date, "en")} at ${v.time}, ${v.address}.`, v.balanceDue ? `Balance still due: ${v.balanceDue}. Pay it in the app or directly to the group.` : "Your balance is paid. Nothing else to do!"], cta: { label: "See my booking", url: v.url }, sms: `${B}: reminder, ${v.group} plays ${v.when === "tomorrow" ? "tomorrow" : "in 7 days"} (${v.date} ${v.time}).${v.balanceDue ? ` Balance due ${v.balanceDue}.` : ""}` }),
+    es: (v) => ({ subject: `${v.when === "tomorrow" ? "Mañana" : "En una semana"}: ${v.group} en tu ${v.event}`, lines: [`Hola ${v.name},`, `Te recordamos que ${v.group} toca en tu ${v.event} ${v.when === "tomorrow" ? "mañana" : "en 7 días"}: ${longDate(v.date, "es")} a las ${v.time}, ${v.address}.`, v.balanceDue ? `Saldo pendiente: ${v.balanceDue}. Págalo en la app o directamente al grupo.` : "Tu saldo está pagado. ¡No falta nada!"], cta: { label: "Ver mi reserva", url: v.url }, sms: `${B}: recordatorio, ${v.group} toca ${v.when === "tomorrow" ? "mañana" : "en 7 días"} (${v.date} ${v.time}).${v.balanceDue ? ` Saldo pendiente ${v.balanceDue}.` : ""}` }) },
+
+  "event.reminder.group": { transactional: true,
+    en: (v) => ({ subject: `Tomorrow: ${v.event} for ${v.customer}`, lines: [`Hi ${v.name},`, `Tomorrow you play a ${v.event} for ${v.customer}: ${longDate(v.date, "en")} at ${v.time}, ${v.address}, about ${v.guests} guests.`, v.phone ? `Customer phone: ${v.phone}` : "", v.balanceLine].filter(Boolean), cta: { label: "Open the booking", url: v.url }, sms: `${B}: tomorrow ${v.date} ${v.time}, ${v.event} for ${v.customer}.` }),
+    es: (v) => ({ subject: `Mañana: ${v.event} de ${v.customer}`, lines: [`Hola ${v.name},`, `Mañana tocas en ${v.event} de ${v.customer}: ${longDate(v.date, "es")} a las ${v.time}, ${v.address}, unos ${v.guests} invitados.`, v.phone ? `Teléfono del cliente: ${v.phone}` : "", v.balanceLine].filter(Boolean), cta: { label: "Abrir la reserva", url: v.url }, sms: `${B}: mañana ${v.date} ${v.time}, ${v.event} de ${v.customer}.` }) },
+
+  "waitlist.joined": { transactional: true,
+    en: (v) => ({ subject: `You're on the list for ${v.city}`, lines: ["Thanks for your interest!", `${B} is launching in Chicago first. We'll email you once we have groups near ${v.city}.`], cta: { label: "See groups in Chicago", url: v.url } }),
+    es: (v) => ({ subject: `Estás en la lista para ${v.city}`, lines: ["¡Gracias por tu interés!", `${B} empieza en Chicago. Te escribiremos cuando tengamos grupos cerca de ${v.city}.`], cta: { label: "Ver grupos en Chicago", url: v.url } }) }
+};
+
+// Adds a template at runtime (used by feature modules so this file doesn't need to know about every feature).
+export function defineTemplates(more) { Object.assign(TEMPLATES, more); }
+
+export function renderEmail({ subject, lines, cta }, { lang, config, unsubUrl }) {
+  const footerBits = [config.businessName, config.businessAddress, config.supportEmail].filter(Boolean).join(" · ");
+  const unsubText = unsubUrl ? (lang === "es" ? `Dejar de recibir estos avisos: ${unsubUrl}` : `Stop these notifications: ${unsubUrl}`) : "";
+  const text = [...lines, cta ? `${cta.label}: ${cta.url}` : "", "", "—", footerBits, unsubText].filter((x, i, a) => x !== "" || (i > 0 && a[i - 1] !== "")).join("\n");
+  const button = cta ? `<p style="margin:22px 0"><a href="${h(cta.url)}" style="background:#b8892b;color:#141210;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">${h(cta.label)}</a></p>` : "";
+  const html = `<div style="background:#f6efe0;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1d1a16"><div style="max-width:540px;margin:0 auto;background:#fffaf0;border:1px solid #ddd0b3;border-radius:12px;overflow:hidden">
+    <div style="background:#141210;padding:16px 22px;color:#d4a84a;font-family:Georgia,serif;font-size:22px">${h(config.businessName)}</div>
+    <div style="padding:22px"><h1 style="font-size:19px;margin:0 0 14px;font-family:Georgia,serif">${h(subject)}</h1>${lines.map((l) => `<p style="margin:0 0 12px;line-height:1.5">${h(l)}</p>`).join("")}${button}</div>
+    <div style="padding:14px 22px;font-size:12px;color:#5d564a;border-top:1px solid #ddd0b3">${h(footerBits)}${unsubUrl ? `<br><a href="${h(unsubUrl)}" style="color:#5d564a">${h(lang === "es" ? "Dejar de recibir estos avisos" : "Stop these notifications")}</a>` : ""}</div></div></div>`;
+  return { subject, text, html };
+}

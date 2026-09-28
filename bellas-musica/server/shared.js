@@ -97,11 +97,16 @@ export function getGroup(db, id) {
   if (!g) throw new HttpError(404, "Group not found");
   return g;
 }
-// A group that the site owner has hidden looks like it doesn't exist to everyone except its own manager.
+// A group is "live" (findable and bookable) once published, unless the owner paused it or you hid it. Sample groups are always live.
+export const LIVE_SQL = "hidden = 0 AND paused = 0 AND (published_at > 0 OR demo = 1)";
+export const isLive = (g) => !g.hidden && !g.paused && (g.published_at > 0 || g.demo === 1);
+
+// Not-live groups look like they don't exist to everyone except their manager, and (unless you hid them) customers who already have a booking or a conversation.
 export function getVisibleGroup(db, id, user) {
   const g = getGroup(db, id);
-  if (g.hidden && !(user && g.owner_id === user.id)) throw new HttpError(404, "Group not found");
-  return g;
+  if (isLive(g) || (user && g.owner_id === user.id)) return g;
+  if (user && !g.hidden && db.get("SELECT (SELECT COUNT(*) FROM bookings WHERE group_id = ? AND customer_id = ? AND status != 'expired') + (SELECT COUNT(*) FROM messages WHERE group_id = ? AND customer_id = ?) n", g.id, user.id, g.id, user.id).n) return g;
+  throw new HttpError(404, "Group not found");
 }
 export function requireOwner(db, user, groupId) {
   const g = getGroup(db, groupId);
@@ -117,7 +122,8 @@ export async function refundBooking(ctx, booking, cents) {
   const { db, stripe } = ctx;
   if (booking.payment_status !== "paid" && booking.payment_status !== "partial_refund") return booking;
   if (stripe.live && booking.stripe_payment_intent && !booking.stripe_payment_intent.startsWith("sim_")) {
-    await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}` });
+    try { await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}` }); }
+    catch (e) { ctx.alert(`REFUND FAILED for booking ${booking.id} (${(cents / 100).toFixed(2)} USD): ${e.message}`, "refund-" + booking.id); throw e; }
   }
   const total = booking.refund_cents + cents;
   db.run("UPDATE bookings SET refund_cents = ?, payment_status = ?, updated_at = ? WHERE id = ?",
@@ -152,9 +158,11 @@ async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
   }
   const paid = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
   if (paid.status === "requested") {
-    const g = db.get("SELECT name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
-    const owner = g?.owner_id ? db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", g.owner_id) : null;
-    if (owner) ctx.sms.notifyPhone(g.contact_phone || owner.phone, owner.sms_opt_in, `Bella's Música: new booking request for ${paid.date} ${paid.time}. Open your dashboard to accept: ${ctx.config.baseUrl}/#/dashboard`);
+    ctx.stats.count("booking_paid", paid.group_id);
+    const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
+    const base = ctx.config.baseUrl, v = ctx.notify.bookingVars(paid, g);
+    if (g.owner_id) ctx.notify.to(g.owner_id, "booking.requested.group", { ...v, url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    ctx.notify.to(paid.customer_id, "booking.received.customer", { ...v, url: `${base}/#/booking/${paid.id}` });
   }
   return paid;
 }

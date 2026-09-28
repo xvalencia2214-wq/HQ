@@ -36,15 +36,10 @@ export default function messageRoutes(ctx, add) {
       db.run("INSERT INTO messages (group_id, customer_id, sender, text, created_at) VALUES (?, ?, 'group', ?, ?)", group.id, customerId,
         "Thanks for reaching out! (This is a sample listing, so this is an automatic reply. Real groups answer here themselves.)", now());
     }
-    // One text per 30 minutes per conversation, and only to people who opted in.
+    // One notification per 30 minutes per conversation.
     if (!recent) {
-      if (sender === "customer" && group.owner_id) {
-        const owner = db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", group.owner_id);
-        sms.notifyPhone(group.contact_phone || owner?.phone, owner?.sms_opt_in, `Bella's Música: new message about ${group.name}. Reply in the app: ${config.baseUrl}/#/dashboard`);
-      } else if (sender === "group") {
-        const c = db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", customerId);
-        sms.notifyPhone(c?.phone, c?.sms_opt_in, `Bella's Música: ${group.name} replied to your message. Open the app to read it: ${config.baseUrl}/#/group/${group.id}`);
-      }
+      if (sender === "customer" && group.owner_id) ctx.notify.to(group.owner_id, "message.group", { group: group.name, url: `${config.baseUrl}/#/dashboard?g=${group.id}&tab=messages` }, { phone: group.contact_phone });
+      else if (sender === "group") ctx.notify.to(customerId, "message.customer", { group: group.name, url: `${config.baseUrl}/#/messages?g=${group.id}` });
     }
     markRead(group.id, customerId, sender);
     return { messages: thread(group.id, customerId), masked };

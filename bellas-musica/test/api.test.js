@@ -61,10 +61,11 @@ test("search: zip, filters, event, guests, song (accent-insensitive), date, limi
   assert.ok(all.results.length >= 3);
   assert.ok(all.results.every((g) => g.distance_miles <= 60));
   assert.ok(all.results[0].rating >= all.results.at(-1).rating);
-  assert.equal((await c.get("/api/search?zip=60608&type=Banda")).json.results.length, 0);
-  assert.ok((await c.get("/api/search?zip=77003&type=Mariachi")).json.results.every((g) => g.type === "Mariachi"));
+  assert.equal((await c.get("/api/search?zip=60608&radius=10&type=Conjunto")).json.results.length, 0); // no conjunto within 10 miles of Pilsen
+  assert.ok((await c.get("/api/search?zip=60608&type=Banda")).json.results.length >= 2);
+  { const m = (await c.get("/api/search?zip=60608&type=Mariachi")).json.results; assert.ok(m.length >= 3 && m.every((g) => g.type === "Mariachi")); }
   assert.ok((await c.get("/api/search?zip=60608&max=340")).json.results.every((g) => g.rate_cents <= 34000));
-  const big = (await c.get("/api/search?zip=90022&guests=450")).json.results;
+  const big = (await c.get("/api/search?zip=60608&guests=450")).json.results;
   assert.ok(big.length && big.every((g) => g.max_guests >= 450));
   const songs = (await c.get("/api/search?zip=60608&song=mananitas")).json.results;
   assert.ok(songs.length && songs[0].matched_songs.some((s) => s.includes("Mañanitas")));
@@ -79,8 +80,8 @@ test("search: zip, filters, event, guests, song (accent-insensitive), date, limi
   assert.equal((await c.get("/api/search?zip=abc")).status, 400);
   assert.equal((await c.get("/api/search?zip=60608&date=2020-01-01")).status, 400);
   assert.ok((await c.get("/api/search?zip=60608&limit=1")).json.results.length === 1);
-  const best = (await c.get("/api/best?zip=77003")).json;
-  assert.equal(best.city, "Houston"); assert.ok(best.groups.length >= 1);
+  const best = (await c.get("/api/best?zip=60623")).json;
+  assert.equal(best.city, "Chicago"); assert.ok(best.groups.length >= 3);
   assert.equal(all.results[0].contact_phone, undefined);
   assert.equal(all.results[0].owner_id, undefined);
 });
@@ -118,16 +119,16 @@ test("groups: create, edit, permissions, packages, photos, video, privacy", asyn
   assert.equal((await owner.del(`/api/packages/${pid}`)).json.packages.length, 1);
   // photos
   const up = await owner.post(`/api/groups/${id}/photos`, { data: PNG });
-  assert.equal(up.status, 200); assert.equal(up.json.photos.length, 1);
-  const url = up.json.photos[0].url;
+  assert.equal(up.status, 200); assert.equal(up.json.photos.length, 2); // makeGroup added one already
+  const url = up.json.photos.at(-1).url;
   const served = await fetch(S.base + url);
   assert.equal(served.status, 200); assert.equal(served.headers.get("content-type"), "image/png");
   assert.equal((await owner.post(`/api/groups/${id}/photos`, { data: Buffer.from("<html><script>alert(1)</script></html>").toString("base64") })).status, 400);
   assert.equal((await other.post(`/api/groups/${id}/photos`, { data: PNG })).status, 403);
   assert.equal((await owner.post(`/api/groups/${id}/photos`, { data: "A".repeat(6_000_000) })).status, 413);
-  assert.equal((await other.del(`/api/groups/${id}/photos/${up.json.photos[0].id}`)).status, 403);
-  const del = await owner.del(`/api/groups/${id}/photos/${up.json.photos[0].id}`);
-  assert.equal(del.json.photos.length, 0);
+  assert.equal((await other.del(`/api/groups/${id}/photos/${up.json.photos.at(-1).id}`)).status, 403);
+  const del = await owner.del(`/api/groups/${id}/photos/${up.json.photos.at(-1).id}`);
+  assert.equal(del.json.photos.length, 1);
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(fs.existsSync(path.join(S.dir, "uploads", path.basename(url))), false);
   // calendar
@@ -260,7 +261,7 @@ test("messaging: contact details hidden until confirmed; sample listings auto-re
   const ok = await cust.post(`/api/groups/${gid}/messages`, { text: "My number is 312-555-0142" });
   assert.equal(ok.json.masked, false);
   // sample listing replies automatically
-  const auto = await cust.post("/api/groups/dj-fiesta-latina/messages", { text: "Are you free?" });
+  const auto = await cust.post("/api/groups/dj-fiesta-chicago/messages", { text: "Are you free?" });
   assert.match(auto.json.messages.at(-1).text, /sample listing/);
 });
 
@@ -305,14 +306,14 @@ test("reviews: only after the event, paid, once; ratings update", async () => {
 test("featured placement: pay, ranks first, badge, stacks 30 days", async () => {
   const owner = client(S.base), other = client(S.base);
   await owner.signup("o7@example.com", "Feat Owner"); await other.signup("o8@example.com", "Not Owner");
-  const gid = await makeGroup(owner, { name: "Zzz Newcomer", zip: "78207" });
-  const before = (await client(S.base).get("/api/search?zip=78207")).json.results;
+  const gid = await makeGroup(owner, { name: "Zzz Newcomer", zip: "60623" });
+  const before = (await client(S.base).get("/api/search?zip=60623")).json.results;
   assert.notEqual(before[0].id, gid);
   const f = await owner.post(`/api/groups/${gid}/feature`);
   assert.equal(f.json.simulated, true);
   assert.equal((await other.post(`/api/feature/${f.json.id}/simulate-pay`)).status, 404);
   assert.equal((await owner.post(`/api/feature/${f.json.id}/simulate-pay`)).status, 200);
-  const after = (await client(S.base).get("/api/search?zip=78207")).json.results;
+  const after = (await client(S.base).get("/api/search?zip=60623")).json.results;
   assert.equal(after[0].id, gid); assert.equal(after[0].promoted, true);
   const first = S.db.get("SELECT promoted_until p FROM groups WHERE id = ?", gid).p;
   const f2 = await owner.post(`/api/groups/${gid}/feature`); await owner.post(`/api/feature/${f2.json.id}/simulate-pay`);
@@ -387,7 +388,7 @@ test("inbox and badges: unread counts clear once you actually read the thread", 
 test("launch checklist reflects what the group has finished", async () => {
   const owner = client(S.base);
   await owner.signup("ck@example.com", "Check Owner", { phone: "312-555-0166", sms_opt_in: true });
-  const id = await makeGroup(owner, { name: "Checklist Band" });
+  const id = await makeGroup(owner, { name: "Checklist Band", draft: true });
   const items = async () => Object.fromEntries((await owner.get("/api/my/groups")).json.groups.find((g) => g.id === id).checklist.items.map((i) => [i.key, i.done]));
   let c = await items();
   assert.deepEqual(c, { photos: false, video: false, story: false, events: false, songs: false, packages: false, dates: false, payouts: true, alerts: true }); // simulated mode: payouts ready; owner opted in to texts
@@ -401,7 +402,7 @@ test("launch checklist reflects what the group has finished", async () => {
   assert.deepEqual([g.checklist.done, g.checklist.total], [9, 9]);
   // a group manager who has not opted in to texts is told to
   const o2 = client(S.base); await o2.signup("ck2@example.com", "No Texts");
-  const id2 = await makeGroup(o2, { name: "Silent Band" });
+  const id2 = await makeGroup(o2, { name: "Silent Band", draft: true });
   assert.equal((await o2.get("/api/my/groups")).json.groups[0].checklist.items.find((i) => i.key === "alerts").done, false);
   void id2;
 });

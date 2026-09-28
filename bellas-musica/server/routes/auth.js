@@ -1,11 +1,11 @@
 import { HttpError, now, str, todayStr } from "../util.js";
-import { hashPassword, verifyPassword, createSession, destroySession, sessionCookie } from "../auth.js";
+import { hashPassword, verifyPassword, createSession, destroySession, sessionCookie, createAuthToken, consumeAuthToken } from "../auth.js";
 import { normalizePhone } from "../sms.js";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
 
-export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), lang: u.lang, is_admin: admins.includes(String(u.email).toLowerCase()) };
+export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), email_notify: Boolean(u.email_notify), email_verified: Boolean(u.email_verified), lang: u.lang, is_admin: admins.includes(String(u.email).toLowerCase()) };
 
 function phoneField(v) {
   const raw = str(v, "Phone", { max: 30 });
@@ -18,6 +18,7 @@ function phoneField(v) {
 export default function authRoutes(ctx, add) {
   const { db, limiters } = ctx;
   const pub = (u) => publicUser(u, ctx.config.adminEmails);
+  const sendVerification = (userId) => ctx.notify.to(userId, "auth.verify", { url: `${ctx.config.baseUrl}/#/verify/${createAuthToken(db, userId, "verify", 24 * 3600)}` });
   const startSession = (res, req, userId) => res.setHeader("Set-Cookie", sessionCookie(createSession(db, userId), { secure: ctx.isSecure(req) }));
 
   add("POST", "/api/auth/register", async ({ req, res, body, ip }) => {
@@ -32,6 +33,8 @@ export default function authRoutes(ctx, add) {
     if (db.get("SELECT 1 AS x FROM users WHERE email = ?", email)) throw new HttpError(409, "That email already has an account. Try logging in.");
     const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, pass_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)", email, name, phone, sms, await hashPassword(password), now());
     startSession(res, req, Number(info.lastInsertRowid));
+    ctx.stats.count("signup");
+    sendVerification(Number(info.lastInsertRowid));
     return { user: pub(db.get("SELECT * FROM users WHERE id = ?", info.lastInsertRowid)) };
   });
 
@@ -51,6 +54,41 @@ export default function authRoutes(ctx, add) {
     return { ok: true };
   });
 
+  // ---- forgot / reset password, confirm email ----
+  add("POST", "/api/auth/forgot", ({ body, ip }) => {
+    const email = str(body.email, "Email", { required: true, max: 254 }).toLowerCase();
+    if (!limiters.forgot.check(`${ip}|${email}`) || !limiters.forgot.check(`${ip}|*`)) throw new HttpError(429, "Too many requests. Try again in an hour.");
+    const u = db.get("SELECT id FROM users WHERE email = ?", email);
+    if (u) ctx.notify.to(u.id, "auth.reset", { url: `${ctx.config.baseUrl}/#/reset/${createAuthToken(db, u.id, "reset", 3600)}` });
+    return { ok: true }; // same answer whether or not the address has an account
+  });
+
+  add("POST", "/api/auth/reset", async ({ body, ip }) => {
+    if (!limiters.auth.check(`${ip}|reset`)) throw new HttpError(429, "Too many attempts. Try again later.");
+    const password = typeof body.password === "string" ? body.password : "";
+    if (password.length < 8 || password.length > 200) throw new HttpError(400, "Password must be 8 to 200 characters");
+    const userId = consumeAuthToken(db, body.token, "reset");
+    if (!userId) throw new HttpError(400, "This reset link is invalid or has expired. Ask for a new one.");
+    db.run("UPDATE users SET pass_hash = ?, email_verified = 1 WHERE id = ?", await hashPassword(password), userId); // clicking the link proves they own the inbox
+    db.run("DELETE FROM sessions WHERE user_id = ?", userId);
+    ctx.notify.to(userId, "auth.reset_done", {});
+    return { ok: true };
+  });
+
+  add("POST", "/api/auth/verify", ({ body }) => {
+    const userId = consumeAuthToken(db, body.token, "verify");
+    if (!userId) throw new HttpError(400, "This confirmation link is invalid or has expired.");
+    db.run("UPDATE users SET email_verified = 1 WHERE id = ?", userId);
+    return { ok: true };
+  });
+
+  add("POST", "/api/auth/resend-verification", ({ user, ip }) => {
+    if (user.email_verified) return { ok: true, already: true };
+    if (!limiters.forgot.check(`${ip}|verify|${user.id}`)) throw new HttpError(429, "Too many requests. Try again in an hour.");
+    sendVerification(user.id);
+    return { ok: true };
+  }, { auth: true });
+
   add("GET", "/api/me", ({ user }) => ({ user: pub(user) }));
 
   add("PATCH", "/api/me", ({ body, user }) => {
@@ -58,7 +96,8 @@ export default function authRoutes(ctx, add) {
     const phone = body.phone !== undefined ? phoneField(body.phone) : user.phone;
     const sms = body.sms_opt_in !== undefined ? (body.sms_opt_in === true && phone ? 1 : 0) : (phone ? user.sms_opt_in : 0);
     const lang = body.lang === "es" || body.lang === "en" ? body.lang : user.lang;
-    db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ? WHERE id = ?", name, phone, sms, lang, user.id);
+    const emailNotify = body.email_notify !== undefined ? (body.email_notify === true ? 1 : 0) : undefined;
+    db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ?, email_notify = COALESCE(?, email_notify) WHERE id = ?", name, phone, sms, lang, emailNotify ?? null, user.id);
     return { user: pub(db.get("SELECT * FROM users WHERE id = ?", user.id)) };
   }, { auth: true });
 

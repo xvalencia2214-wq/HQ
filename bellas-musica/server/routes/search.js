@@ -1,7 +1,8 @@
 import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
-import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf } from "../shared.js";
+import { MARKET, inMarket } from "../market.js";
+import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
 
 // Which music suits which event when a group hasn't said what it plays.
 const EVENT_FIT = {
@@ -39,7 +40,7 @@ export default function searchRoutes(ctx, add) {
     let list = [];
     // Only groups whose ZIP is inside the radius can match, so let SQL skip everything else.
     const nearby = zipsWithin(origin, radius);
-    const candidates = nearby.length ? db.all(`SELECT * FROM groups WHERE hidden = 0 AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby) : [];
+    const candidates = nearby.length ? db.all(`SELECT * FROM groups WHERE ${LIVE_SQL} AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby) : [];
     for (const g of candidates) {
       const z = lookupZip(g.zip);
       if (!z) continue;
@@ -70,6 +71,7 @@ export default function searchRoutes(ctx, add) {
 
     return {
       origin: { zip: origin.zip, city: origin.city, state: origin.state, lat: origin.lat, lon: origin.lon },
+      in_market: inMarket(origin.zip),
       results: list.map((x) => {
         const c = publicGroup(ctx, x.g, {
           rating: x.r,
@@ -92,7 +94,8 @@ export default function searchRoutes(ctx, add) {
   add("GET", "/api/meta", () => ({
     events: EVENT_TYPES, group_types: GROUP_TYPES, slots: SLOTS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
-    payments: stripe.mode, sms: sms.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
+    market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
+    payments: stripe.mode, sms: sms.mode, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
   }));
 
   add("GET", "/api/nearest-zip", ({ query }) => {
@@ -109,7 +112,7 @@ export default function searchRoutes(ctx, add) {
     return z;
   });
 
-  add("GET", "/api/search", ({ query }) => search(query));
+  add("GET", "/api/search", ({ query }) => { const out = search(query); ctx.stats.count("search", out.origin.zip); return out; });
 
   // "Best of your city": the top-rated groups within 40 miles of a ZIP.
   add("GET", "/api/best", ({ query }) => {

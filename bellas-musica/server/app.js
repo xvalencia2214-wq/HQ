@@ -4,6 +4,10 @@ import path from "node:path";
 import { openDb } from "./db.js";
 import { createStripe } from "./stripe.js";
 import { createSms } from "./sms.js";
+import { createEmail } from "./email.js";
+import { createAlerts } from "./alerts.js";
+import { createStats } from "./stats.js";
+import { createNotifier } from "./notify.js";
 import { userFromRequest } from "./auth.js";
 import { HttpError, readBody, readJson, createLimiter, setTimezone } from "./util.js";
 import { MIME_BY_EXT } from "./media.js";
@@ -18,6 +22,8 @@ import bookingRoutes from "./routes/bookings.js";
 import messageRoutes from "./routes/messages.js";
 import reviewRoutes from "./routes/reviews.js";
 import adminRoutes from "./routes/admin.js";
+import waitlistRoutes from "./routes/waitlist.js";
+import claimRoutes from "./routes/claim.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -53,20 +59,26 @@ export function createApp(config) {
   setTimezone(config.timezone);
   const db = openDb(config);
   const stripe = createStripe(config);
-  const sms = createSms(config, db);
+  const alert = createAlerts(config);
+  const sms = createSms(config, db, alert);
+  const email = createEmail(config, db, alert);
   const L = config.limits;
-  const ctx = { config, db, stripe, sms, limiters: {
+  const stats = createStats(db);
+  const ctx = { config, db, stripe, sms, email, alert, stats, limiters: {
     api: createLimiter({ windowMs: 60_000, max: L.api }),
     auth: createLimiter({ windowMs: 15 * 60_000, max: L.auth }),
     register: createLimiter({ windowMs: 60 * 60_000, max: L.register }),
+    forgot: createLimiter({ windowMs: 60 * 60_000, max: L.forgot }),
+    waitlist: createLimiter({ windowMs: 60 * 60_000, max: L.waitlist }),
     chat: createLimiter({ windowMs: 60_000, max: L.chat }),
     upload: createLimiter({ windowMs: 60 * 60_000, max: L.upload }),
     booking: createLimiter({ windowMs: 60 * 60_000, max: L.booking })
   } };
+  ctx.notify = createNotifier(ctx);
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -113,9 +125,19 @@ export function createApp(config) {
     res.end(body);
   }
 
+  // Works from the link in an email (GET, shows a page) and from a mail app's one-click button (POST).
+  function handleUnsubscribe(req, res) {
+    const url = new URL(req.url, "http://x"), id = Number(url.searchParams.get("u"));
+    const ok = Number.isInteger(id) && ctx.notify.verifyUnsub(id, url.searchParams.get("t"));
+    if (ok) db.run("UPDATE users SET email_notify = 0 WHERE id = ?", id);
+    const msg = ok ? "You will no longer receive these notifications. Booking receipts and security emails will still be sent. You can turn notifications back on under Account." : "This unsubscribe link is not valid. You can change your email preferences under Account.";
+    if (req.method === "POST") { res.writeHead(ok ? 200 : 400, { "Content-Type": "text/plain" }); res.end(ok ? "ok" : "bad link"); return; }
+    sendText(res, "text/html; charset=utf-8", `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email preferences</title><link rel="stylesheet" href="/style.css"></head><body><main style="max-width:520px"><div class="panel"><h1>Email preferences</h1><p>${msg}</p><p><a class="btn" href="/">Back to Bella&#39;s Música</a></p></div></main></body></html>`);
+  }
+
   function serveStatic(req, res, pathname) {
     if (pathname.includes("\0")) throw new HttpError(400, "Bad URL"); // a NUL byte would make the file system throw
-    const share = /^\/(g|b)\/([\w-]+)\/?$/.exec(pathname);
+    const share = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(pathname);
     if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
@@ -160,6 +182,7 @@ export function createApp(config) {
     try {
       const url = new URL(req.url, "http://x");
       if (url.pathname.startsWith("/api/")) { await handleApi(req, res, url); return; }
+      if (url.pathname === "/unsubscribe") { handleUnsubscribe(req, res); return; } // GET (link) and POST (one-click)
       if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "Method not allowed");
       let pathname;
       try { pathname = decodeURIComponent(url.pathname); } catch { throw new HttpError(400, "Bad URL"); }
@@ -167,7 +190,7 @@ export function createApp(config) {
     } catch (e) {
       if (res.headersSent) { res.end(); return; }
       if (e instanceof HttpError) sendJson(res, e.status, { error: e.message, ...e.extra });
-      else { console.error(e); sendJson(res, 500, { error: "Something went wrong" }); }
+      else { console.error(e); alert(`Server error on ${req.method} ${String(req.url).split("?")[0]}: ${e && e.message}`, `500 ${req.method} ${String(req.url).split("?")[0]}`); sendJson(res, 500, { error: "Something went wrong" }); }
     }
   });
 

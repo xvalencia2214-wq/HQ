@@ -10,7 +10,7 @@ export function normalizePhone(raw) {
 
 // Texts go out from the platform's number, so users never see each other's phone numbers.
 // With no Twilio settings every message is only written to sms_log (simulated).
-export function createSms(config, db) {
+export function createSms(config, db, alert = () => {}) {
   const live = Boolean(config.twilioSid && config.twilioToken && config.twilioFrom);
 
   async function send(phone, body) {
@@ -33,6 +33,7 @@ export function createSms(config, db) {
       return true;
     } catch (e) {
       db.run("UPDATE sms_log SET error = ? WHERE id = ?", String(e.message).slice(0, 200), row.lastInsertRowid);
+      alert(`Text message failed: ${e.message}`, "sms");
       return false;
     }
   }

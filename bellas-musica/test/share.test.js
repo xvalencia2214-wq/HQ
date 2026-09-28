@@ -17,7 +17,8 @@ test("share pages: photo card tags, hostile names are escaped, hidden groups don
     assert.match(res.headers.get("content-security-policy"), /base-uri 'self'/);
     let html = await res.text();
     assert.match(html, /<meta property="og:title" content="Los &quot;Reyes&quot; &lt;script&gt;alert\(1\)&lt;\/script&gt; &amp; Co · Mariachi in Chicago, IL">/);
-    assert.match(html, /og:image" content="[^"]*\/og\.png"/); // no photo yet: default card
+    assert.match(html, /og:image" content="[^"]*\/uploads\/[\w-]+\.png"/); // makeGroup gave it a photo
+    assert.match(await (await fetch(S.base + "/g/los-gallos-de-oro")).text(), /og:image" content="[^"]*\/og\.png"/); // a sample group has none: the default card
     assert.doesNotMatch(html, /<script>alert\(1\)/); assert.doesNotMatch(html, /<b>tags<\/b>/);
     assert.match(html, /<base href="\/">/); assert.match(html, /<main id="app"><div class="panel"><h1>Los &quot;Reyes&quot;/);
     const desc = html.match(/og:description" content="([^"]*)"/)[1];

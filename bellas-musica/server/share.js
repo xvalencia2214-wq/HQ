@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { lookupZip } from "./geo.js";
+import { MARKET } from "./market.js";
+import { LIVE_SQL } from "./shared.js";
 
 const h = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -13,7 +15,7 @@ export function renderSharePage(ctx, kind, id) {
   let image = `${config.baseUrl}/og.png`, url = config.baseUrl + "/", summary = "";
 
   if (kind === "g") {
-    const g = db.get("SELECT * FROM groups WHERE id = ? AND hidden = 0", id);
+    const g = db.get(`SELECT * FROM groups WHERE id = ? AND ${LIVE_SQL}`, id);
     if (g) {
       const z = lookupZip(g.zip);
       const place = z ? `${z.city}, ${z.state}` : "";
@@ -25,6 +27,17 @@ export function renderSharePage(ctx, kind, id) {
       const fromPrice = db.get("SELECT MIN(price_cents) m FROM packages WHERE group_id = ?", g.id).m ?? g.rate_cents;
       summary = `<div class="panel"><h1>${h(g.name)}</h1><p>${h(g.type)}${place ? " · " + h(place) : ""} · from $${Math.round(fromPrice / 100)}</p><p>${h(g.story)}</p></div>`;
     }
+  } else if (kind === "c" && id === MARKET.key) {
+    title = "Live Mexican music in Chicago: mariachi, banda, norteño and more · Bella's Música";
+    desc = "Book mariachis, bandas, norteño groups and DJs for your quinceañera, wedding or fiesta anywhere in Chicagoland. See who is free on your date, compare prices, and pay a deposit online.";
+    url = `${config.baseUrl}/c/${MARKET.key}`;
+    summary = `<div class="panel"><h1>Live Mexican music for your Chicago fiesta</h1>
+      <p>Bella's Música helps families in ${h(MARKET.area)} find and book mariachi, banda, norteño, grupera, trío and DJ groups for quinceañeras, weddings, birthdays, anniversaries and serenatas. Search by your date and guest count, compare prices, message the group, and secure your date with a deposit.</p>
+      <h2>Serving</h2><p>${MARKET.neighborhoods.map((n) => h(n.name)).join(", ")} and the surrounding suburbs.</p>
+      <h2>Common questions</h2>
+      <p><strong>How does the deposit work?</strong> You pay a deposit to request a group. If the group declines, you get it back in full. The balance is paid at the event or in the app.</p>
+      <p><strong>What if I need to cancel?</strong> Each group shows its cancellation policy before you pay: flexible, moderate or strict.</p>
+      <p><strong>Is there a fee for families?</strong> No. Groups pay a small platform fee out of the deposit.</p></div>`;
   } else if (kind === "b") {
     const z = lookupZip(id);
     if (z) {
@@ -52,9 +65,9 @@ export function robotsTxt(config) {
 
 export function sitemapXml(ctx) {
   const { db, config } = ctx;
-  const urls = [config.baseUrl + "/"];
+  const urls = [config.baseUrl + "/", `${config.baseUrl}/c/${MARKET.key}`];
   const zips = new Set();
-  for (const g of db.all("SELECT id, zip FROM groups WHERE demo = 0 AND hidden = 0 ORDER BY created_at")) { urls.push(`${config.baseUrl}/g/${g.id}`); zips.add(g.zip); }
+  for (const g of db.all(`SELECT id, zip FROM groups WHERE demo = 0 AND ${LIVE_SQL} ORDER BY created_at`)) { urls.push(`${config.baseUrl}/g/${g.id}`); zips.add(g.zip); }
   for (const z of zips) urls.push(`${config.baseUrl}/b/${z}`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${h(u)}</loc></url>`).join("\n")}\n</urlset>\n`;
 }

@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   phone TEXT NOT NULL DEFAULT '',
   sms_opt_in INTEGER NOT NULL DEFAULT 0,
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  email_notify INTEGER NOT NULL DEFAULT 1,
   lang TEXT NOT NULL DEFAULT 'en',
   pass_hash TEXT NOT NULL,
   created_at INTEGER NOT NULL
@@ -44,6 +46,10 @@ CREATE TABLE IF NOT EXISTS groups (
   stripe_account_id TEXT NOT NULL DEFAULT '',
   stripe_ready INTEGER NOT NULL DEFAULT 0,
   hidden INTEGER NOT NULL DEFAULT 0,
+  paused INTEGER NOT NULL DEFAULT 0,
+  published_at INTEGER NOT NULL DEFAULT 0,
+  invited INTEGER NOT NULL DEFAULT 0,
+  claim_token_hash TEXT NOT NULL DEFAULT '',
   seed_rating REAL NOT NULL DEFAULT 0,
   seed_reviews INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
@@ -98,6 +104,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   stripe_payment_intent TEXT NOT NULL DEFAULT '',
   refund_cents INTEGER NOT NULL DEFAULT 0,
   reminder_sent INTEGER NOT NULL DEFAULT 0,
+  reminder7_sent INTEGER NOT NULL DEFAULT 0,
+  reminder1_sent INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -123,6 +131,22 @@ CREATE TABLE IF NOT EXISTS admin_log (
   details TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS waitlist (
+  id INTEGER PRIMARY KEY,
+  email TEXT NOT NULL COLLATE NOCASE,
+  zip TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('customer','group')),
+  lang TEXT NOT NULL DEFAULT 'en',
+  created_at INTEGER NOT NULL,
+  UNIQUE (email, zip, kind)
+);
+CREATE TABLE IF NOT EXISTS stats_daily (
+  day TEXT NOT NULL,
+  key TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, key, ref)
+);
 CREATE TABLE IF NOT EXISTS thread_reads (
   group_id TEXT NOT NULL,
   customer_id INTEGER NOT NULL,
@@ -147,6 +171,23 @@ CREATE TABLE IF NOT EXISTS payments_feature (
   stripe_session_id TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS email_log (
+  id INTEGER PRIMARY KEY,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT '',
+  sent INTEGER NOT NULL DEFAULT 0,
+  error TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  token_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('reset','verify')),
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER
+);
 CREATE TABLE IF NOT EXISTS sms_log (
   id INTEGER PRIMARY KEY,
   to_phone TEXT NOT NULL,
@@ -167,9 +208,20 @@ export function openDb(config) {
   db.exec(SCHEMA);
   // Databases created before a column existed get it added (CREATE TABLE IF NOT EXISTS never alters).
   const ensureColumn = (table, column, ddl) => {
-    if (!db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+    if (db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column)) return false;
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+    return true;
   };
   ensureColumn("groups", "hidden", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "paused", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "invited", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "claim_token_hash", "TEXT NOT NULL DEFAULT ''");
+  // Groups that already existed when the draft/publish step was introduced stay live.
+  if (ensureColumn("groups", "published_at", "INTEGER NOT NULL DEFAULT 0")) db.exec("UPDATE groups SET published_at = created_at WHERE demo = 0 AND owner_id IS NOT NULL");
+  ensureColumn("bookings", "reminder7_sent", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "reminder1_sent", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("users", "email_verified", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("users", "email_notify", "INTEGER NOT NULL DEFAULT 1");
   const q = {
     all: (sql, ...p) => db.prepare(sql).all(...p),
     get: (sql, ...p) => db.prepare(sql).get(...p),

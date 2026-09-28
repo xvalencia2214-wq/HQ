@@ -3,8 +3,9 @@ import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip } from "../geo.js";
+import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
-import { getGroup, getVisibleGroup, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -41,15 +42,29 @@ export default function groupRoutes(ctx, add) {
     return { items, done: items.filter((i) => i.done).length, total: items.length };
   }
 
+  // The minimum a profile needs before customers can see it: one photo, a real story, the events you play, and a date to book.
+  function publishMissing(g, detail) {
+    const missing = [];
+    if (detail.photos.length < 1) missing.push("photos");
+    if (g.story.trim().length < 40) missing.push("story");
+    if (detail.events.length < 1) missing.push("events");
+    if (db.get("SELECT COUNT(*) c FROM availability WHERE group_id = ? AND date > ?", g.id, todayStr()).c < 1) missing.push("dates");
+    if (stripe.live && !g.stripe_ready) missing.push("payouts");
+    return missing;
+  }
+  const statusOf = (g) => (g.hidden ? "hidden" : g.published_at === 0 && !g.demo ? "draft" : g.paused ? "paused" : "live");
+
   // Everything the owner may see about their own group (adds private fields).
   function manageView(g) {
     const detail = groupDetail(ctx, g);
     return {
       ...detail,
       checklist: checklist(g, detail),
+      status: statusOf(g), publish_missing: g.published_at === 0 && !g.demo ? publishMissing(g, detail) : [], outside_market: !inMarket(g.zip),
       contact_phone: g.contact_phone, promoted_until: g.promoted_until,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
+      stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id) },
       pending_requests: db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'requested'", g.id).c,
       unread_threads: db.get(
         `SELECT COUNT(DISTINCT m.customer_id) c FROM messages m
@@ -73,11 +88,29 @@ export default function groupRoutes(ctx, add) {
     return manageView(getGroup(db, id));
   }, { auth: true });
 
+  add("POST", "/api/groups/:id/publish", ({ params, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (g.hidden) throw new HttpError(403, "This listing was hidden by the site owner. Contact support.");
+    const missing = publishMissing(g, groupDetail(ctx, g));
+    if (missing.length) throw new HttpError(400, "Finish these steps before you publish", { missing });
+    db.run("UPDATE groups SET published_at = CASE WHEN published_at = 0 THEN ? ELSE published_at END, paused = 0 WHERE id = ?", now(), g.id);
+    return manageView(getGroup(db, g.id));
+  }, { auth: true });
+
+  add("POST", "/api/groups/:id/pause", ({ params, body, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (g.published_at === 0 && !g.demo) throw new HttpError(400, "Publish your listing first");
+    db.run("UPDATE groups SET paused = ? WHERE id = ?", body.paused === true ? 1 : 0, g.id);
+    return manageView(getGroup(db, g.id));
+  }, { auth: true });
+
   add("GET", "/api/my/groups", ({ user }) => ({ groups: db.all("SELECT * FROM groups WHERE owner_id = ? ORDER BY created_at", user.id).map(manageView) }), { auth: true });
 
   add("GET", "/api/groups/:id", ({ params, user }) => {
     const g = getVisibleGroup(db, params.id, user);
-    return { ...groupDetail(ctx, g), is_owner: Boolean(user && g.owner_id === user.id) };
+    const isOwner = Boolean(user && g.owner_id === user.id);
+    if (!isOwner) ctx.stats.count("group_view", g.id); // a group looking at its own page is not a customer view
+    return { ...groupDetail(ctx, g), is_owner: isOwner };
   });
 
   add("PATCH", "/api/groups/:id", ({ params, body, user }) => {

@@ -3,12 +3,13 @@ import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundPercent, SLOT
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
+import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
 import { displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markFeaturePaid, newId, openSlots, refundBooking, requireOwner } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
-  const { db, stripe, sms, config, limiters } = ctx;
+  const { db, stripe, config, limiters, notify } = ctx;
 
   // Validate the request and price it. Used for the quote shown before paying and again when booking.
   function priceRequest(body, { requireSlot }, user) {
@@ -119,6 +120,7 @@ export default function bookingRoutes(ctx, add) {
   // ---- create ----
   add("POST", "/api/bookings", async ({ body, user, ip }) => {
     if (!limiters.booking.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many booking attempts. Try again later.");
+    if (ctx.email.live && !user.email_verified) throw new HttpError(403, "Please confirm your email address first. We sent you a link; you can ask for another from the banner at the top.", { code: "verify_email" });
     if (body.acceptPolicy !== true) throw new HttpError(400, "Please accept the deposit and cancellation policy");
     const target = getVisibleGroup(db, str(body.groupId, "Group", { required: true, max: 80 }), user);
     if (target.owner_id === user.id) throw new HttpError(400, "You can't book your own group");
@@ -155,6 +157,7 @@ export default function bookingRoutes(ctx, add) {
       if (/UNIQUE/i.test(String(e.message))) throw new HttpError(409, "That time was just taken. Please pick another.");
       throw e;
     }
+    ctx.stats.count("booking_started", r.group.id);
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, id);
     if (!stripe.live) return { booking: view(b, "customer"), payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/booking/${id}` } };
     try {
@@ -200,7 +203,7 @@ export default function bookingRoutes(ctx, add) {
     const g = getGroup(db, b.group_id);
     const isOwner = g.owner_id === user.id, isCustomer = b.customer_id === user.id;
     if (!isOwner && !isCustomer) throw new HttpError(404, "Booking not found");
-    const customer = db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", b.customer_id);
+    const base = config.baseUrl, bv = notify.bookingVars(b, g);
     const today = todayStr();
     const setStatus = (s) => db.run("UPDATE bookings SET status = ?, updated_at = ? WHERE id = ?", s, now(), b.id);
 
@@ -208,13 +211,14 @@ export default function bookingRoutes(ctx, add) {
       if (!isOwner) throw new HttpError(403, "Only the group can accept");
       if (b.status !== "requested" || b.payment_status !== "paid") throw new HttpError(400, "This request can't be accepted");
       setStatus("confirmed");
-      sms.notifyPhone(customer.phone, customer.sms_opt_in, `Bella's Música: ${g.name} confirmed your booking for ${b.date} at ${b.time}.`);
+      ctx.stats.count("booking_confirmed", g.id);
+      notify.to(b.customer_id, "booking.confirmed.customer", { ...bv, url: `${base}/#/booking/${b.id}` });
     } else if (action === "decline") {
       if (!isOwner) throw new HttpError(403, "Only the group can decline");
       if (b.status !== "requested") throw new HttpError(400, "This request can't be declined");
       await refundBooking(ctx, b, b.deposit_cents - b.refund_cents); // refund first: if it fails nothing else changes
       setStatus("declined");
-      sms.notifyPhone(customer.phone, customer.sms_opt_in, `Bella's Música: ${g.name} can't take your ${b.date} booking. Your deposit is being refunded.`);
+      notify.to(b.customer_id, "booking.declined.customer", { ...bv, refund: usd(b.deposit_cents), url: `${base}/#/` });
     } else {
       if (!["pending_payment", "requested", "confirmed"].includes(b.status)) throw new HttpError(400, "This booking can't be cancelled");
       if (b.date <= today) throw new HttpError(400, "This event has already started or passed");
@@ -222,11 +226,8 @@ export default function bookingRoutes(ctx, add) {
       const cents = isOwner ? b.deposit_cents - b.refund_cents : refundForCancel(b, today) - b.refund_cents;
       await refundBooking(ctx, b, Math.max(0, cents));
       setStatus("cancelled");
-      if (isOwner) sms.notifyPhone(customer.phone, customer.sms_opt_in, `Bella's Música: ${g.name} cancelled your ${b.date} booking. Your deposit is being refunded in full.`);
-      else if (g.owner_id) {
-        const owner = db.get("SELECT phone, sms_opt_in FROM users WHERE id = ?", g.owner_id);
-        sms.notifyPhone(g.contact_phone || owner?.phone, owner?.sms_opt_in, `Bella's Música: the ${b.date} ${b.time} booking was cancelled by the customer.`);
-      }
+      if (isOwner) notify.to(b.customer_id, "booking.cancelled.customer", { ...bv, refund: usd(b.deposit_cents), url: `${base}/#/` });
+      else if (g.owner_id) notify.to(g.owner_id, "booking.cancelled.group", { ...bv, refund: usd(Math.max(0, cents) + b.refund_cents), url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     }
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), isOwner ? "owner" : "customer") };
   }), { auth: true });
@@ -251,6 +252,7 @@ export default function bookingRoutes(ctx, add) {
       }
     } catch (e) {
       db.run("DELETE FROM webhook_events WHERE id = ?", String(event.id)); // let Stripe retry
+      ctx.alert(`Stripe webhook ${event.type} failed: ${e.message}`, "webhook");
       throw e;
     }
     return { received: true };

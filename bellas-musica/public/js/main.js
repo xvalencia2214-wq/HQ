@@ -13,8 +13,8 @@ import { messagesView } from "./views/messages.js";
 import { admin } from "./views/admin.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
-const landing = /^\/(g|b)\/([\w-]+)\/?$/.exec(location.pathname);
-if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group/" : "best/") + landing[2]);
+const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
+if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group/" + landing[2] : landing[1] === "b" ? "best/" + landing[2] : "chicago"));
 
 const app = document.getElementById("app");
 // Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.

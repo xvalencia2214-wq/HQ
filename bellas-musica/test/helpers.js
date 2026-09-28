@@ -8,7 +8,7 @@ import { createApp } from "../server/app.js";
 
 export async function startApp(env = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bm-test-"));
-  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", ...env });
+  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_FORGOT: "1000", RATE_WAITLIST: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", ...env });
   const app = createApp(config);
   const port = await app.listen(0);
   const base = `http://127.0.0.1:${port}`;
@@ -53,7 +53,7 @@ export const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
 // A tiny stand-in for api.stripe.com that records every request it receives.
 export async function fakeStripe() {
   const calls = [];
-  const state = { sessionPaid: false, sessionAmount: 0, ready: true, failRefunds: false, refundDelay: 0, refunded: [], idem: new Map() };
+  const state = { sessionPaid: false, sessionAmount: 0, ready: true, failRefunds: false, refundDelay: 0, refunded: [], idem: new Map(), connectEnabled: true, chargesEnabled: true, webhooks: [] };
   const server = http.createServer(async (req, res) => {
     let body = "";
     for await (const c of req) body += c;
@@ -72,6 +72,12 @@ export async function fakeStripe() {
       if (key) state.idem.set(key, out);
       return send(out);
     }
+    if (req.method === "GET" && req.url === "/v1/account") return send({ id: "acct_platform", country: "US", charges_enabled: state.chargesEnabled });
+    if (req.method === "GET" && req.url.startsWith("/v1/accounts?")) {
+      if (!state.connectEnabled) { res.writeHead(400, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { message: "You can only create new accounts if you've signed up for Connect" } })); }
+      return send({ data: [] });
+    }
+    if (req.method === "GET" && req.url.startsWith("/v1/webhook_endpoints")) return send({ data: state.webhooks });
     if (req.method === "POST" && req.url === "/v1/accounts") return send({ id: "acct_test_1" });
     if (req.method === "POST" && req.url === "/v1/account_links") return send({ url: "https://connect.stripe.test/onboard" });
     if (req.method === "GET" && req.url.startsWith("/v1/accounts/")) return send({ id: "acct_test_1", charges_enabled: state.ready, payouts_enabled: state.ready });
@@ -93,13 +99,30 @@ export async function postWebhook(base, payload, secret, opts = {}) {
   return { status: res.status, json: await res.json().catch(() => null) };
 }
 
-// A group with a paid-ready profile and open slots on the given dates.
-export async function makeGroup(owner, { name = "Test Mariachi", zip = "60608", rate = 300, dates = [], extra = {} } = {}) {
-  const c = await owner.post("/api/groups", { name, type: "Mariachi", zip, rate, members: 6, story: "We play." });
+const TINY_PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64, 1)]).toString("base64");
+
+// A published group with open slots on the given dates. Pass `draft: true` to leave it unpublished and unfinished.
+export async function makeGroup(owner, { name = "Test Mariachi", zip = "60608", rate = 300, dates = [], extra = {}, draft = false, photo = true } = {}) {
+  const c = await owner.post("/api/groups", { name, type: "Mariachi", zip, rate, members: 6, story: draft ? "We play." : "We play mariachi music for weddings, quinceañeras and family parties." });
   if (c.status !== 200) throw new Error("group create failed " + JSON.stringify(c.json));
   const id = c.json.id;
-  if (Object.keys(extra).length) await owner.patch(`/api/groups/${id}`, extra);
+  const patch = { ...extra };
+  if (!draft) {
+    if (!patch.story || patch.story.length < 40) patch.story = "We play mariachi music for weddings, quinceañeras and family parties.";
+    if (!patch.events) patch.events = ["Wedding", "Quinceañera"];
+  }
+  if (Object.keys(patch).length) { const r = await owner.patch(`/api/groups/${id}`, patch); if (r.status !== 200) throw new Error("group patch failed " + JSON.stringify(r.json)); }
   if (dates.length) await owner.put(`/api/groups/${id}/availability`, { dates: Object.fromEntries(dates.map((d) => [d, ["12:00 PM", "2:00 PM", "4:00 PM"]])) });
+  if (!draft) {
+    if (!dates.length) await owner.post(`/api/groups/${id}/availability/weekends`, { weeks: 2 });
+    if (photo) await owner.post(`/api/groups/${id}/photos`, { data: TINY_PNG });
+    let p = await owner.post(`/api/groups/${id}/publish`);
+    if (p.status === 400 && p.json.missing?.includes("payouts")) { // live Stripe mode: finish payout setup first, like a real group must
+      await owner.post(`/api/groups/${id}/stripe/onboard`); await owner.post(`/api/groups/${id}/stripe/refresh`);
+      p = await owner.post(`/api/groups/${id}/publish`);
+    }
+    if (p.status !== 200) throw new Error("publish failed " + JSON.stringify(p.json));
+  }
   return id;
 }
 

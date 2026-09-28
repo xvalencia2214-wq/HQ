@@ -4,30 +4,34 @@ import { SLOTS } from "./pricing.js";
 // Fictional sample listings so a fresh install has something to search. Turn off with DEMO_SEED=0.
 const G = (id, name, type, zip, rate, members, rating, reviews, story, extra = {}) => ({ id, name, type, zip, rate, members, rating, reviews, story, ...extra });
 const DEMO = [
-  G("los-gallos-de-oro", "Los Gallos de Oro", "Mariachi", "60608", 350, 7, 4.9, 132, "Started in 2011 when three cousins played for tips on 26th Street. Today the whole family plays weddings, quinceañeras and Sunday parties.",
+  G("los-gallos-de-oro", "Los Gallos de Oro", "Mariachi", "60608", 350, 7, 4.9, 132, "Started in 2011 when three cousins played for tips on 26th Street. Today the whole family plays weddings, quinceañeras and Sunday parties across Pilsen and beyond.",
     { songs: ["Las Mañanitas", "El Rey", "Cielito Lindo", "Volver Volver", "Si Nos Dejan", "Sway (Quién Será)"], events: ["Wedding", "Quinceañera", "Birthday", "Serenata"], sound: 1, dress: "Charro suits (black and silver)", travel: 40, fee: 6000, guests: 250 }),
-  G("mariachi-estrella-azul", "Mariachi Estrella Azul", "Mariachi", "77003", 400, 8, 4.9, 210, "Formed by music school friends who wanted to keep the classic sound alive. Traditional trajes, modern sound system, no cover songs they can't play well.",
-    { songs: ["Las Mañanitas", "Cielito Lindo", "Amor Eterno", "Volver Volver", "México Lindo y Querido", "La Negra"], events: ["Wedding", "Quinceañera", "Anniversary", "Serenata"], sound: 1, dress: "Traditional trajes de charro", travel: 30, fee: 7500, guests: 300 }),
-  G("banda-el-patron", "Banda El Patrón", "Banda", "90022", 900, 14, 4.8, 98, "A 14-piece banda that grew out of a high school band program. Big brass, big dance floor, built for large parties.",
+  G("banda-los-paisanos-del-sur", "Banda Los Paisanos del Sur", "Banda", "60623", 900, 14, 4.8, 98, "A 14-piece banda that grew out of a Little Village high school band program. Big brass, big dance floor, built for large quinceañeras and weddings.",
     { songs: ["El Sinaloense", "Mi Ranchito", "Ni Con Tu Sombra", "La Culebra", "Se Vende Un Corazón"], events: ["Wedding", "Quinceañera", "Birthday"], sound: 1, dress: "Matching black shirts", travel: 50, fee: 15000, guests: 500 }),
-  G("los-del-rio-bravo", "Los del Río Bravo", "Norteño", "78207", 300, 5, 4.8, 76, "Accordion, bajo sexto and a lot of heart. The band began at a family ranch in the Rio Grande Valley and now plays across South Texas.",
+  G("los-compas-de-cicero", "Los Compas de Cicero", "Norteño", "60804", 300, 5, 4.8, 76, "Accordion, bajo sexto and a lot of heart. Friends from Cicero who have played family parties and restaurants across the west side for years.",
     { songs: ["Tragos Amargos", "Mi Tierra", "Cruz de Olvido", "Volverte a Ver", "El Sinaloense"], events: ["Birthday", "Wedding", "Corporate / Restaurant"], sound: 0, dress: "Boots and hats", travel: 40, fee: 5000, guests: 200 }),
-  G("trio-luna-de-plata", "Trío Luna de Plata", "Trío romántico", "85003", 250, 3, 4.9, 64, "Three voices, three guitars. Perfect for serenatas, anniversaries and intimate dinners.",
+  G("trio-luna-de-humboldt", "Trío Luna de Humboldt", "Trío romántico", "60651", 250, 3, 4.9, 64, "Three voices, three guitars. Perfect for serenatas, anniversaries and intimate dinners from Humboldt Park to the suburbs.",
     { songs: ["Sabor a Mí", "Bésame Mucho", "Contigo Aprendí", "Amor Eterno", "La Barca"], events: ["Serenata", "Anniversary", "Corporate / Restaurant", "Wedding"], sound: 0, dress: "Guayaberas or formal", travel: 25, fee: 4000, guests: 80 }),
-  G("grupo-sabor-tropical", "Grupo Sabor Tropical", "Grupera", "60608", 600, 6, 4.7, 88, "Cumbia and grupera hits from the 80s to today. They started playing at neighborhood block parties and never stopped.",
+  G("grupo-sabor-tropical", "Grupo Sabor Tropical", "Grupera", "60609", 600, 6, 4.7, 88, "Cumbia and grupera hits from the 80s to today. They started at Back of the Yards block parties and never stopped.",
     { songs: ["La Cumbia del Sol", "Mi Cucu", "Sonidero Nacional", "Tu Cárcel", "Amor de Mis Amores"], events: ["Quinceañera", "Birthday", "Wedding"], sound: 1, dress: "Colorful shirts", travel: 35, fee: 6000, guests: 300 }),
-  G("mariachi-real-de-jalisco", "Mariachi Real de Jalisco", "Mariachi", "90022", 375, 7, 4.7, 155, "Third-generation mariachi family. They learned to play before they learned to drive.",
+  G("mariachi-real-de-berwyn", "Mariachi Real de Berwyn", "Mariachi", "60402", 375, 7, 4.7, 155, "Third-generation mariachi family. They learned to play before they learned to drive.",
     { songs: ["Las Mañanitas", "Guadalajara", "El Son de la Negra", "Cielito Lindo", "Amor Eterno"], events: ["Wedding", "Quinceañera", "Birthday", "Serenata"], sound: 1, dress: "Charro suits", travel: 40, fee: 6500, guests: 250 }),
-  G("los-hermanos-vega", "Los Hermanos Vega", "Norteño", "85003", 280, 4, 4.6, 41, "Four brothers, one accordion and a long list of corridos requests. Family-run and easy to work with.",
-    { songs: ["Mi Tierra", "Tragos Amargos", "El Rey", "Contrabando y Traición"], events: ["Birthday", "Corporate / Restaurant", "Wedding"], sound: 0, dress: "Boots and hats", travel: 30, fee: 4500, guests: 150 }),
-  G("dj-fiesta-latina", "DJ Fiesta Latina", "DJ", "77003", 200, 1, 4.6, 120, "Bilingual DJ and MC who reads the room. Cumbia, reggaetón, banda, oldies — whatever gets the family dancing.",
+  G("los-hermanos-vega-de-aurora", "Los Hermanos Vega de Aurora", "Norteño", "60505", 280, 4, 4.6, 41, "Four brothers, one accordion and a long list of corrido requests. Family-run and easy to work with.",
+    { songs: ["Mi Tierra", "Tragos Amargos", "El Rey", "Contrabando y Traición"], events: ["Birthday", "Corporate / Restaurant", "Wedding"], sound: 0, dress: "Boots and hats", travel: 40, fee: 4500, guests: 150 }),
+  G("dj-fiesta-chicago", "DJ Fiesta Chicago", "DJ", "60647", 200, 1, 4.6, 120, "Bilingual DJ and MC who reads the room. Cumbia, reggaetón, banda, oldies — whatever gets the family dancing.",
     { songs: ["La Bamba", "Bailando", "La Macarena", "Suavemente", "El Sinaloense"], events: ["Quinceañera", "Birthday", "Wedding", "Corporate / Restaurant"], sound: 1, dress: "Business casual", travel: 50, fee: 3000, guests: 400 }),
-  G("banda-la-costa", "Banda La Costa", "Banda", "78207", 850, 13, 4.5, 57, "Sinaloa-style banda with a full brass section. They have played at hundreds of quinceañeras across Texas.",
+  G("banda-la-costa-de-waukegan", "Banda La Costa de Waukegan", "Banda", "60085", 850, 13, 4.5, 57, "Sinaloa-style banda with a full brass section. They have played hundreds of quinceañeras across Lake County.",
     { songs: ["El Sinaloense", "La Culebra", "Mi Ranchito", "Las Mañanitas"], events: ["Quinceañera", "Wedding", "Birthday"], sound: 1, dress: "Matching outfits", travel: 50, fee: 14000, guests: 500 }),
   G("mariachi-alma-mexicana", "Mariachi Alma Mexicana", "Mariachi", "60608", 325, 6, 4.5, 39, "A younger group with a fresh take on the classics. Great for weddings that mix old and new.",
     { songs: ["Las Mañanitas", "Cielito Lindo", "Sway (Quién Será)", "Volver Volver", "Bésame Mucho"], events: ["Wedding", "Birthday", "Anniversary"], sound: 1, dress: "Modern black charro", travel: 30, fee: 5500, guests: 200 }),
-  G("conjunto-brisa-del-valle", "Conjunto Brisa del Valle", "Conjunto", "85003", 260, 5, 4.4, 28, "Conjunto music from the border, played the way their grandparents played it.",
-    { songs: ["Volver Volver", "Mi Tierra", "Cruz de Olvido", "Tragos Amargos"], events: ["Birthday", "Corporate / Restaurant", "Anniversary"], sound: 0, dress: "Western wear", travel: 30, fee: 4000, guests: 150 })
+  G("conjunto-brisa-de-joliet", "Conjunto Brisa de Joliet", "Conjunto", "60435", 260, 5, 4.4, 28, "Conjunto music from the border, played the way their grandparents played it.",
+    { songs: ["Volver Volver", "Mi Tierra", "Cruz de Olvido", "Tragos Amargos"], events: ["Birthday", "Corporate / Restaurant", "Anniversary"], sound: 0, dress: "Western wear", travel: 30, fee: 4000, guests: 150 }),
+  G("mariachi-juvenil-de-melrose-park", "Mariachi Juvenil de Melrose Park", "Mariachi", "60160", 300, 8, 4.8, 64, "Eight young musicians who came up through a community mariachi program. Energy, harmony and a lot of pride.",
+    { songs: ["Cielito Lindo", "El Rey", "La Negra", "México Lindo y Querido", "Las Mañanitas"], events: ["Quinceañera", "Birthday", "Wedding", "Serenata"], sound: 1, dress: "Red and black trajes", travel: 35, fee: 5000, guests: 250 }),
+  G("banda-el-jefe-de-brighton-park", "Banda El Jefe de Brighton Park", "Banda", "60632", 950, 15, 4.7, 77, "Fifteen musicians and a sound system that fills any banquet hall. Their quinceañera set is famous on the southwest side.",
+    { songs: ["El Sinaloense", "Mi Ranchito", "La Culebra", "Ni Con Tu Sombra", "Las Mañanitas"], events: ["Quinceañera", "Wedding", "Birthday"], sound: 1, dress: "Matching white shirts", travel: 50, fee: 16000, guests: 600 }),
+  G("trio-los-caballeros-de-des-plaines", "Trío Los Caballeros de Des Plaines", "Trío romántico", "60016", 240, 3, 4.5, 35, "Classic boleros and rancheras for restaurants, anniversaries and serenatas in the northwest suburbs.",
+    { songs: ["Sabor a Mí", "Contigo Aprendí", "Bésame Mucho", "La Barca", "Amor Eterno"], events: ["Serenata", "Anniversary", "Corporate / Restaurant"], sound: 0, dress: "Suits", travel: 30, fee: 3500, guests: 80 })
 ];
 
 function hash(str) {
@@ -55,9 +59,16 @@ export function fillDemoAvailability(db) {
 }
 
 export function seedDemo(db) {
-  if (!db.get("SELECT 1 AS x FROM groups WHERE demo = 1")) {
+  // Older sample sets are retired: removed, or just hidden if anyone already booked or messaged them.
+  const keep = DEMO.map((g) => g.id);
+  for (const old of db.all(`SELECT id FROM groups WHERE demo = 1 AND id NOT IN (${keep.map(() => "?").join(",")})`, ...keep)) {
+    const used = db.get("SELECT (SELECT COUNT(*) FROM bookings WHERE group_id = ?) + (SELECT COUNT(*) FROM messages WHERE group_id = ?) n", old.id, old.id).n;
+    if (used) db.run("UPDATE groups SET hidden = 1 WHERE id = ?", old.id); else db.run("DELETE FROM groups WHERE id = ?", old.id);
+  }
+  {
     db.tx(() => {
       for (const g of DEMO) {
+        if (db.get("SELECT 1 AS x FROM groups WHERE id = ?", g.id)) continue; // already there
         db.run(
           `INSERT INTO groups (id, demo, name, type, zip, rate_cents, members, story, events, songs, max_guests, sound_system, dress_code,
              travel_miles, travel_fee_cents, seed_rating, seed_reviews, created_at)
