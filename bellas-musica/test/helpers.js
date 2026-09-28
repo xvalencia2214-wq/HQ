@@ -52,7 +52,7 @@ export const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
 // A tiny stand-in for api.stripe.com that records every request it receives.
 export async function fakeStripe() {
   const calls = [];
-  const state = { sessionPaid: false, sessionAmount: 0, ready: true, failRefunds: false, refundDelay: 0 };
+  const state = { sessionPaid: false, sessionAmount: 0, ready: true, failRefunds: false, refundDelay: 0, refunded: [], idem: new Map() };
   const server = http.createServer(async (req, res) => {
     let body = "";
     for await (const c of req) body += c;
@@ -64,7 +64,12 @@ export async function fakeStripe() {
     if (req.method === "POST" && req.url === "/v1/refunds") {
       if (state.refundDelay) await new Promise((r) => setTimeout(r, state.refundDelay));
       if (state.failRefunds) { res.writeHead(500, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { message: "refund failed" } })); }
-      return send({ id: "re_test_" + calls.length });
+      const key = req.headers["idempotency-key"];
+      if (key && state.idem.has(key)) return send(state.idem.get(key)); // like Stripe: same key = same result, no second refund
+      const out = { id: "re_test_" + calls.length };
+      state.refunded.push({ pi: form.payment_intent, amount: Number(form.amount) });
+      if (key) state.idem.set(key, out);
+      return send(out);
     }
     if (req.method === "POST" && req.url === "/v1/accounts") return send({ id: "acct_test_1" });
     if (req.method === "POST" && req.url === "/v1/account_links") return send({ url: "https://connect.stripe.test/onboard" });

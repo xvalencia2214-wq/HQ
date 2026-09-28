@@ -32,6 +32,7 @@ export function loadConfig(env = process.env) {
     trustProxy: env.TRUST_PROXY === "1",
     secret,
     demoSeed: env.DEMO_SEED !== "0",
+    timezone: env.BUSINESS_TZ || "America/Chicago", // the calendar day used for "today", holds and refund windows
     // Rate limits (max requests per window per client); tests raise these
     limits: {
       api: int(env.RATE_API, 300), register: int(env.RATE_REGISTER, 10), auth: int(env.RATE_AUTH, 10),

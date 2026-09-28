@@ -86,6 +86,16 @@ export default function bookingRoutes(ctx, add) {
     return b;
   };
 
+  // Payment link for a booking that is still waiting on a deposit, or null if it can't be resumed.
+  async function resumePayment(b) {
+    const row = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id);
+    if (!stripe.live) return { booking: view(row, "customer"), payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/booking/${b.id}` } };
+    if (!b.stripe_session_id) return null;
+    const s = await stripe.getCheckoutSession(b.stripe_session_id).catch(() => null);
+    if (s && s.status === "open" && typeof s.url === "string" && s.url.startsWith("https://")) return { booking: view(row, "customer"), payment: { mode: "stripe", url: s.url } };
+    return null;
+  }
+
   // ---- create ----
   add("POST", "/api/bookings", async ({ body, user, ip }) => {
     if (!limiters.booking.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many booking attempts. Try again later.");
@@ -93,6 +103,22 @@ export default function bookingRoutes(ctx, add) {
     const target = getGroup(db, str(body.groupId, "Group", { required: true, max: 80 }));
     if (target.owner_id === user.id) throw new HttpError(400, "You can't book your own group");
     if (!isBookable(ctx, target)) throw new HttpError(400, "This group isn't taking online deposits yet. Send them a message instead.");
+
+    // Their own unpaid hold on this exact slot: hand back the same checkout instead of a confusing "not available".
+    expirePending(db);
+    const old = db.get("SELECT * FROM bookings WHERE customer_id = ? AND group_id = ? AND date = ? AND time = ? AND status = 'pending_payment'", user.id, target.id, body.date, body.time);
+    if (old) {
+      const again = priceRequest(body, { requireSlot: false });
+      if (again.quote.total_cents === old.total_cents && again.quote.deposit_cents === old.deposit_cents) {
+        const resumed = await resumePayment(old);
+        if (resumed) return resumed;
+      }
+      db.run("UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE id = ?", now(), old.id); // details changed: replace the hold
+    }
+    // Stop one person from squatting on many slots at once.
+    if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status = 'pending_payment'", user.id).c >= 3) {
+      throw new HttpError(429, "You have several unpaid holds. Pay for or cancel one before holding another.");
+    }
     const r = priceRequest(body, { requireSlot: true });
     const phone = normalizePhone(str(body.phone, "Phone", { required: true, max: 30 }));
     if (!phone) throw new HttpError(400, "Enter a valid US phone number");

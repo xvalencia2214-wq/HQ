@@ -5,7 +5,7 @@ import { openDb } from "./db.js";
 import { createStripe } from "./stripe.js";
 import { createSms } from "./sms.js";
 import { userFromRequest } from "./auth.js";
-import { HttpError, readBody, readJson, createLimiter } from "./util.js";
+import { HttpError, readBody, readJson, createLimiter, setTimezone } from "./util.js";
 import { MIME_BY_EXT } from "./media.js";
 import { expirePending } from "./shared.js";
 import { seedDemo } from "./seed.js";
@@ -47,6 +47,7 @@ function createRouter() {
 }
 
 export function createApp(config) {
+  setTimezone(config.timezone);
   const db = openDb(config);
   const stripe = createStripe(config);
   const sms = createSms(config, db);

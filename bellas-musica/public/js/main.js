@@ -1,4 +1,4 @@
-import { init, state, onChange, setUser } from "./state.js";
+import { init, state, onChange, setUser, refreshMetaIfStale } from "./state.js";
 import { api } from "./api.js";
 import { t, lang, setLang, initLang } from "./i18n.js";
 import { esc, toast } from "./ui.js";
@@ -44,6 +44,8 @@ async function route() {
   const path = qi === -1 ? raw : raw.slice(0, qi);
   const params = new URLSearchParams(qi === -1 ? "" : raw.slice(qi + 1));
   const seg = path.split("/").filter(Boolean);
+  await refreshMetaIfStale();
+  if (token !== routeToken) return;
   renderChrome();
   window.scrollTo(0, 0);
   if (needsLogin.has(seg[0]) && !state.user) { location.hash = "#/login?next=" + encodeURIComponent(location.hash); return; }

@@ -1,4 +1,5 @@
 import { t, lang } from "./i18n.js";
+import { state } from "./state.js";
 
 export function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -7,7 +8,8 @@ export const money = (cents) => new Intl.NumberFormat(lang() === "es" ? "es-US" 
 export const pad = (n) => (n < 10 ? "0" + n : "" + n);
 export const dkey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const parseKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
-export const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+// The business calendar day from the server (falls back to the browser clock before meta has loaded).
+export const today = () => { const k = state.meta && state.meta.today; if (k) return parseKey(k); const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 export const tomorrowKey = () => { const d = today(); d.setDate(d.getDate() + 1); return dkey(d); };
 export const fmtDate = (k) => parseKey(k).toLocaleDateString(lang() === "es" ? "es-US" : "en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 export const fmtMonth = (d) => d.toLocaleString(lang() === "es" ? "es-US" : "en-US", { month: "long", year: "numeric" });

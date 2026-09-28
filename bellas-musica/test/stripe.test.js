@@ -120,6 +120,18 @@ test("refunds: reverse the transfer and app fee; a failed refund changes nothing
   assert.equal(lastCall((x) => x.url === "/v1/refunds").form.amount, "7500");
 });
 
+test("live mode: re-clicking Pay returns the same open Stripe checkout instead of creating a second", async () => {
+  const d = day(80);
+  await owner.put(`/api/groups/${gid}/availability`, { dates: { [d]: ["12:00 PM"] } });
+  const before = F.calls.filter((c) => c.url === "/v1/checkout/sessions" && c.method === "POST").length;
+  const a = await cust.post("/api/bookings", bookingBody(gid, d, { time: "12:00 PM" }));
+  const b = await cust.post("/api/bookings", bookingBody(gid, d, { time: "12:00 PM" }));
+  assert.equal(b.json.booking.id, a.json.booking.id);
+  assert.equal(b.json.payment.url, "https://checkout.stripe.test/resume"); // the still-open session from Stripe
+  assert.equal(F.calls.filter((c) => c.url === "/v1/checkout/sessions" && c.method === "POST").length - before, 1);
+  await cust.patch(`/api/bookings/${a.json.booking.id}`, { action: "cancel" });
+});
+
 test("double-tapping cancel while a refund is in flight refunds and records exactly once", async () => {
   const d = day(70);
   await owner.put(`/api/groups/${gid}/availability`, { dates: { [d]: ["12:00 PM"] } });

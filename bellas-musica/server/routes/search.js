@@ -1,4 +1,4 @@
-import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr } from "../util.js";
+import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip, miles, zipCount } from "../geo.js";
 import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf } from "../shared.js";
@@ -89,7 +89,7 @@ export default function searchRoutes(ctx, add) {
   add("GET", "/api/meta", () => ({
     events: EVENT_TYPES, group_types: GROUP_TYPES, slots: SLOTS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
-    payments: stripe.mode, sms: sms.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount()
+    payments: stripe.mode, sms: sms.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
   }));
 
   add("GET", "/api/zip/:zip", ({ params }) => {

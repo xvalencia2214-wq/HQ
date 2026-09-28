@@ -70,10 +70,12 @@ export function oneOf(v, name, list) {
 }
 export const isDate = (s) => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s + "T00:00:00Z"));
 export const isZip = (s) => typeof s === "string" && /^\d{5}$/.test(s);
-export const todayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+// "Today" is always the business's calendar day (default America/Chicago), never the host's clock:
+// cloud hosts run on UTC, which would flip the date every US evening and shift refund windows by a day.
+let tz = "America/Chicago";
+export function setTimezone(zone) { new Intl.DateTimeFormat("en-CA", { timeZone: zone }); tz = zone; } // throws on a bad zone name
+export const getTimezone = () => tz;
+export const todayStr = () => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 export function addDays(dateStr, n) {
   const d = new Date(dateStr + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
