@@ -48,7 +48,12 @@ export function client(base) {
 }
 
 export const ymd = (d) => d.toISOString().slice(0, 10);
-export const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+// "N days from today" on the business calendar (America/Chicago), like the server: not the test machine's clock, which may already be tomorrow.
+export const inDays = (n) => {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(t.getUTCDate()).padStart(2, "0")}`;
+};
 
 // A tiny stand-in for api.stripe.com that records every request it receives.
 export async function fakeStripe() {

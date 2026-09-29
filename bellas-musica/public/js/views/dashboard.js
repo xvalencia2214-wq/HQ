@@ -98,12 +98,20 @@ async function requests({ g, body, refresh }) {
   const rsBox = (b) => (b.reschedule && b.can_respond_reschedule
     ? `<div class="note small"><strong>${esc(t("rs.asks", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</strong>${b.reschedule.note ? `<br>“${esc(b.reschedule.note)}”` : ""}<br>
        <button class="btn small" data-rs="accept" data-id="${esc(b.id)}">${esc(t("rs.accept"))}</button> <button class="btn ghost small" data-rs="decline" data-id="${esc(b.id)}">${esc(t("rs.decline"))}</button></div>` : "");
+  const showBox = (b) => {
+    let out = b.checked_in ? `<br><span class="dim small">✓ ${esc(t("show.checkedIn"))}</span>` : "";
+    if (b.noshow && b.noshow.status === "reported") out += `<div class="note warn small">${esc(t("show.groupReport", { note: b.noshow.note }))}${b.noshow.reply ? `<br>${esc(t("show.answered", { text: b.noshow.reply }))}` : ""}${b.can_reply_noshow ? `<br><button class="btn small" data-nsreply="${esc(b.id)}">${esc(t("show.answer"))}</button>` : ""}</div>`;
+    else if (b.noshow) out += `<div class="dim small">${esc(t(b.noshow.status === "refunded" ? "show.stRefunded" : "show.stRejected"))}</div>`;
+    return out + `<div class="ci-slot"></div>`;
+  };
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
-      ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${rsBox(b)}</div>
+      ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
+      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}?g=${esc(g.id)}">${esc(t("agr.link"))}</a> ` : ""}
+      ${b.can_checkin ? `<button class="btn small" data-checkin="${esc(b.id)}">${esc(t("show.checkin"))}</button> ` : ""}
       ${b.can_mark_balance_offline && b.date >= dkey(today()) ? `<button class="btn ghost small" data-off="${b.balance_status === "offline" ? "undo" : "mark"}" data-id="${esc(b.id)}" data-amount="${b.balance_cents}">${esc(t(b.balance_status === "offline" ? "bal.undoOffline" : "bal.markOffline"))}</button> ` : ""}
       ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`;
   const st30 = g.stats_30d;
@@ -111,6 +119,20 @@ async function requests({ g, body, refresh }) {
     <div class="tiles small" aria-label="${esc(t("stat.title"))}">${[["stat.views", st30.views], ["stat.feedViews", st30.feed_views], ["stat.feedTaps", st30.feed_taps], ["stat.requests", st30.requests], ["stat.confirmed", st30.confirmed]].map(([k, v]) => `<div class="tile"><div class="tile-l">${esc(t(k))} · ${esc(t("stat.title"))}</div><div class="tile-v">${v}</div></div>`).join("")}</div>${bookings.length
     ? sections.filter(([, list]) => list.length).map(([key, list, hot]) => `<div class="sec-h${hot ? " hot" : ""}"><strong>${esc(t(key))}</strong><span class="count">${list.length}</span></div>${list.map(row).join("")}`).join("")
     : `<div class="empty">${esc(t("dash.noReq"))}</div>`}</div>`;
+  const slotForm = (btn, html, onSubmit) => {
+    const slot = btn.closest(".req").querySelector(".ci-slot");
+    slot.innerHTML = html;
+    slot.querySelector("input, textarea").focus();
+    slot.querySelector("form").onsubmit = async (e) => { e.preventDefault(); try { await onSubmit(new FormData(e.target)); } catch (ex) { slot.querySelector(".err").textContent = ex.message; } };
+  };
+  body.querySelectorAll("[data-checkin]").forEach((b) => {
+    b.onclick = () => slotForm(b, `<form class="note small"><p class="dim small">${esc(t("show.checkinHint"))}</p><label for="ci-${esc(b.dataset.checkin)}">${esc(t("show.checkinCode"))}</label><input id="ci-${esc(b.dataset.checkin)}" name="code" inputmode="numeric" maxlength="4" pattern="\\d{4}" required autocomplete="off"><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("show.checkinGo"))}</button></form>`,
+      async (f) => { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.checkin)}/checkin`, { code: f.get("code") }); toast(t("show.checkinDone")); refresh(); });
+  });
+  body.querySelectorAll("[data-nsreply]").forEach((b) => {
+    b.onclick = () => slotForm(b, `<form class="note small"><label for="nr-${esc(b.dataset.nsreply)}">${esc(t("show.answerLabel"))}</label><textarea id="nr-${esc(b.dataset.nsreply)}" name="reply" maxlength="400" required minlength="5"></textarea><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("show.answerSend"))}</button></form>`,
+      async (f) => { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.nsreply)}/noshow/reply`, { reply: f.get("reply") }); toast(t("show.answerSaved")); refresh(); });
+  });
   body.querySelectorAll("[data-off]").forEach((b) => {
     b.onclick = async () => {
       const mark = b.dataset.off === "mark";

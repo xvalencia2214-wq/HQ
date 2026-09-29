@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
 import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
@@ -53,6 +54,16 @@ export default function bookingRoutes(ctx, add) {
   // ---- rescheduling ----
   const RESCHED_MIN_DAYS = 2, RESCHED_MAX = 2;
   const reschedPending = (b) => b.resched_status === "pending" && b.resched_at > now() - RESCHED_TTL;
+  // ---- show-up guarantee: the customer shows a 4-digit code on the day, the group enters it, and a group that never
+  // checked in can be reported as a no-show for a few days afterwards; an admin reviews it and can refund everything paid in the app ----
+  const NOSHOW_WINDOW_DAYS = 3;
+  const ensureCode = (b) => {
+    if (b.checkin_code) return b.checkin_code;
+    const code = String(crypto.randomInt(1000, 10000));
+    db.run("UPDATE bookings SET checkin_code = ? WHERE id = ? AND checkin_code = ''", code, b.id);
+    return db.get("SELECT checkin_code c FROM bookings WHERE id = ?", b.id).c;
+  };
+  const canNoShow = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && !b.noshow_status && b.date < today && daysBetween(b.date, today) <= NOSHOW_WINDOW_DAYS;
   const canReschedule = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !reschedPending(b) && b.resched_count < RESCHED_MAX && daysBetween(today, b.date) >= RESCHED_MIN_DAYS;
   const clearResched = (id, extraSql = "") => db.run(`UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = ''${extraSql}, updated_at = ? WHERE id = ?`, now(), id);
 
@@ -71,10 +82,14 @@ export default function bookingRoutes(ctx, add) {
       out.can_cancel = ["requested", "confirmed", "pending_payment"].includes(b.status) && b.date > today;
       out.refund_if_cancel_cents = b.status === "pending_payment" ? 0 : refundForCancel(b, today);
       out.refund_percent_now = refundPercent(b.policy, daysBetween(today, b.date));
-      out.can_review = b.status === "confirmed" && b.date < today && b.payment_status !== "unpaid" && !b.reviewed;
+      out.can_review = b.status === "confirmed" && b.date < today && !["unpaid", "refunded"].includes(b.payment_status) && !b.reviewed;
       out.reviewed = Boolean(b.reviewed);
       out.can_pay_balance = canPayBalance(b, today);
       out.can_reschedule = canReschedule(b, today);
+      out.checked_in = Boolean(b.checked_in_at);
+      if (b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && (b.date === today || b.date === addDays(today, 1))) out.checkin_code = ensureCode(b);
+      out.can_report_noshow = canNoShow(b, today);
+      out.noshow = b.noshow_status ? { status: b.noshow_status, note: b.noshow_note } : null;
       out.pay_url = b.status === "pending_payment" && !stripe.live ? `${config.baseUrl}/#/pay/booking/${b.id}` : undefined;
     } else {
       out.customer_name = b.name;
@@ -82,6 +97,10 @@ export default function bookingRoutes(ctx, add) {
       out.platform_fee_cents = b.platform_fee_cents;
       out.payout_cents = Math.max(0, b.deposit_cents - b.platform_fee_cents);
       out.can_respond = b.status === "requested";
+      out.can_checkin = b.status === "confirmed" && !b.checked_in_at && b.date === today;
+      out.checked_in = Boolean(b.checked_in_at);
+      out.noshow = b.noshow_status ? { status: b.noshow_status, note: b.noshow_note, reply: b.noshow_reply } : null;
+      out.can_reply_noshow = b.noshow_status === "reported" && !b.noshow_reply;
       out.can_respond_reschedule = b.status === "confirmed" && reschedPending(b);
       out.can_mark_balance_offline = b.status === "confirmed" && balanceCents(b) > 0 && (b.balance_status === "unpaid" || b.balance_status === "offline");
     }
@@ -198,6 +217,53 @@ export default function bookingRoutes(ctx, add) {
       if (b.balance_status !== "offline") throw new HttpError(400, "It isn't marked as received");
       db.run("UPDATE bookings SET balance_status = 'unpaid', updated_at = ? WHERE id = ?", now(), b.id);
     }
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
+  }), { auth: true });
+
+
+  // ---- arrival check-in and no-show reports ----
+  add("POST", "/api/bookings/:id/checkin", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
+    const g = b && getGroup(db, b.group_id);
+    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (!limiters.auth.check(`checkin|${b.id}`)) throw new HttpError(429, "Too many tries. Ask the customer to read the code again a little later.");
+    if (b.status !== "confirmed") throw new HttpError(400, "Only confirmed bookings can be checked in.");
+    if (b.checked_in_at) throw new HttpError(400, "Already checked in.");
+    if (b.date !== todayStr()) throw new HttpError(400, "Check-in opens on the day of the event.");
+    const code = str(body.code, "Code", { required: true, max: 8 });
+    const want = Buffer.from(b.checkin_code || "none"), got = Buffer.from(code);
+    if (!b.checkin_code || want.length !== got.length || !crypto.timingSafeEqual(want, got)) throw new HttpError(400, "That code isn't right. Ask the customer to open their booking and read you the 4-digit code.");
+    db.run("UPDATE bookings SET checked_in_at = ?, updated_at = ? WHERE id = ?", now(), now(), b.id);
+    notify.to(b.customer_id, "checkin.customer", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/bookings` });
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
+  }), { auth: true });
+
+  add("POST", "/api/bookings/:id/noshow", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = mine(user, params.id), today = todayStr();
+    if (!canNoShow(b, today)) {
+      const why = b.noshow_status ? "You already reported this booking."
+        : b.checked_in_at ? "The group checked in with your code, so this can't be reported as a no-show. Contact support if something else went wrong."
+        : b.status !== "confirmed" || b.payment_status !== "paid" ? "Only a confirmed, paid booking can be reported."
+        : b.date >= today ? "You can report a no-show after the event day has passed."
+        : `Reports must be made within ${NOSHOW_WINDOW_DAYS} days of the event.`;
+      throw new HttpError(400, why);
+    }
+    const note = str(body.note, "What happened", { min: 5, max: 400 });
+    db.run("UPDATE bookings SET noshow_status = 'reported', noshow_note = ?, noshow_at = ?, updated_at = ? WHERE id = ?", note, now(), now(), b.id);
+    const g = getGroup(db, b.group_id);
+    if (g.owner_id) notify.to(g.owner_id, "noshow.reported.group", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    ctx.alert(`NO-SHOW REPORTED: booking ${b.id} (${g.name}, ${b.date}). Review it on the Admin page.`, "noshow-" + b.id);
+    return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
+  }), { auth: true });
+
+  add("POST", "/api/bookings/:id/noshow/reply", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
+    const g = b && getGroup(db, b.group_id);
+    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (b.noshow_status !== "reported") throw new HttpError(400, "There is no open report on this booking.");
+    if (b.noshow_reply) throw new HttpError(400, "You already answered this report.");
+    db.run("UPDATE bookings SET noshow_reply = ?, updated_at = ? WHERE id = ?", str(body.reply, "Your answer", { min: 5, max: 400 }), now(), b.id);
+    ctx.alert(`No-show report answered by the group: booking ${b.id} (${g.name}). Review it on the Admin page.`, "noshow-reply-" + b.id);
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
   }), { auth: true });
 

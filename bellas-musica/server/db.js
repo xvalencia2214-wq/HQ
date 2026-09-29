@@ -234,6 +234,12 @@ export function openDb(config) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
     return true;
   };
+  ensureColumn("bookings", "checkin_code", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "checked_in_at", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "noshow_status", "TEXT NOT NULL DEFAULT ''");   // '' | reported | refunded | rejected
+  ensureColumn("bookings", "noshow_note", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "noshow_reply", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "noshow_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("reviews", "reply", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("reviews", "reply_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "verified", "INTEGER NOT NULL DEFAULT 0");

@@ -11,19 +11,30 @@ function payBadge(b) {
 
 function card(b) {
   const cancelNote = b.can_cancel && b.status !== "pending_payment" ? `<div class="dim small">${esc(t("bk.cancelNote", { amount: money(b.refund_if_cancel_cents), pct: b.refund_percent_now }))}</div>` : "";
-  const balanceLine = balanceInfo(b) + (b.reschedule ? `<div class="note small">${esc(t("rs.pending", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</div>` : "");
+  const balanceLine = balanceInfo(b) + guaranteeInfo(b) + (b.reschedule ? `<div class="note small">${esc(t("rs.pending", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</div>` : "");
   return `<div class="req" data-id="${esc(b.id)}"><div><strong><a href="#/group/${esc(b.group_id)}">${esc(b.group_name)}</a></strong> ${statusBadge(b.status)} ${payBadge(b)}<br>
     ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}<br>
     <span class="dim">${esc(b.address)}</span>${cancelNote}${balanceLine}</div>
     <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("bk.deposit"))} ${money(b.deposit_cents)}${b.refund_cents ? ` · ${esc(t("bk.refunded", { amount: money(b.refund_cents) }))}` : ""}</span><br>
       ${b.status === "pending_payment" ? `<a class="btn small" href="#/booking/${esc(b.id)}">${esc(t("bk.payNow"))}</a> ` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
+      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}">${esc(t("agr.link"))}</a> ` : ""}
       ${b.can_pay_balance ? `<button class="btn small" data-balance="${esc(b.id)}">${esc(t("bal.payNow", { amount: money(b.balance_cents) }))}</button> ` : ""}
       ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}
       ${b.can_cancel ? `<button class="btn ghost small" data-cancel="${esc(b.id)}" data-refund="${b.refund_if_cancel_cents}">${esc(t("bk.cancel"))}</button>` : ""}
+      ${b.can_report_noshow ? `<button class="btn ghost small" data-noshow="${esc(b.id)}">${esc(t("show.report"))}</button> ` : ""}
       ${b.can_review ? `<button class="btn small" data-review="${esc(b.id)}">${esc(t("bk.review"))}</button>` : ""}
       ${b.reviewed ? `<span class="dim small">✓ ${esc(t("bk.reviewed"))}</span>` : ""}</div>
     <div class="review-form" hidden></div><div class="resched-form" hidden></div></div>`;
+}
+
+// The arrival code (event day and the day before), the group's check-in, and where a no-show report stands.
+function guaranteeInfo(b) {
+  let out = "";
+  if (b.checkin_code) out += `<div class="note small code-note">${esc(t("show.code"))} <strong class="bigcode">${esc(b.checkin_code)}</strong></div>`;
+  if (b.checked_in) out += `<div class="dim small">✓ ${esc(t("show.checkedIn"))}</div>`;
+  if (b.noshow) out += `<div class="note small">${esc(t(b.noshow.status === "refunded" ? "show.stRefunded" : b.noshow.status === "rejected" ? "show.stRejected" : "show.stReported"))}</div>`;
+  return out;
 }
 
 // What is owed on top of the deposit, in words the customer can act on.
@@ -99,6 +110,18 @@ function wire(root, reload) {
     b.onclick = async () => {
       try { await api.del(`/api/bookings/${encodeURIComponent(b.dataset.unresched)}/reschedule`); toast(t("rs.withdrawn")); reload(); }
       catch (e) { toast(e.message, "error"); }
+    };
+  });
+  root.querySelectorAll("[data-noshow]").forEach((b) => {
+    b.onclick = () => {
+      const holder = b.closest(".req").querySelector(".review-form");
+      holder.hidden = false;
+      holder.innerHTML = `<form><p class="dim small">${esc(t("show.reportHint"))}</p><label for="ns-${esc(b.dataset.noshow)}">${esc(t("show.report"))}</label><textarea id="ns-${esc(b.dataset.noshow)}" name="note" maxlength="400" required minlength="5"></textarea><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("show.reportSend"))}</button></form>`;
+      holder.querySelector("form").onsubmit = async (e) => {
+        e.preventDefault();
+        try { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.noshow)}/noshow`, { note: new FormData(e.target).get("note") }); toast(t("show.reported")); reload(); }
+        catch (ex) { holder.querySelector(".err").textContent = ex.message; }
+      };
     };
   });
   root.querySelectorAll("[data-review]").forEach((b) => {

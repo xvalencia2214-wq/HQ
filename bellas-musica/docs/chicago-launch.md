@@ -53,6 +53,15 @@ Give **Verified** only when you have confirmed the group is real and working: an
 - Ask banquet halls and photographers to list you as a preferred way to find music.
 - Tell early customers you're new: a few honest reviews beat a big launch.
 
+## What to say when a group asks "why you and not GigSalad / Thumbtack?"
+
+(Details and sources in `docs/competitors.md`.) Keep it to these, and only say what the site really does:
+- **You never pay for leads.** A customer has to put down a deposit before you even hear from them, so no fake or "just browsing" requests. You pay a small fee only on paid bookings.
+- **Your price and open dates are on your page.** Families book without waiting for a quote.
+- **Discover feed:** post a short vertical clip (a YouTube Short) and it plays for families scrolling near you. Free to be in it; paying for Featured makes you show up more often, always labelled Promoted.
+- **Protection both ways:** the customer's deposit is theirs to lose if they cancel late per your policy; if you're not able to show up, they are refunded. The arrival code on the day proves you were there.
+- **Spanish and English**, made for quinceañeras, bodas and serenatas.
+
 ## Numbers to watch (the funnel, groups list and waitlist are on the Admin page)
 
 | Metric | Healthy first month |

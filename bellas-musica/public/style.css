@@ -325,7 +325,7 @@ details.quote-req summary { cursor: pointer; font-weight: 600; color: var(--gold
 .rs-cal { max-width: 420px; }
 
 /* ---- rebrand: big logo, roomy hero ---- */
-body { background: linear-gradient(180deg, #f5f8fd 0, var(--cream) 320px); background-attachment: fixed; }
+body { background: linear-gradient(180deg, #f5f8fd 0, var(--cream) 320px); }
 .hero { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 28px; align-items: center; text-align: left; padding: 30px 30px 26px;
   background: radial-gradient(ellipse at 15% 20%, #1c3a7a 0, transparent 55%), linear-gradient(160deg, #0f1b3a, var(--black) 70%); border: 1px solid #3b4d76; box-shadow: 0 10px 30px rgba(10,16,34,.25); }
 .hero-logo { grid-row: 1 / span 2; width: 168px; height: 168px; border-radius: 34px; margin: 0; filter: drop-shadow(0 8px 26px rgba(63,120,255,.5)); }
@@ -393,3 +393,22 @@ nav a { font-weight: 500; }
 .end-in .btn.ghost { color: #fff; border-color: rgba(255,255,255,.45); }
 .feed-msg { padding: 40px 20px; color: #fff; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .card, .feed { scroll-behavior: auto; transition: none; } }
+.bigcode { font-size: 1.6rem; letter-spacing: .25em; color: var(--gold-ink); font-variant-numeric: tabular-nums; margin-left: 6px; }
+.code-note { border-color: var(--gold); }
+.ci-slot:empty { display: none; }
+.ci-slot input { max-width: 140px; letter-spacing: .3em; font-size: 1.2rem; }
+.agreement h1 { margin-bottom: 2px; }
+.agreement h2 { font-size: 1.05rem; margin: 18px 0 6px; color: var(--gold-ink); }
+table.kv { width: 100%; border-collapse: collapse; }
+table.kv th { text-align: left; width: 38%; font-weight: 600; color: var(--ink-2); padding: 6px 10px 6px 0; vertical-align: top; border-bottom: 1px solid var(--line); font-size: .92rem; }
+table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line); }
+@media print {
+  .top, .banner, #foot, footer, .noprint, .cta-bar, #toast { display: none !important; }
+  body, .panel { background: #fff !important; box-shadow: none !important; }
+  .panel { border: 0; padding: 0; }
+  main { max-width: none; padding: 0; }
+}
+.why { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .why { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 980px) { .why { grid-template-columns: repeat(3, 1fr); } }
+.why .panel { margin-bottom: 0; border-top: 3px solid var(--gold); }

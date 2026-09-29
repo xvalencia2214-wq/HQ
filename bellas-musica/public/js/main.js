@@ -11,6 +11,7 @@ import { forgotView, resetView, verifyView, renderVerifyBanner } from "./views/r
 import { chicago } from "./views/chicago.js";
 import { claim } from "./views/claim.js";
 import { discover } from "./views/discover.js";
+import { agreement } from "./views/agreement.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
@@ -53,7 +54,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "pay", "dashboard", "account", "messages", "admin"]);
+const needsLogin = new Set(["bookings", "booking", "agreement", "pay", "dashboard", "account", "messages", "admin"]);
 
 async function route() {
   const token = ++routeToken;
@@ -81,6 +82,7 @@ async function route() {
     else if (seg[0] === "verify" && seg[1]) await verifyView(box, seg[1]);
     else if (seg[0] === "chicago") await chicago(box);
     else if (seg[0] === "discover") await discover(box);
+    else if (seg[0] === "agreement" && seg[1]) await agreement(box, seg[1], params);
     else if (seg[0] === "claim" && seg[1]) await claim(box, seg[1]);
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);

@@ -37,6 +37,9 @@ export async function admin(app) {
       ${tile("Texts, last 30 days", `${s.texts_30d.sent} sent`, `${s.texts_30d.failed} failed · ${s.texts_30d.logged_only} logged only`)}
     </div>
 
+    ${s.noshow_reports.length ? `<h2 class="sec">No-show reports to review (${s.noshow_reports.length})</h2><div class="panel">${s.noshow_reports.map((r) => `<div class="req"><div><strong>${esc(r.group_name)}</strong> · ${esc(r.date)} ${esc(r.time)}<br><span class="dim small">${esc(r.customer)} (${esc(r.customer_email)}) paid ${cents(r.paid_cents)} in the app · reported ${when(r.noshow_at)}</span>
+      <div class="note small">Customer: “${esc(r.noshow_note)}”<br>${r.noshow_reply ? `Group: “${esc(r.noshow_reply)}”` : "<em>The group has not answered yet.</em>"}</div></div>
+      <div><button class="btn small" data-ns="refund" data-b="${esc(r.id)}" data-amt="${r.paid_cents}">Refund ${cents(r.paid_cents)}</button> <button class="btn ghost small" data-ns="reject" data-b="${esc(r.id)}">Not confirmed</button></div></div>`).join("")}</div>` : ""}
     <h2 class="sec">Last 30 days</h2>
     <div class="tiles">${tile("Searches", s.funnel_30d.searches)}${tile("Group pages viewed", s.funnel_30d.group_views)}${tile("Bookings started", s.funnel_30d.booking_started)}${tile("Deposits paid", s.funnel_30d.booking_paid)}${tile("Confirmed by groups", s.funnel_30d.booking_confirmed)}${tile("Sign-ups", s.funnel_30d.signups)}${tile("Discover views", s.funnel_30d.feed_views, `${s.funnel_30d.feed_taps} taps to a profile or chat`)}</div>
     <div class="two"><div class="panel"><h2 class="sec">Where people search</h2>${s.top_zips.length ? `<table class="tbl"><thead><tr><th>ZIP</th><th>City</th><th class="num">Searches</th></tr></thead><tbody>${s.top_zips.map((z) => `<tr><td>${esc(z.zip)}</td><td>${esc(z.city)}</td><td class="num">${z.searches}</td></tr>`).join("")}</tbody></table>` : '<div class="dim">No searches yet.</div>'}</div>
@@ -72,6 +75,11 @@ export async function admin(app) {
   }; });
   app.querySelectorAll("[data-feat]").forEach((btn) => { btn.onclick = async () => {
     try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.feat)}/feature`, { days: Number(btn.dataset.days) }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
+  }; });
+  app.querySelectorAll("[data-ns]").forEach((btn) => { btn.onclick = async () => {
+    const refund = btn.dataset.ns === "refund";
+    if (!confirm(refund ? `Refund ${cents(Number(btn.dataset.amt))} to the customer? The group's payout is reversed.` : "Mark this report as not confirmed? No money moves.")) return;
+    try { await api.post(`/api/admin/bookings/${encodeURIComponent(btn.dataset.b)}/noshow`, { refund }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
   }; });
   app.querySelectorAll("[data-badge]").forEach((btn) => { btn.onclick = async () => {
     try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.g)}/badges`, { [btn.dataset.badge]: btn.dataset.to === "1" }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }

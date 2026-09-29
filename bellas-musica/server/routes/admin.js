@@ -1,10 +1,12 @@
 import crypto from "node:crypto";
-import { HttpError, int, now, oneOf, str, rid } from "../util.js";
+import { HttpError, int, now, oneOf, str, rid, withLock } from "../util.js";
 import { lookupZip } from "../geo.js";
 import { hashPassword } from "../auth.js";
 import { backupStatus } from "../backups.js";
 import { hashClaim } from "./claim.js";
-import { GROUP_TYPES } from "../pricing.js";
+import { GROUP_TYPES, balanceCents } from "../pricing.js";
+import { refundBooking, refundBalance } from "../shared.js";
+import { usd } from "../emails.js";
 
 // Owner-only tools. Anyone else gets a 404 so the page's existence isn't advertised.
 export default function adminRoutes(ctx, add) {
@@ -52,6 +54,10 @@ export default function adminRoutes(ctx, add) {
         return { total: db.get("SELECT COUNT(*) c FROM waitlist").c, by_city: [...by.values()].sort((a, b) => b.customers + b.groups - a.customers - a.groups).slice(0, 15) };
       })(),
       texts_30d: { sent: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 1 AND created_at > ?", d30).c, failed: one("SELECT COUNT(*) c FROM sms_log WHERE error != '' AND created_at > ?", d30).c, logged_only: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 0 AND error = '' AND created_at > ?", d30).c },
+      noshow_reports: db.all(
+        `SELECT b.id, g.name AS group_name, u.name AS customer, u.email AS customer_email, b.date, b.time, b.deposit_cents, b.total_cents, b.balance_status, b.noshow_note, b.noshow_reply, b.noshow_at, b.refund_cents, b.balance_refund_cents
+         FROM bookings b JOIN groups g ON g.id = b.group_id JOIN users u ON u.id = b.customer_id WHERE b.noshow_status = 'reported' ORDER BY b.noshow_at`
+      ).map((r) => ({ ...r, paid_cents: (r.deposit_cents - r.refund_cents) + (["paid", "partial_refund"].includes(r.balance_status) ? r.total_cents - r.deposit_cents - r.balance_refund_cents : 0) })),
       invites: db.all("SELECT id, name, type, zip, created_at FROM groups WHERE invited = 1 AND owner_id IS NULL ORDER BY created_at DESC").map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "" })),
       groups_list: db.all(
         `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
@@ -102,6 +108,28 @@ export default function adminRoutes(ctx, add) {
     log(user, "delete invite", g.id, g.name);
     return { ok: true };
   });
+
+  // Decide a no-show report. Refunding sends back everything paid in the app (deposit and balance) and reverses the group's payout.
+  add("POST", "/api/admin/bookings/:id/noshow", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
+    admin(user);
+    const b = db.get("SELECT b.*, g.name AS group_name FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", params.id);
+    if (!b) throw new HttpError(404, "Booking not found");
+    if (b.noshow_status !== "reported") throw new HttpError(400, "There is no open report on this booking");
+    const g = db.get("SELECT * FROM groups WHERE id = ?", b.group_id), url = `${config.baseUrl}/#/bookings`;
+    if (body.refund === true) {
+      let cur = await refundBooking(ctx, b, b.deposit_cents - b.refund_cents); // if Stripe fails this throws and nothing else changes
+      cur = await refundBalance(ctx, cur, balanceCents(cur) - cur.balance_refund_cents);
+      db.run("UPDATE bookings SET noshow_status = 'refunded', updated_at = ? WHERE id = ?", now(), b.id);
+      const total = cur.refund_cents + cur.balance_refund_cents;
+      ctx.notify.to(b.customer_id, "noshow.refunded.customer", { ...ctx.notify.bookingVars(b, g), refund: usd(total), url });
+      log(user, "no-show refund", b.id, `${usd(total)} refunded, group ${b.group_name}`);
+      return { ok: true, status: "refunded", refunded_cents: total };
+    }
+    db.run("UPDATE bookings SET noshow_status = 'rejected', updated_at = ? WHERE id = ?", now(), b.id);
+    ctx.notify.to(b.customer_id, "noshow.rejected.customer", { ...ctx.notify.bookingVars(b, g), url });
+    log(user, "no-show rejected", b.id, b.group_name);
+    return { ok: true, status: "rejected" };
+  }), {});
 
   add("POST", "/api/admin/groups/:id/hide", ({ params, body, user }) => {
     admin(user);
