@@ -37,7 +37,7 @@ export function loadConfig(env = process.env) {
     // Rate limits (max requests per window per client); tests raise these
     limits: {
       api: int(env.RATE_API, 300), register: int(env.RATE_REGISTER, 10), forgot: int(env.RATE_FORGOT, 5), waitlist: int(env.RATE_WAITLIST, 5), auth: int(env.RATE_AUTH, 10),
-      chat: int(env.RATE_CHAT, 20), upload: int(env.RATE_UPLOAD, 30), booking: int(env.RATE_BOOKING, 20)
+      chat: int(env.RATE_CHAT, 20), upload: int(env.RATE_UPLOAD, 30), booking: int(env.RATE_BOOKING, 20), feedEvent: int(env.RATE_FEEDEVENT, 3)
     },
     // Money
     platformFeePct: int(env.PLATFORM_FEE_PCT, 10), // % of the booking total, taken from the deposit

@@ -191,6 +191,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   }
   await initCalendar();
   await drawCal(); drawBook(); await drawChat();
+  if (params.get("chat")) { const cp = document.getElementById("chatpanel"); if (cp && !cp.hidden) { cp.scrollIntoView({ behavior: "smooth", block: "center" }); document.getElementById("chatin")?.focus({ preventScroll: true }); } }
 
   const ctaBtn = document.getElementById("ctabtn");
   if (ctaBtn) {

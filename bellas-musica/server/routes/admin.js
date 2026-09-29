@@ -42,7 +42,7 @@ export default function adminRoutes(ctx, add) {
       email: ctx.email.mode, backups: backupStatus(config), alerts_on: Boolean(config.alertWebhook),
       funnel_30d: {
         searches: ctx.stats.total("search"), group_views: ctx.stats.total("group_view"), booking_started: ctx.stats.total("booking_started"),
-        booking_paid: ctx.stats.total("booking_paid"), booking_confirmed: ctx.stats.total("booking_confirmed"), signups: ctx.stats.total("signup")
+        booking_paid: ctx.stats.total("booking_paid"), booking_confirmed: ctx.stats.total("booking_confirmed"), signups: ctx.stats.total("signup"), feed_views: ctx.stats.total("feed_view"), feed_taps: ctx.stats.total("feed_tap")
       },
       top_zips: ctx.stats.top("search", 30, 8).map((r) => ({ zip: r.ref, city: lookupZip(r.ref)?.city || "", searches: r.n })),
       waitlist: (() => {

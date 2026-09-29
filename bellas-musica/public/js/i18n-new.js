@@ -1,6 +1,12 @@
 // Strings for password recovery, the Chicago page, publishing, balance payments, rescheduling, custom offers,
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
+  // discover feed
+  "nav.discover": "Discover", "feed.title": "Discover groups near you", "feed.near": "Near {city}", "feed.change": "Change", "feed.promoted": "Promoted",
+  "feed.message": "Message", "feed.profile": "Profile & book", "feed.sound": "Turn sound on or off", "feed.play": "Play video", "feed.next": "Next group", "feed.prev": "Previous group",
+  "feed.from": "From {price}", "feed.endTitle": "That's everyone near {city} for now", "feed.endText": "Try the search with filters for your date and event, or start over for a fresh order.",
+  "feed.search": "Search with filters", "feed.again": "Start over", "feed.empty": "No groups near {city} yet. Leave your email below and we'll tell you when they arrive.",
+  "stat.feedViews": "Discover views", "stat.feedTaps": "Taps from Discover",
   // password recovery + email confirmation
   "rec.forgotLink": "Forgot your password?", "rec.forgotTitle": "Reset your password", "rec.forgotSub": "Enter the email you signed up with and we'll send you a link.",
   "rec.send": "Send reset link", "rec.sent": "If that email has an account, a reset link is on its way. It works for one hour. Check your spam folder too.",
@@ -65,6 +71,11 @@ export const EN2 = {
 };
 
 export const ES2 = {
+  "nav.discover": "Descubre", "feed.title": "Descubre grupos cerca de ti", "feed.near": "Cerca de {city}", "feed.change": "Cambiar", "feed.promoted": "Promocionado",
+  "feed.message": "Mensaje", "feed.profile": "Perfil y reservar", "feed.sound": "Activar o silenciar el sonido", "feed.play": "Reproducir video", "feed.next": "Siguiente grupo", "feed.prev": "Grupo anterior",
+  "feed.from": "Desde {price}", "feed.endTitle": "Eso es todo lo que hay cerca de {city} por ahora", "feed.endText": "Prueba la búsqueda con filtros para tu fecha y evento, o empieza de nuevo con otro orden.",
+  "feed.search": "Buscar con filtros", "feed.again": "Empezar de nuevo", "feed.empty": "Aún no hay grupos cerca de {city}. Deja tu correo abajo y te avisamos cuando lleguen.",
+  "stat.feedViews": "Vistas en Descubre", "stat.feedTaps": "Toques desde Descubre",
   "rec.forgotLink": "¿Olvidaste tu contraseña?", "rec.forgotTitle": "Restablece tu contraseña", "rec.forgotSub": "Escribe el correo con el que te registraste y te enviaremos un enlace.",
   "rec.send": "Enviar enlace", "rec.sent": "Si ese correo tiene una cuenta, el enlace va en camino. Funciona por una hora. Revisa también tu carpeta de spam.",
   "rec.simNote": "Modo de prueba: los correos no se envían de verdad, así que no llegará ningún enlace.", "rec.backLogin": "Volver a iniciar sesión",

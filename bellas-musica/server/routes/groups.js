@@ -65,7 +65,7 @@ export default function groupRoutes(ctx, add) {
       contact_phone: g.contact_phone, promoted_until: g.promoted_until,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
-      stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id) },
+      stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
       open_offers: db.all("SELECT p.id, p.name, p.hours, p.price_cents, p.expires_at, u.name AS customer FROM packages p JOIN users u ON u.id = p.private_customer_id WHERE p.group_id = ? AND p.expires_at > ? ORDER BY p.id DESC", g.id, now()).map((o) => ({ ...o, customer: o.customer.split(" ")[0] })),
       pending_requests: db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'requested'", g.id).c,
       unread_threads: db.get(

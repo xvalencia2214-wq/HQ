@@ -10,6 +10,7 @@ import { authView, accountView } from "./views/auth.js";
 import { forgotView, resetView, verifyView, renderVerifyBanner } from "./views/recover.js";
 import { chicago } from "./views/chicago.js";
 import { claim } from "./views/claim.js";
+import { discover } from "./views/discover.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
@@ -31,7 +32,7 @@ function renderChrome() {
   const dot = (n) => (n > 0 ? `<span class="dot" aria-label="${n}">${n}</span>` : "");
   const managerCount = a ? a.manager.requests + a.manager.messages : 0;
   document.getElementById("nav").innerHTML =
-    `<a href="#/" data-r="home">${esc(t("nav.find"))}</a>` +
+    `<a href="#/" data-r="home">${esc(t("nav.find"))}</a><a href="#/discover" data-r="discover">${esc(t("nav.discover"))}</a>` +
     (u ? `<a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
     `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}${dot(managerCount)}</a>` +
     (u && u.is_admin ? `<a href="#/admin" data-r="admin">${esc(t("nav.admin"))}</a>` : "") +
@@ -79,6 +80,7 @@ async function route() {
     else if (seg[0] === "reset" && seg[1]) resetView(box, seg[1]);
     else if (seg[0] === "verify" && seg[1]) await verifyView(box, seg[1]);
     else if (seg[0] === "chicago") await chicago(box);
+    else if (seg[0] === "discover") await discover(box);
     else if (seg[0] === "claim" && seg[1]) await claim(box, seg[1]);
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);

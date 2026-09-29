@@ -69,5 +69,5 @@ export function wireShare(root) {
 export function groupPhoto(g) {
   return g.photo
     ? `<div class="photo" role="img" aria-label="${esc(g.name)}" style="background-image:url('${esc(g.photo)}')"></div>`
-    : `<div class="photo ph"><img src="logo.svg" alt="" width="56" height="56"></div>`;
+    : `<div class="photo ph"><img src="logo.svg" alt="" width="104" height="104"></div>`;
 }

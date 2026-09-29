@@ -1,15 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Bella's Música logo">
-<rect width="200" height="200" rx="30" fill="#141210"/>
-<rect x="6" y="6" width="188" height="188" rx="25" fill="none" stroke="#b8892b" stroke-width="2"/>
-<g fill="none" stroke="#d4a84a" stroke-width="1.6" stroke-linejoin="round">
-<path d="M17.0,17.0 L21.1,19.5 L25.3,20.1 L29.4,18.4 L33.6,15.6 L37.8,13.9 L41.9,14.5 L46.0,17.1 L50.2,19.5 L54.4,20.1 L58.5,18.3 L62.7,15.5 L66.8,13.9 L71.0,14.6 L75.1,17.1 L79.2,19.6 L83.4,20.1 L87.5,18.3 L91.7,15.5 L95.8,13.9 L100.0,14.6 L104.2,17.2 L108.3,19.6 L112.4,20.1 L116.6,18.2 L120.8,15.4 L124.9,13.8 L129.1,14.6 L133.2,17.2 L137.3,19.6 L141.5,20.1 L145.7,18.2 L149.8,15.4 L153.9,13.8 L158.1,14.7 L162.2,17.3 L166.4,19.7 L170.6,20.0 L174.7,18.1 L178.8,15.3 L186.2,17.0 L185.3,21.1 L182.7,25.3 L180.3,29.4 L180.0,33.6 L181.9,37.8 L184.7,41.9 L186.2,46.0 L185.3,50.2 L182.6,54.4 L180.3,58.5 L180.0,62.7 L182.0,66.8 L184.7,71.0 L186.2,75.1 L185.2,79.2 L182.6,83.4 L180.2,87.5 L180.0,91.7 L182.0,95.8 L184.8,100.0 L186.2,104.2 L185.2,108.3 L182.5,112.4 L180.2,116.6 L180.0,120.8 L182.1,124.9 L184.8,129.1 L186.2,133.2 L185.1,137.3 L182.5,141.5 L180.2,145.7 L180.0,149.8 L182.1,153.9 L184.9,158.1 L186.2,162.2 L185.1,166.4 L182.4,170.6 L180.2,174.7 L180.1,178.8 L183.0,182.2 L178.8,184.9 L174.7,186.2 L170.6,185.1 L166.4,182.4 L162.2,180.1 L158.1,180.1 L153.9,182.2 L149.8,185.0 L145.7,186.2 L141.5,185.0 L137.3,182.3 L133.2,180.1 L129.1,180.1 L124.9,182.3 L120.8,185.0 L116.6,186.2 L112.5,185.0 L108.3,182.3 L104.2,180.1 L100.0,180.1 L95.8,182.3 L91.7,185.0 L87.6,186.2 L83.4,184.9 L79.2,182.2 L75.1,180.1 L70.9,180.2 L66.8,182.4 L62.7,185.1 L58.5,186.2 L54.3,184.9 L50.2,182.1 L46.1,180.1 L41.9,180.2 L37.8,182.5 L33.6,185.1 L29.4,186.2 L25.3,184.8 L21.2,182.1 L20.0,183.0 L19.8,178.8 L17.5,174.7 L14.8,170.6 L13.8,166.4 L15.2,162.2 L18.0,158.1 L20.0,153.9 L19.8,149.8 L17.4,145.7 L14.8,141.5 L13.8,137.3 L15.2,133.2 L18.0,129.1 L20.0,124.9 L19.7,120.8 L17.4,116.6 L14.8,112.5 L13.8,108.3 L15.3,104.2 L18.1,100.0 L20.0,95.8 L19.7,91.7 L17.3,87.6 L14.7,83.4 L13.8,79.2 L15.3,75.1 L18.1,70.9 L20.0,66.8 L19.7,62.7 L17.3,58.5 L14.7,54.3 L13.8,50.2 L15.4,46.1 L18.2,41.9 L20.1,37.8 L19.6,33.6 L17.2,29.4 L14.6,25.3 L13.8,21.2Z"/></g>
-<g fill="#b8892b"><ellipse cx="29.4" cy="12.4" rx="5" ry="2.2" transform="rotate(-90 29.4 12.4)"/><ellipse cx="62.7" cy="21.5" rx="5" ry="2.2" transform="rotate(90 62.7 21.5)"/><ellipse cx="95.8" cy="7.9" rx="5" ry="2.2" transform="rotate(-90 95.8 7.9)"/><ellipse cx="129.1" cy="20.6" rx="5" ry="2.2" transform="rotate(90 129.1 20.6)"/><ellipse cx="162.2" cy="11.3" rx="5" ry="2.2" transform="rotate(-90 162.2 11.3)"/><ellipse cx="174.3" cy="29.4" rx="5" ry="2.2" transform="rotate(180 174.3 29.4)"/><ellipse cx="186.0" cy="62.7" rx="5" ry="2.2" transform="rotate(-0 186.0 62.7)"/><ellipse cx="176.0" cy="95.8" rx="5" ry="2.2" transform="rotate(180 176.0 95.8)"/><ellipse cx="190.8" cy="129.1" rx="5" ry="2.2" transform="rotate(-0 190.8 129.1)"/><ellipse cx="180.2" cy="162.2" rx="5" ry="2.2" transform="rotate(180 180.2 162.2)"/><ellipse cx="170.6" cy="191.1" rx="5" ry="2.2" transform="rotate(90 170.6 191.1)"/><ellipse cx="137.3" cy="176.3" rx="5" ry="2.2" transform="rotate(-90 137.3 176.3)"/><ellipse cx="104.2" cy="186.1" rx="5" ry="2.2" transform="rotate(90 104.2 186.1)"/><ellipse cx="70.9" cy="174.2" rx="5" ry="2.2" transform="rotate(-90 70.9 174.2)"/><ellipse cx="37.8" cy="188.5" rx="5" ry="2.2" transform="rotate(90 37.8 188.5)"/><ellipse cx="20.8" cy="170.6" rx="5" ry="2.2" transform="rotate(0 20.8 170.6)"/><ellipse cx="7.8" cy="137.3" rx="5" ry="2.2" transform="rotate(-180 7.8 137.3)"/><ellipse cx="21.3" cy="104.2" rx="5" ry="2.2" transform="rotate(0 21.3 104.2)"/><ellipse cx="12.1" cy="70.9" rx="5" ry="2.2" transform="rotate(-180 12.1 70.9)"/><ellipse cx="26.1" cy="37.8" rx="5" ry="2.2" transform="rotate(0 26.1 37.8)"/></g>
-<g fill="#d4a84a"><path d="M44.4,17.1 L46.0,22.1 L47.6,17.1Z"/><path d="M77.7,19.6 L79.2,14.6 L80.8,19.6Z"/><path d="M110.8,20.1 L112.4,25.1 L114.0,20.1Z"/><path d="M144.1,18.2 L145.7,13.2 L147.2,18.2Z"/><path d="M177.2,15.3 L178.8,20.3 L180.4,15.3Z"/><path d="M186.2,44.4 L191.2,46.0 L186.2,47.6Z"/><path d="M185.2,77.7 L180.2,79.2 L185.2,80.8Z"/><path d="M182.5,110.8 L187.5,112.4 L182.5,114.0Z"/><path d="M180.2,144.1 L175.2,145.7 L180.2,147.2Z"/><path d="M180.1,177.2 L185.1,178.8 L180.1,180.4Z"/><path d="M155.5,182.2 L153.9,177.2 L152.3,182.2Z"/><path d="M122.3,185.0 L120.8,190.0 L119.2,185.0Z"/><path d="M89.2,186.2 L87.6,181.2 L86.0,186.2Z"/><path d="M55.9,184.9 L54.3,189.9 L52.7,184.9Z"/><path d="M22.8,182.1 L21.2,177.1 L19.6,182.1Z"/><path d="M20.0,155.5 L15.0,153.9 L20.0,152.3Z"/><path d="M19.7,122.3 L24.7,120.8 L19.7,119.2Z"/><path d="M17.3,89.2 L12.3,87.6 L17.3,86.0Z"/><path d="M14.7,55.9 L19.7,54.3 L14.7,52.7Z"/><path d="M13.8,22.8 L8.8,21.2 L13.8,19.6Z"/></g>
-<path d="M100,150 C52,116 46,80 70,68 C86,60 98,70 100,82 C102,70 114,60 130,68 C154,80 148,116 100,150Z" fill="#d4a84a"/>
-<g transform="rotate(-38 100 100)">
-<rect x="97" y="42" width="6" height="52" rx="2" fill="#141210"/>
-<rect x="94" y="34" width="12" height="12" rx="3" fill="#141210"/>
-<path d="M100,88 C86,88 80,98 86,106 C78,112 80,128 100,130 C120,128 122,112 114,106 C120,98 114,88 100,88Z" fill="#f6efe0" stroke="#141210" stroke-width="2"/>
-<circle cx="100" cy="112" r="5" fill="#141210"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a charro hat with veins running through it">
+<defs>
+<radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#1b2c55"/><stop offset="1" stop-color="#0a1022"/></radialGradient>
+<linearGradient id="hat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f8cff"/><stop offset="1" stop-color="#1c48b8"/></linearGradient>
+<linearGradient id="brim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a72e8"/><stop offset="1" stop-color="#173a96"/></linearGradient>
+<linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#aab4c6"/></linearGradient>
+<linearGradient id="vein" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e9eef8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+</defs>
+<rect width="128" height="128" rx="30" fill="url(#bg)"/>
+<rect x="3" y="3" width="122" height="122" rx="27" fill="none" stroke="url(#silver)" stroke-width="2"/>
+<g transform="translate(64 66) scale(1.05) translate(-64 -66)">
+<!-- brim -->
+<path d="M6 70 C14 96 42 106 64 106 C86 106 114 96 122 70 C110 83 90 90 64 90 C38 90 18 83 6 70 Z" fill="url(#brim)" stroke="url(#silver)" stroke-width="2.2" stroke-linejoin="round"/>
+<!-- crown -->
+<path d="M39 90 C39 72 41 52 44 38 C45.5 30 50 26 56 25 C60.5 24.4 67.5 24.4 72 25 C78 26 82.5 30 84 38 C87 52 89 72 89 90 C76 94 52 94 39 90 Z" fill="url(#hat)" stroke="url(#silver)" stroke-width="2" stroke-linejoin="round"/>
+<path d="M46.5 36 C56 41 72 41 81.5 36" fill="none" stroke="#9dbcff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+<!-- band with conchos -->
+<path d="M39.6 81 C54 87 74 87 88.4 81 L88.9 89.6 C75 94 53 94 39.1 89.6 Z" fill="#0d1a3d" stroke="url(#silver)" stroke-width="1.4"/>
+<g fill="url(#silver)"><circle cx="49" cy="87.6" r="2.3"/><circle cx="64" cy="89.2" r="2.6"/><circle cx="79" cy="87.6" r="2.3"/></g>
+<!-- veins running through the crown and along the brim -->
+<g fill="none" stroke="url(#vein)" stroke-linecap="round" stroke-linejoin="round">
+<path d="M64 83 C62.5 68 65.5 52 64 30" stroke-width="2.2"/>
+<path d="M64.2 70 C58 66 54 60 52.5 50" stroke-width="1.7"/>
+<path d="M64.2 70 C70.5 65 74.5 59 76 49" stroke-width="1.7"/>
+<path d="M64 56 C60 52 58.5 47 58.5 42" stroke-width="1.4"/>
+<path d="M64 56 C68 52 69.5 47 69.5 42" stroke-width="1.4"/>
+<path d="M58.5 63 C55 62 52 59 50.5 56" stroke-width="1.2"/>
+<path d="M70 62 C73.5 61 76.5 58 78 55" stroke-width="1.2"/>
+<path d="M52 97 C40 96 26 91 13 79" stroke-width="1.9"/>
+<path d="M76 97 C88 96 102 91 115 79" stroke-width="1.9"/>
+<path d="M40 95 C36 92 33 90 30 86" stroke-width="1.3"/>
+<path d="M88 95 C92 92 95 90 98 86" stroke-width="1.3"/>
+<path d="M28 90 C25 89 22 86 20 83" stroke-width="1.2"/>
+<path d="M100 90 C103 89 106 86 108 83" stroke-width="1.2"/>
+<path d="M64 98 C64 101 64 103 64 105" stroke-width="1.5"/>
+</g>
+<g fill="#fff"><circle cx="64" cy="30" r="1.9"/><circle cx="52.5" cy="50" r="1.5"/><circle cx="76" cy="49" r="1.5"/><circle cx="58.5" cy="42" r="1.3"/><circle cx="69.5" cy="42" r="1.3"/><circle cx="13" cy="79" r="1.6"/><circle cx="115" cy="79" r="1.6"/></g>
 </g>
 </svg>

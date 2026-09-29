@@ -101,10 +101,10 @@ export function renderEmail({ subject, lines, cta }, { lang, config, unsubUrl })
   const footerBits = [config.businessName, config.businessAddress, config.supportEmail].filter(Boolean).join(" · ");
   const unsubText = unsubUrl ? (lang === "es" ? `Dejar de recibir estos avisos: ${unsubUrl}` : `Stop these notifications: ${unsubUrl}`) : "";
   const text = [...lines, cta ? `${cta.label}: ${cta.url}` : "", "", "—", footerBits, unsubText].filter((x, i, a) => x !== "" || (i > 0 && a[i - 1] !== "")).join("\n");
-  const button = cta ? `<p style="margin:22px 0"><a href="${h(cta.url)}" style="background:#b8892b;color:#141210;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">${h(cta.label)}</a></p>` : "";
-  const html = `<div style="background:#f6efe0;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#1d1a16"><div style="max-width:540px;margin:0 auto;background:#fffaf0;border:1px solid #ddd0b3;border-radius:12px;overflow:hidden">
-    <div style="background:#141210;padding:16px 22px;color:#d4a84a;font-family:Georgia,serif;font-size:22px">${h(config.businessName)}</div>
+  const button = cta ? `<p style="margin:22px 0"><a href="${h(cta.url)}" style="background:#1f5fd6;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;display:inline-block">${h(cta.label)}</a></p>` : "";
+  const html = `<div style="background:#eef2f8;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#101828"><div style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid #d3dae6;border-radius:12px;overflow:hidden">
+    <div style="background:#0a1022;padding:16px 22px;color:#7fb0ff;font-family:Georgia,serif;font-size:22px">${h(config.businessName)}</div>
     <div style="padding:22px"><h1 style="font-size:19px;margin:0 0 14px;font-family:Georgia,serif">${h(subject)}</h1>${lines.map((l) => `<p style="margin:0 0 12px;line-height:1.5">${h(l)}</p>`).join("")}${button}</div>
-    <div style="padding:14px 22px;font-size:12px;color:#5d564a;border-top:1px solid #ddd0b3">${h(footerBits)}${unsubUrl ? `<br><a href="${h(unsubUrl)}" style="color:#5d564a">${h(lang === "es" ? "Dejar de recibir estos avisos" : "Stop these notifications")}</a>` : ""}</div></div></div>`;
+    <div style="padding:14px 22px;font-size:12px;color:#4a5568;border-top:1px solid #d3dae6">${h(footerBits)}${unsubUrl ? `<br><a href="${h(unsubUrl)}" style="color:#4a5568">${h(lang === "es" ? "Dejar de recibir estos avisos" : "Stop these notifications")}</a>` : ""}</div></div></div>`;
   return { subject, text, html };
 }

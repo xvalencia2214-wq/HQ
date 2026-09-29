@@ -19,7 +19,7 @@ export function drawMap(box, list, origin) {
   instance = L.map(box, { scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(instance);
   const bounds = [[origin.lat, origin.lon]];
-  L.circleMarker([origin.lat, origin.lon], { radius: 9, color: "#141210", weight: 3, fillColor: "#d4a84a", fillOpacity: 1 }).addTo(instance).bindTooltip(t("map.you"));
+  L.circleMarker([origin.lat, origin.lon], { radius: 9, color: "#0a1022", weight: 3, fillColor: "#7fb0ff", fillOpacity: 1 }).addTo(instance).bindTooltip(t("map.you"));
   list.forEach((g, i) => {
     const j = jitter(g.id), pos = [g.lat + j.lat, g.lon + j.lon];
     bounds.push(pos);
