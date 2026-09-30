@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildQuote, refundPercent, refundForCancel } from "../server/pricing.js";
 import { verifyWebhook } from "../server/stripe.js";
 import { signWebhook } from "./helpers.js";
-import { parseVideo, sniffImage } from "../server/media.js";
+import { parseVideo, embedUrl, sniffImage } from "../server/media.js";
 import { maskContact } from "../server/routes/messages.js";
 
 test("refund schedules follow each policy", () => {
@@ -47,6 +47,22 @@ test("webhook signature: valid, tampered, stale, wrong secret", () => {
   const old = signWebhook(body, "whsec_test", Math.floor(Date.now() / 1000) - 3600);
   assert.throws(() => verifyWebhook(Buffer.from(old.raw), old.header, "whsec_test"), /tolerance/i);
   assert.throws(() => verifyWebhook(Buffer.from(raw), "", "whsec_test"));
+});
+
+test("video links: TikTok and Instagram links become our own embeds; look-alike hosts and short links are refused", () => {
+  assert.deepEqual(parseVideo("https://www.tiktok.com/@mariachi.chi/video/7312345678901234567?is_from_webapp=1"), { provider: "tiktok", id: "7312345678901234567" });
+  assert.equal(embedUrl("tiktok", "7312345678901234567"), "https://www.tiktok.com/embed/v2/7312345678901234567");
+  assert.deepEqual(parseVideo("https://www.instagram.com/reel/C8aBcDeFgHi/?igsh=abc"), { provider: "instagram", id: "reel:C8aBcDeFgHi" });
+  assert.deepEqual(parseVideo("instagram.com/reels/C8aBcDeFgHi/"), { provider: "instagram", id: "reel:C8aBcDeFgHi" });
+  assert.deepEqual(parseVideo("https://instagram.com/p/C8aBcDeFgHi"), { provider: "instagram", id: "p:C8aBcDeFgHi" });
+  assert.equal(embedUrl("instagram", "reel:C8aBcDeFgHi"), "https://www.instagram.com/reel/C8aBcDeFgHi/embed");
+  assert.equal(embedUrl("instagram", "p:C8aBcDeFgHi"), "https://www.instagram.com/p/C8aBcDeFgHi/embed");
+  for (const bad of [
+    "https://vm.tiktok.com/ZMabc123/", "https://www.tiktok.com/@x/video/123", "https://www.tiktok.com/@x", "https://tiktok.com.evil.example/@x/video/7312345678901234567",
+    "https://www.instagram.com/someuser/", "https://www.instagram.com/reel/", "https://www.instagram.com/reel/a", "https://www.instagram.com.evil.example/reel/C8aBcDeFgHi/", "https://instagram.com/reel/../../x"
+  ]) assert.equal(parseVideo(bad), null, bad);
+  // an id that was tampered with in the database never turns into an embed URL
+  assert.equal(embedUrl("tiktok", "1/../x"), ""); assert.equal(embedUrl("instagram", "reel:a/../b"), ""); assert.equal(embedUrl("nope", "x"), "");
 });
 
 test("video links: only YouTube and Vimeo", () => {

@@ -13,7 +13,7 @@ import { HttpError, readBody, readJson, createLimiter, setTimezone } from "./uti
 import { MIME_BY_EXT } from "./media.js";
 import { expirePending } from "./shared.js";
 import { seedDemo } from "./seed.js";
-import { renderSharePage, robotsTxt, sitemapXml } from "./share.js";
+import { renderSharePage, renderLandingPage, robotsTxt, sitemapXml } from "./share.js";
 import { startJobs } from "./jobs.js";
 import authRoutes from "./routes/auth.js";
 import searchRoutes from "./routes/search.js";
@@ -25,6 +25,7 @@ import adminRoutes from "./routes/admin.js";
 import waitlistRoutes from "./routes/waitlist.js";
 import claimRoutes from "./routes/claim.js";
 import feedRoutes from "./routes/feed.js";
+import favoriteRoutes from "./routes/favorites.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -80,7 +81,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -97,7 +98,7 @@ export function createApp(config) {
     res.setHeader("Content-Security-Policy", [
       "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
-      "frame-src https://www.youtube-nocookie.com https://player.vimeo.com",
+      "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com",
       "connect-src 'self'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'", "object-src 'none'"
     ].join("; "));
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -141,6 +142,8 @@ export function createApp(config) {
     if (pathname.includes("\0")) throw new HttpError(400, "Bad URL"); // a NUL byte would make the file system throw
     const share = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(pathname);
     if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
+    const land = /^\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(pathname);
+    if (land) { const page = renderLandingPage(ctx, land[1], land[2] || ""); if (page) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, "l", land[1], page)); }
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
     let root = config.publicDir, rel = pathname, cache = "no-cache";

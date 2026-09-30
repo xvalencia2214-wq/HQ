@@ -277,7 +277,7 @@ function media({ g, body, refresh }) {
     ${g.photos.length < 10 ? `<label class="btn ghost" for="file">${esc(t("dash.addPhoto"))}</label><input type="file" id="file" accept="image/*" multiple hidden>` : ""}<div id="uerr" class="err" role="alert"></div></div>
     <div class="panel"><h2 class="sec">${esc(t("dash.video"))}</h2><p class="dim small">${esc(t("dash.videoHint"))}</p>
     <form id="vform"><input id="v-url" name="video_url" placeholder="https://youtu.be/…" value="" aria-label="${esc(t("dash.video"))}"><div id="verr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form>
-    ${g.video ? `<div class="video"><iframe src="${esc(g.video.url)}" title="video" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : ""}</div></div>`;
+    ${g.video ? `<div class="video${["tiktok", "instagram"].includes(g.video.provider) ? " tall" : ""}"><iframe src="${esc(g.video.url)}" title="video" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : ""}</div></div>`;
   const gid = encodeURIComponent(g.id);
   body.querySelectorAll("[data-rm]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del(`/api/groups/${gid}/photos/${b.dataset.rm}`); refresh(); } catch (e) { toast(e.message, "error"); } }; });
   body.querySelectorAll("[data-cover]").forEach((b) => { b.onclick = async () => { try { await api.post(`/api/groups/${gid}/photos/${b.dataset.cover}/cover`); refresh(); } catch (e) { toast(e.message, "error"); } }; });

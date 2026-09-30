@@ -34,14 +34,18 @@ Research date: September 2026. Sources are web-search results (linked at the bot
 | **No paperwork.** | A printable **booking agreement** (parties, event, price, payments, cancellation policy, guarantee) for the family, the venue or the hall. | New this round. |
 | **Groups' calendars are a mess.** | Groups open dates once; the site never double-books; customers can request a new date with the slot held while the group decides. | Already built. |
 
+## Built since the first version of this report
+
+- **Neighborhood and event landing pages** (`/chicago/pilsen/quinceanera` and so on): real groups and prices, structured data, only in the sitemap when a real group stands behind them. After launch, add your site to Google Search Console and submit `/sitemap.xml`.
+- **Saved groups and shareable shortlists:** heart a group anywhere; send a link to your partner or family chat.
+- **TikTok and Instagram clips in Discover**, next to YouTube and Vimeo. Verified with stand-in players only, not the real TikTok and Instagram embeds (see the README note).
+
 ## Ideas not built yet, in the order I would do them
 
-1. **Content for search:** a page per neighborhood and event ("Mariachi for a quinceañera in Pilsen"), each with real groups and prices. Cheapest source of free traffic.
-2. **Serenata-now:** a same-day, short "surprise serenata" flow (Mother's Day is the peak). Serenattia's whole product is this.
-3. **ID verification for groups** (Stripe Identity or a manual check of a photo ID): upgrades the Verified badge into something GigSalad doesn't have.
-4. **Holding payouts until check-in** (Stripe manual transfers) instead of paying groups immediately, so a no-show refund never has to claw money back. More moving parts; do it once volume justifies it.
-5. **Instagram/TikTok clip links in Discover** (today: YouTube Shorts and Vimeo only, because they embed cleanly and privately).
-6. **Group shortlists** ("send my 3 favorites to my partner"), which is how families actually decide.
+1. **Serenata-now:** a same-day, short "surprise serenata" flow (Mother's Day is the peak). Serenattia's whole product is this. It needs same-day booking (today a booking must be for a future date) and time-of-day rules for groups.
+2. **ID verification for groups** (Stripe Identity or a manual check of a photo ID): upgrades the Verified badge into something GigSalad doesn't have.
+3. **Holding payouts until check-in** (Stripe manual transfers) instead of paying groups immediately, so a no-show refund never has to claw money back. More moving parts; do it once volume justifies it.
+4. **Sound control for TikTok/Instagram clips** in Discover, and a fallback if a group's account is private or the embed asks visitors to log in.
 
 ## Sources
 

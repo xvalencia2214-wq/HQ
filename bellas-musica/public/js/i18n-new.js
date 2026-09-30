@@ -1,6 +1,14 @@
 // Strings for password recovery, the Chicago page, publishing, balance payments, rescheduling, custom offers,
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
+  // saved groups and shortlists
+  "nav.saved": "Saved", "fav.save": "Save this group", "fav.unsave": "Remove from saved", "fav.saved": "Saved ♥", "fav.removed": "Removed from saved",
+  "fav.title": "Saved groups", "fav.none": "Tap the ♡ on any group to keep it here.", "fav.share": "Send my shortlist",
+  "fav.shareHint": "Make a link to these groups for your partner or family chat. They see the groups and prices, and only your first name.",
+  "fav.titleLabel": "Name this list (optional)", "fav.titlePh": "Quinceañera music", "fav.create": "Create link",
+  "fav.linkReady": "Your link is ready. Anyone who has it can see these groups.", "fav.copy": "Copy link", "fav.copied": "Link copied",
+  "fav.myLists": "Links you've shared", "fav.untitled": "Shortlist", "fav.count": "{n} groups", "fav.revoke": "Stop sharing", "fav.revoked": "Link removed",
+  "fav.listBy": "{name} picked these groups", "fav.listGone": "This list isn't available any more.", "fav.cta": "Find more music", "fav.shareText": "{name} picked these groups for the event:",
   // why us
   "chi.why": "Why families and groups choose Bella's Música",
   "chi.w1t": "See the price first", "chi.w1": "Real totals and open dates before you message anyone. No waiting days for a quote.",
@@ -92,6 +100,13 @@ export const EN2 = {
 };
 
 export const ES2 = {
+  "nav.saved": "Guardados", "fav.save": "Guardar este grupo", "fav.unsave": "Quitar de guardados", "fav.saved": "Guardado ♥", "fav.removed": "Quitado de guardados",
+  "fav.title": "Grupos guardados", "fav.none": "Toca el ♡ en cualquier grupo para guardarlo aquí.", "fav.share": "Enviar mi lista",
+  "fav.shareHint": "Crea un enlace a estos grupos para tu pareja o el chat de la familia. Verán los grupos y precios, y solo tu nombre de pila.",
+  "fav.titleLabel": "Ponle nombre a la lista (opcional)", "fav.titlePh": "Música para la quinceañera", "fav.create": "Crear enlace",
+  "fav.linkReady": "Tu enlace está listo. Cualquiera que lo tenga puede ver estos grupos.", "fav.copy": "Copiar enlace", "fav.copied": "Enlace copiado",
+  "fav.myLists": "Enlaces que compartiste", "fav.untitled": "Lista", "fav.count": "{n} grupos", "fav.revoke": "Dejar de compartir", "fav.revoked": "Enlace eliminado",
+  "fav.listBy": "{name} eligió estos grupos", "fav.listGone": "Esta lista ya no está disponible.", "fav.cta": "Buscar más música", "fav.shareText": "{name} eligió estos grupos para el evento:",
   "chi.why": "Por qué familias y grupos eligen Bella's Música",
   "chi.w1t": "Ve el precio primero", "chi.w1": "Totales reales y fechas libres antes de escribirle a nadie. Sin esperar días por una cotización.",
   "chi.w2t": "Solicitudes reales", "chi.w2": "Cada solicitud llega con un depósito pagado. Los grupos nunca pagan por contactos ni persiguen a quien solo estaba mirando.",

@@ -50,6 +50,9 @@ Give **Verified** only when you have confirmed the group is real and working: an
 
 - Post the Chicago page (`YOUR-DOMAIN/c/chicago`) in neighborhood Facebook groups (Pilsen, Little Village, Cicero, Berwyn...), community and parish pages, and quinceañera/wedding planning groups. Share **a real group's page** (`/g/...`), not the homepage: it shows a photo card in WhatsApp/iMessage.
 - Ask each published group to share **their own** link. Their followers are the best first customers.
+- **Get found on Google (free, slow, worth starting on day one):** add your live site to Google Search Console, verify it, and submit `YOUR-DOMAIN/sitemap.xml`. The site already publishes a page for each neighborhood and event that has a real group behind it (for example `/chicago/pilsen/quinceanera`), so every group you add earns you more pages. Expect weeks, not days. Pages with no real group are hidden from search on purpose.
+- **Ask groups for a clip, not just photos:** a TikTok, Reel or YouTube Short they already posted works. Paste the link on their Media tab and it plays in Discover. A group with a clip is shown first.
+- Tell families they can tap the ♡ to save groups and send the list to their partner or the family chat.
 - Ask banquet halls and photographers to list you as a preferred way to find music.
 - Tell early customers you're new: a few honest reviews beat a big launch.
 

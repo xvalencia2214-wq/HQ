@@ -3,12 +3,19 @@ import { state } from "../state.js";
 import { t } from "../i18n.js";
 import { esc, money, share } from "../ui.js";
 import { waitlistBox } from "./waitlist.js";
+import { heart, loadFavs, wireHearts } from "../fav.js";
 
 const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } }
 };
-const okEmbed = (u) => /^https:\/\/(www\.youtube-nocookie\.com\/embed\/|player\.vimeo\.com\/video\/)/.test(u || "");
+const okEmbed = (u) => /^https:\/\/(www\.youtube-nocookie\.com\/embed\/|player\.vimeo\.com\/video\/|www\.tiktok\.com\/embed\/v2\/|www\.instagram\.com\/(reel|p)\/[\w-]+\/embed)/.test(u || "");
+// Only YouTube and Vimeo players let us control sound from here; TikTok and Instagram show their own controls.
+const soundControl = (v) => v && (v.provider === "youtube" || v.provider === "vimeo");
+const playerQuery = (v, sound) => v.provider === "youtube"
+  ? `?autoplay=1&mute=${sound ? 0 : 1}&loop=1&playlist=${v.id}&controls=0&playsinline=1&modestbranding=1&rel=0&enablejsapi=1`
+  : v.provider === "vimeo" ? `?autoplay=1&muted=${sound ? 0 : 1}&loop=1&playsinline=1&title=0&byline=0&portrait=0`
+    : v.provider === "tiktok" ? "?autoplay=1&loop=1&rel=0&music_info=0&description=0" : "";
 const send = (win, msg) => { try { win.postMessage(JSON.stringify(msg), "*"); } catch { /* frame gone */ } };
 const track = (kind, groupId) => { api.post("/api/feed/event", { kind, groupId }).catch(() => {}); };
 
@@ -25,7 +32,7 @@ function reel(g, i) {
   return `<article class="reel" data-i="${i}" data-id="${esc(g.id)}" aria-label="${esc(g.name)}" aria-posinset="${i + 1}">
     <div class="reel-media${g.photo ? "" : " ph"}" ${bg}>${g.photo ? "" : `<img src="logo.svg" alt="" width="150" height="150">`}</div>
     <div class="reel-shade" aria-hidden="true"></div>
-    ${g.video ? `<div class="reel-rail"><button type="button" class="rail-btn" data-sound aria-pressed="false" aria-label="${esc(t("feed.sound"))}">🔇</button></div>` : ""}
+    <div class="reel-rail">${soundControl(g.video) ? `<button type="button" class="rail-btn" data-sound aria-pressed="false" aria-label="${esc(t("feed.sound"))}">🔇</button>` : ""}${heart(g.id, "rail-btn")}</div>
     <div class="reel-info">
       <div class="pills">${tags}</div>
       <h2>${esc(g.name)}</h2>
@@ -72,6 +79,7 @@ export async function discover(app) {
   };
 
   let first;
+  await loadFavs();
   try { first = await load(); } catch (e) { feed.innerHTML = `<div class="feed-msg">${esc(e.message)}</div>`; feed.setAttribute("aria-busy", "false"); return; }
   document.getElementById("feedplace").textContent = t("feed.near", { city: `${st.origin.city}, ${st.origin.state}` });
   feed.setAttribute("aria-busy", "false");
@@ -94,9 +102,7 @@ export async function discover(app) {
   function mount(el, g) {
     unmount();
     if (!g.video || !okEmbed(g.video.embed)) return;
-    const q = g.video.provider === "youtube"
-      ? `?autoplay=1&mute=${st.sound ? 0 : 1}&loop=1&playlist=${g.video.id}&controls=0&playsinline=1&modestbranding=1&rel=0&enablejsapi=1`
-      : `?autoplay=1&muted=${st.sound ? 0 : 1}&loop=1&playsinline=1&title=0&byline=0&portrait=0`;
+    const q = playerQuery(g.video, st.sound);
     const f = document.createElement("iframe");
     f.className = "reel-video"; f.title = g.name; f.allow = "autoplay; encrypted-media; picture-in-picture"; f.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
     f.src = g.video.embed + q;
@@ -124,6 +130,7 @@ export async function discover(app) {
       // reduced motion: the person starts the clip themselves
       if (g.video && reduceMotion) el.querySelector(".reel-media").insertAdjacentHTML("beforeend", `<button type="button" class="playbtn" aria-label="${esc(t("feed.play"))}">▶</button>`);
       const pb = el.querySelector(".playbtn"); if (pb) pb.onclick = () => { mount(el, g); pb.remove(); };
+      wireHearts(el);
       el.querySelectorAll("[data-tap]").forEach((a) => a.addEventListener("click", () => track("tap", g.id)));
       const sh = el.querySelector("[data-share]"); if (sh) sh.onclick = () => share(g.name, "#/group/" + g.id);
       const so = el.querySelector("[data-sound]");

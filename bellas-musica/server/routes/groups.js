@@ -141,7 +141,7 @@ export default function groupRoutes(ctx, add) {
     }
     if (body.video_url !== undefined) {
       const v = parseVideo(body.video_url);
-      if (!v) throw new HttpError(400, "Use a YouTube or Vimeo link");
+      if (!v) throw new HttpError(400, "Use a YouTube, Vimeo, TikTok or Instagram video link");
       set.video_provider = v.provider; set.video_id = v.id;
     }
     const keys = Object.keys(set);

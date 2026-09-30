@@ -27,6 +27,15 @@ export function parseVideo(input) {
     id = u.pathname.split("/").filter(Boolean).pop() || "";
     if (/^\d{5,12}$/.test(id)) return { provider: "vimeo", id };
     return null;
+  } else if (host === "tiktok.com") { // https://www.tiktok.com/@name/video/7312345678901234567
+    const seg = u.pathname.split("/").filter(Boolean);
+    if (seg.length >= 3 && seg[0].startsWith("@") && seg[1] === "video" && /^\d{15,22}$/.test(seg[2])) return { provider: "tiktok", id: seg[2] };
+    return null; // short links (vm.tiktok.com) can't be resolved safely, so ask for the full video link
+  } else if (host === "instagram.com") { // https://www.instagram.com/reel/CODE/ (also /reels/CODE, /p/CODE, /tv/CODE)
+    const seg = u.pathname.split("/").filter(Boolean);
+    const kind = seg[0] === "reels" || seg[0] === "reel" || seg[0] === "tv" ? "reel" : seg[0] === "p" ? "p" : "";
+    if (kind && /^[\w-]{5,20}$/.test(seg[1] || "")) return { provider: "instagram", id: `${kind}:${seg[1]}` };
+    return null;
   }
   if (host === "youtu.be" && /^[\w-]{11}$/.test(id)) return { provider: "youtube", id };
   return null;
@@ -35,5 +44,7 @@ export function parseVideo(input) {
 export function embedUrl(provider, id) {
   if (provider === "youtube") return `https://www.youtube-nocookie.com/embed/${id}`;
   if (provider === "vimeo") return `https://player.vimeo.com/video/${id}`;
+  if (provider === "tiktok" && /^\d{15,22}$/.test(id)) return `https://www.tiktok.com/embed/v2/${id}`;
+  if (provider === "instagram") { const m = /^(reel|p):([\w-]{5,20})$/.exec(id); if (m) return `https://www.instagram.com/${m[1]}/${m[2]}/embed`; }
   return "";
 }

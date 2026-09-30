@@ -1,8 +1,9 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t } from "../i18n.js";
-import { esc, sel } from "../ui.js";
+import { esc, sel, wireShare } from "../ui.js";
 import { groupCard } from "./home.js";
+import { loadFavs, wireHearts } from "../fav.js";
 
 const POPULAR = ["Quinceañera", "Wedding", "Birthday", "Serenata", "Anniversary", "Corporate / Restaurant"];
 
@@ -11,6 +12,7 @@ export async function chicago(app) {
   const m = state.meta.market;
   document.title = `${t("chi.title")} · Bella's Música`;
   let top = [];
+  await loadFavs();
   try { top = (await api.get("/api/best?zip=" + encodeURIComponent(m.center_zip))).groups.slice(0, 6); } catch { /* the page still works without the list */ }
   const anySample = top.some((g) => g.demo);
   app.innerHTML = `<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t("chi.title"))}</h1><p>${esc(t("chi.sub"))}</p>
@@ -24,6 +26,7 @@ export async function chicago(app) {
     ${top.length ? `<section><h2 class="sec">${esc(t("chi.top"))}</h2><div class="grid">${top.map((g, i) => groupCard(g, i)).join("")}</div>${anySample ? `<p class="dim small">${esc(t("chi.note"))}</p>` : ""}</section>` : ""}
     <section class="panel"><h2 class="sec">${esc(t("chi.faq"))}</h2>${[["chi.q1", "chi.a1"], ["chi.q2", "chi.a2"], ["chi.q3", "chi.a3"], ["chi.q4", "chi.a4"]].map(([q, a]) => `<details class="faq"><summary>${esc(t(q))}</summary><p>${esc(t(a))}</p></details>`).join("")}</section>
     <section class="panel cta-groups"><h2 class="sec">${esc(t("chi.groups"))}</h2><p>${esc(t("chi.groupsText"))}</p><a class="btn" href="#/${state.user ? "dashboard?new=1" : "signup?next=" + encodeURIComponent("#/dashboard?new=1")}">${esc(t("chi.groupsBtn"))}</a></section>`;
+  wireShare(app); wireHearts(app);
   document.getElementById("cform").onsubmit = (e) => {
     e.preventDefault();
     const zip = document.getElementById("c-zip").value.trim(), ev = document.getElementById("c-ev").value;

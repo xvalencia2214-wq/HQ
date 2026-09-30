@@ -153,6 +153,25 @@ CREATE TABLE IF NOT EXISTS waitlist (
   created_at INTEGER NOT NULL,
   UNIQUE (email, zip, kind)
 );
+-- Groups a customer saved, and read-only shortlists they share ("send my 3 favorites to my partner").
+CREATE TABLE IF NOT EXISTS favorites (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, group_id)
+);
+CREATE TABLE IF NOT EXISTS shortlists (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS shortlist_items (
+  token TEXT NOT NULL REFERENCES shortlists(token) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  PRIMARY KEY (token, group_id)
+);
 CREATE TABLE IF NOT EXISTS stats_daily (
   day TEXT NOT NULL,
   key TEXT NOT NULL,

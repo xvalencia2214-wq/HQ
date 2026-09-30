@@ -4,6 +4,7 @@ import { t, lang } from "../i18n.js";
 import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
+import { heart, loadFavs, wireHearts } from "../fav.js";
 
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
 
@@ -13,6 +14,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Música`;
   const meta = state.meta, user = state.user;
+  await loadFavs();
   // Private offers the group made this customer (if any).
   let offers = [];
   if (user && !g.is_owner) { try { offers = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/offers`)).offers; } catch { /* no offers */ } }
@@ -26,11 +28,11 @@ export async function group(app, id, params = new URLSearchParams()) {
 
   const fact = (k, v) => `<div class="fact"><span>${esc(t(k))}</span><strong>${v}</strong></div>`;
   const gallery = g.photos.length ? `<div class="gallery"><img id="hero-img" src="${esc(g.photos[0].url)}" alt="${esc(g.name)}">${g.photos.length > 1 ? `<div class="thumbs">${g.photos.map((p, i) => `<button type="button" class="thumb" data-i="${i}" aria-label="${esc(t("g.photo", { n: i + 1 }))}"><img src="${esc(p.url)}" alt=""></button>`).join("")}</div>` : ""}</div>` : "";
-  const video = g.video ? `<div class="video"><iframe src="${esc(g.video.url)}" title="${esc(g.name)}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : "";
+  const video = g.video ? `<div class="video${["tiktok", "instagram"].includes(g.video.provider) ? " tall" : ""}"><iframe src="${esc(g.video.url)}" title="${esc(g.name)}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : "";
 
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
-  <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1>${shareButtons(g.name, "#/group/" + g.id)}</div>
+  <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
     ${gallery}${video}
     <div class="facts">
@@ -53,7 +55,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="quotebox"></div><div id="chatbox"></div></div>
   </aside></div>
   ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(g.packages.length ? Math.min(...g.packages.map((p) => p.price_cents)) : g.rate_cents) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
-  wireShare(app);
+  wireShare(app); wireHearts(app);
   app.querySelectorAll(".thumb").forEach((b) => { b.onclick = () => { document.getElementById("hero-img").src = g.photos[Number(b.dataset.i)].url; }; });
 
   // songs

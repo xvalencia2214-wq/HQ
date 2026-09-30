@@ -4,6 +4,7 @@ import { t } from "../i18n.js";
 import { esc, money, sel, tomorrowKey, groupPhoto, shareButtons, wireShare, toast } from "../ui.js";
 import { drawMap } from "../map.js";
 import { waitlistBox } from "./waitlist.js";
+import { heart, loadFavs, wireHearts } from "../fav.js";
 
 const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius"];
 
@@ -17,10 +18,10 @@ export function groupCard(g, i, ctx = "") {
   if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
   if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
   const href = `#/group/${esc(g.id)}${ctx ? "?" + esc(ctx) : ""}`;
-  return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}
+  return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}${heart(g.id, "on-card")}
     <h3>${esc(g.name)}</h3>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${g.reviews})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${tags.join("")}</div>
-    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span><span>${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span><span>${esc(t("card.members", { n: g.members }))}</span></div>
+    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span>${g.distance_miles == null ? "" : `<span>${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span>`}<span>${esc(t("card.members", { n: g.members }))}</span></div>
     ${g.fits_event ? `<div class="fit">✓ ${esc(t("card.fits"))}</div>` : ""}
     ${g.matched_songs?.length ? `<div class="fit">♪ ${esc(t("card.plays"))}: ${esc(g.matched_songs.join(", "))}</div>` : ""}
     ${g.open_slots?.length ? `<div class="fit">📅 ${esc(t("card.open"))}: ${esc(g.open_slots.join(", "))}</div>` : ""}
@@ -74,6 +75,7 @@ export async function home(app, params) {
     }, () => { toast(t("f.locFail"), "error"); loc.textContent = t("f.locate"); }, { timeout: 8000 });
   };
 
+  await loadFavs(); // so the hearts on the cards start in the right state
   const box = document.getElementById("results");
   if (!p.zip) {
     const m = meta.market;
@@ -99,7 +101,7 @@ export async function home(app, params) {
     (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}</div>`
       : view === "map" ? `<div id="map" class="map" role="region" aria-label="${esc(t("home.map"))}"></div><div class="legend">${esc(t("map.note"))}</div>`
         : `<div class="grid">${data.results.map((g, i) => groupCard(g, i, ctx)).join("")}</div>`);
-  wireShare(box);
+  wireShare(box); wireHearts(box);
   if (!data.results.length && !data.in_market) box.appendChild(waitlistBox(data.origin.zip, `${data.origin.city}, ${data.origin.state}`));
   if (data.results.length && view === "map") drawMap(document.getElementById("map"), data.results, data.origin);
 }

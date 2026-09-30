@@ -383,6 +383,16 @@ nav a { font-weight: 500; }
 .rail-btn:hover { background: rgba(31,95,214,.85); }
 .playbtn { width: 84px; height: 84px; border-radius: 50%; border: 2px solid #fff; background: rgba(10,16,34,.55); color: #fff; font-size: 2rem; z-index: 2; margin-bottom: 20%; }
 .feed-nav { display: none; }
+.video.tall { padding-top: 0; height: min(78vh, 640px); max-width: 360px; margin-left: auto; margin-right: auto; }
+/* hearts (saved groups) */
+.heart { border: 1px solid var(--line); background: rgba(255,255,255,.92); color: var(--ink-2); border-radius: 50%; width: 40px; height: 40px; font-size: 1.25rem; line-height: 1; padding: 0; }
+.heart.on { color: #d6336c; border-color: #d6336c; }
+.heart:hover { border-color: #d6336c; }
+.heart.on-card { position: absolute; top: 24px; right: 24px; z-index: 2; box-shadow: 0 2px 8px rgba(10,16,34,.25); }
+.heart.big { width: 42px; height: 42px; }
+.heart.rail-btn { background: rgba(10,16,34,.6); color: #fff; border-color: rgba(255,255,255,.4); width: 46px; height: 46px; }
+.heart.rail-btn.on { color: #ff6b9a; border-color: #ff6b9a; }
+.titlebtns { display: flex; align-items: center; gap: 8px; }
 @media (min-width: 900px) {
   .feed-nav { display: flex; flex-direction: column; gap: 10px; position: absolute; right: -66px; top: 50%; transform: translateY(-50%); }
   .feed-nav .rail-btn { border-color: var(--silver); background: #fff; color: var(--black); }

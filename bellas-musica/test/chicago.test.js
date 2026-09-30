@@ -79,7 +79,7 @@ test("the Chicago landing page is server-rendered for search engines and link pr
   try {
     const html = await (await fetch(S.base + "/c/chicago")).text();
     assert.match(html, /<title>Live Mexican music in Chicago/); assert.match(html, /og:title" content="Live Mexican music in Chicago/);
-    assert.match(html, /<h1>Live Mexican music for your Chicago fiesta<\/h1>/); assert.match(html, /Pilsen, Little Village/); assert.match(html, /How does the deposit work\?/);
+    assert.match(html, /<h1>Live Mexican music for your Chicago fiesta<\/h1>/); assert.match(html, /<a href="\/chicago\/pilsen">Pilsen<\/a>, <a href="\/chicago\/little-village">Little Village<\/a>/); // neighborhoods link to their own landing pages assert.match(html, /How does the deposit work\?/);
     const map = await (await fetch(S.base + "/sitemap.xml")).text(); assert.match(map, /\/c\/chicago</);
     assert.match(await (await fetch(S.base + "/c/nowhere")).text(), /og:title" content="Bella&#39;s Música/); // unknown pages fall back to the generic page
   } finally { await S.close(); }

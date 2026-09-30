@@ -66,7 +66,7 @@ try {
   ok("video link becomes a privacy-friendly embed", (await O.locator(".video iframe").getAttribute("src")).startsWith("https://www.youtube-nocookie.com/embed/"));
   await O.fill("#v-url", "https://evil.example/x"); await O.click("#vform button[type=submit]");
   await O.waitForSelector("#verr:not(:empty)");
-  ok("non-YouTube/Vimeo link is refused", /YouTube or Vimeo/.test(await O.locator("#verr").innerText()));
+  ok("non-YouTube/Vimeo link is refused", /YouTube, Vimeo, TikTok or Instagram/.test(await O.locator("#verr").innerText()));
   await O.goto(S.base + "/#/dashboard?tab=requests"); await O.waitForSelector("#publish:not([disabled])");
   ok("once photo, story, events and dates are in, Publish is enabled", (await O.locator(".draft li").count()) === 0);
   await O.click("#publish"); await O.waitForSelector(".statusline");

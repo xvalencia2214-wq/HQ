@@ -12,6 +12,7 @@ import { chicago } from "./views/chicago.js";
 import { claim } from "./views/claim.js";
 import { discover } from "./views/discover.js";
 import { agreement } from "./views/agreement.js";
+import { saved, shortlist } from "./views/saved.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
@@ -20,6 +21,14 @@ import { admin } from "./views/admin.js";
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
 if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group/" + landing[2] : landing[1] === "b" ? "best/" + landing[2] : "chicago"));
+// /chicago/<neighborhood>[/<event>] pages are for search engines and shared links; inside the app they open a search for that place and event.
+const hoodLanding = /^\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(location.pathname);
+if (hoodLanding) {
+  const EVENT_NAMES = { quinceanera: "Quinceañera", wedding: "Wedding", birthday: "Birthday", serenata: "Serenata", anniversary: "Anniversary", corporate: "Corporate / Restaurant" };
+  const meta0 = await fetch("/api/meta").then((r) => r.json()).catch(() => null);
+  const hood = meta0 && meta0.market.neighborhoods.find((n) => n.id === hoodLanding[1]);
+  history.replaceState(null, "", "/#/" + (hood ? `?zip=${hood.zip}${EVENT_NAMES[hoodLanding[2]] ? "&event=" + encodeURIComponent(EVENT_NAMES[hoodLanding[2]]) : ""}` : "chicago"));
+}
 
 const app = document.getElementById("app");
 // Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.
@@ -34,7 +43,7 @@ function renderChrome() {
   const managerCount = a ? a.manager.requests + a.manager.messages : 0;
   document.getElementById("nav").innerHTML =
     `<a href="#/" data-r="home">${esc(t("nav.find"))}</a><a href="#/discover" data-r="discover">${esc(t("nav.discover"))}</a>` +
-    (u ? `<a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
+    (u ? `<a href="#/saved" data-r="saved">♥ ${esc(t("nav.saved"))}</a><a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
     `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}${dot(managerCount)}</a>` +
     (u && u.is_admin ? `<a href="#/admin" data-r="admin">${esc(t("nav.admin"))}</a>` : "") +
     (u ? `<a href="#/account" data-r="account">${esc(u.name.split(" ")[0])}</a><button type="button" id="logout" class="linkbtn">${esc(t("nav.logout"))}</button>`
@@ -54,7 +63,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "agreement", "pay", "dashboard", "account", "messages", "admin"]);
+const needsLogin = new Set(["bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin"]);
 
 async function route() {
   const token = ++routeToken;
@@ -83,6 +92,8 @@ async function route() {
     else if (seg[0] === "chicago") await chicago(box);
     else if (seg[0] === "discover") await discover(box);
     else if (seg[0] === "agreement" && seg[1]) await agreement(box, seg[1], params);
+    else if (seg[0] === "saved") await saved(box);
+    else if (seg[0] === "shortlist" && seg[1]) await shortlist(box, seg[1]);
     else if (seg[0] === "claim" && seg[1]) await claim(box, seg[1]);
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);
