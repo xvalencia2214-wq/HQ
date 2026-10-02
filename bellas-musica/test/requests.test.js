@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startApp, client, inDays, makeGroup, bookingBody } from "./helpers.js";
+import { expandSilentRequests } from "../server/routes/requests.js";
 
 const body = (over = {}) => ({ event: "Quinceañera", date: inDays(30), guests: 120, hours: 3, zip: "60608", note: "Outdoor, Saturday", ...over });
 
@@ -120,5 +121,62 @@ test("'booked here' count: only confirmed, past, still-paid events; a refunded n
     S.db.run("UPDATE bookings SET status = 'cancelled' WHERE id = ?", b.id);
     assert.equal(await count(), 1);
     assert.equal((await anon.get("/api/search?zip=60608")).json.results.find((g) => g.id === gid).events_done, 1);
+  } finally { await S.close(); }
+});
+
+test("get quotes: after 24 hours of silence the request goes to up to 2 more groups, once, and the customer is told", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const d = inDays(30), d3 = inDays(33), soon = inDays(1);
+    const owners = [];
+    for (let i = 0; i < 9; i++) { const o = client(S.base); await o.signup(`ex${i}@example.com`, `Owner ${i}`); owners.push({ o, id: await makeGroup(o, { name: `Ex Band ${i}`, dates: i < 8 ? [d, soon] : [d, d3, soon], extra: { events: ["Quinceañera"], max_guests: 300 } }) }); }
+    const mkCust = async (n) => { const c = client(S.base); await c.signup(`exc${n}@example.com`, `Cust ${n} Name`); return c; };
+    const body = (over = {}) => ({ event: "Quinceañera", date: d, guests: 100, hours: 3, zip: "60608", ...over });
+    const age = (id, hours = 25) => S.db.run("UPDATE event_requests SET created_at = created_at - ? WHERE id = ?", hours * 3600, id);
+    const askedIds = (id) => S.db.all("SELECT group_id g, round r FROM event_request_groups WHERE request_id = ?", id).map((x) => ({ ...x }));
+    const mails = (to) => S.db.all("SELECT subject FROM email_log WHERE kind = 'request.expanded.customer' AND to_email = ?", to);
+
+    // A: nobody answers -> two more groups, once
+    const a = await mkCust(1); const ra = (await a.post("/api/requests", body())).json;
+    assert.equal(ra.sent, 5);
+    assert.equal(expandSilentRequests(S.ctx), 0); // too early: nothing happens yet
+    age(ra.id, 23); assert.equal(expandSilentRequests(S.ctx), 0); // 23 hours: still too early
+    age(ra.id, 2);
+    assert.equal(expandSilentRequests(S.ctx), 2);
+    const rows = askedIds(ra.id); assert.equal(rows.length, 7); assert.equal(new Set(rows.map((x) => x.g)).size, 7); // 2 new groups, none asked twice
+    assert.equal(rows.filter((x) => x.r === 2).length, 2);
+    for (const x of rows.filter((y) => y.r === 2)) assert.equal(S.db.get("SELECT COUNT(*) c FROM messages WHERE group_id = ? AND sender = 'customer'", x.g).c, 1); // each got the request in its inbox
+    assert.equal(mails("exc1@example.com").length, 1); assert.match(mails("exc1@example.com")[0].subject, /2 more groups/);
+    assert.equal(expandSilentRequests(S.ctx), 0); assert.equal(askedIds(ra.id).length, 7); assert.equal(mails("exc1@example.com").length, 1); // only ever once
+    // the quotes page marks the later ones, and a later group's reply time counts from when IT was asked
+    let q = (await a.get("/api/my/requests")).json.requests[0]; assert.equal(q.groups.length, 7); assert.equal(q.groups.filter((g) => g.later).length, 2);
+    const late = rows.find((x) => x.r === 2), lateOwner = owners.find((x) => x.id === late.g);
+    S.db.run("UPDATE event_request_groups SET asked_at = asked_at - 600 WHERE request_id = ? AND group_id = ?", ra.id, late.g); // asked 10 minutes ago
+    const uid = S.db.get("SELECT id FROM users WHERE email = 'exc1@example.com'").id;
+    await lateOwner.o.post(`/api/groups/${late.g}/threads/${uid}`, { text: "Yes, we are free!" });
+    q = (await a.get("/api/my/requests")).json.requests[0]; const lg = q.groups.find((g) => g.id === late.g);
+    assert.equal(lg.replied, true); assert.ok(lg.reply_minutes >= 10 && lg.reply_minutes <= 12, `reply_minutes ${lg.reply_minutes}`); // not "25 hours": measured from when it was asked
+
+    // B: someone answered within the day -> nothing is added, and it is marked done so it is never re-checked
+    const b = await mkCust(2); const rb = (await b.post("/api/requests", body())).json;
+    const first = owners.find((x) => x.id === rb.groups[0].id); const ub = S.db.get("SELECT id FROM users WHERE email = 'exc2@example.com'").id;
+    await first.o.post(`/api/groups/${first.id}/threads/${ub}`, { text: "Hello! We can do it." });
+    age(rb.id); assert.equal(expandSilentRequests(S.ctx), 0);
+    assert.equal(askedIds(rb.id).length, 5); assert.equal(S.db.get("SELECT expanded e FROM event_requests WHERE id = ?", rb.id).e, 1);
+
+    // C: the event is tomorrow: too late for a second round, left alone
+    const c = await mkCust(3); const rc = (await c.post("/api/requests", body({ date: soon }))).json; assert.ok(rc.sent > 0);
+    age(rc.id); assert.equal(expandSilentRequests(S.ctx), 0); assert.equal(S.db.get("SELECT expanded e FROM event_requests WHERE id = ?", rc.id).e, 0);
+
+    // D: no other group fits (only one group is free that day): nothing to add, and the customer is not told something untrue
+    const dcust = await mkCust(4); const rd = (await dcust.post("/api/requests", body({ date: d3 }))).json; assert.equal(rd.sent, 1);
+    age(rd.id); assert.equal(expandSilentRequests(S.ctx), 0);
+    assert.equal(mails("exc4@example.com").length, 0); assert.equal(S.db.get("SELECT expanded e FROM event_requests WHERE id = ?", rd.id).e, 1);
+
+    // the hourly job runs it (and a customer who deleted their account takes the request with them)
+    const e = await mkCust(5); const re = (await e.post("/api/requests", body())).json; age(re.id);
+    assert.equal(expandSilentRequests(S.ctx), 2);
+    assert.equal((await e.post("/api/me/delete", { password: "correct horse battery" })).status, 200);
+    assert.equal(expandSilentRequests(S.ctx), 0);
   } finally { await S.close(); }
 });

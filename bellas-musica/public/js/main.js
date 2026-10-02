@@ -1,5 +1,5 @@
 import { init, state, onChange, setUser, refreshMetaIfStale, refreshAttention } from "./state.js";
-import { api } from "./api.js";
+import { api, ApiError } from "./api.js";
 import { t, lang, setLang, initLang } from "./i18n.js";
 import { esc, toast } from "./ui.js";
 import { killMap } from "./map.js";
@@ -30,6 +30,18 @@ if (hoodLanding) {
   const hood = meta0 && meta0.market.neighborhoods.find((n) => n.id === hoodLanding[1]);
   history.replaceState(null, "", "/#/" + (hood ? `?zip=${hood.zip}${EVENT_NAMES[hoodLanding[2]] ? "&event=" + encodeURIComponent(EVENT_NAMES[hoodLanding[2]]) : ""}` : "chicago"));
 }
+
+
+// Tell the server when the page itself crashes (at most 3 reports per page load). Our own code only: browser extensions and
+// ordinary user-facing API errors (wrong password, a full slot) are not crashes and are skipped.
+let reported = 0;
+const reportCrash = (message, source, line) => {
+  if (reported >= 3 || !message || /ResizeObserver loop|Script error/i.test(message)) return;
+  reported++;
+  fetch("/api/client-error", { method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true, body: JSON.stringify({ message: String(message).slice(0, 300), source: source || "", line: Number.isInteger(line) ? line : undefined, route: location.hash }) }).catch(() => {});
+};
+window.addEventListener("error", (e) => { if (e.filename && !e.filename.startsWith(location.origin)) return; reportCrash(e.message, e.filename, e.lineno); });
+window.addEventListener("unhandledrejection", (e) => { const r = e.reason; if (r instanceof ApiError && r.status < 500) return; reportCrash(r && r.message ? r.message : String(r), r && r.stack && (/\(?(https?:\/\/[^\s)]+?):\d+:\d+/.exec(r.stack) || [])[1]); });
 
 const app = document.getElementById("app");
 // Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.

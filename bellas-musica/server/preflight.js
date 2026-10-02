@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { loadConfig } from "./config.js";
 import { setTimezone } from "./util.js";
+import { parseDsn } from "./alerts.js";
 
 const ok = (name, detail = "") => ({ name, status: "ok", detail });
 const warn = (name, detail) => ({ name, status: "warn", detail });
@@ -27,7 +28,8 @@ export async function runPreflight(config) {
   out.push(config.adminEmails.length ? ok("ADMIN_EMAILS", config.adminEmails.join(", ")) : warn("ADMIN_EMAILS", "empty: nobody can open the owner page"));
   out.push(config.businessAddress ? ok("BUSINESS_ADDRESS (email footer)") : warn("BUSINESS_ADDRESS", "empty: commercial email must include a postal address (CAN-SPAM)"));
   out.push(config.supportEmail ? ok("SUPPORT_EMAIL", config.supportEmail) : warn("SUPPORT_EMAIL", "empty: people who need help have nobody to write to"));
-  out.push(config.alertWebhook ? ok("ALERT_WEBHOOK_URL is set") : warn("ALERT_WEBHOOK_URL", "empty: you will not be told when something breaks"));
+  if (config.sentryDsn) out.push(parseDsn(config.sentryDsn) ? ok("SENTRY_DSN is set", "errors are sent to Sentry") : warn("SENTRY_DSN", "is set but is not a valid Sentry DSN (it looks like https://KEY@HOST/PROJECTNUMBER): Sentry is off"));
+  out.push(config.alertWebhook ? ok("ALERT_WEBHOOK_URL is set") : (config.sentryDsn && parseDsn(config.sentryDsn) ? ok("ALERT_WEBHOOK_URL", "empty, but Sentry will tell you") : warn("ALERT_WEBHOOK_URL", "empty: you will not be told when something breaks")));
   out.push(config.backupDir ? ok("BACKUP_DIR", `${config.backupDir} (keeps ${config.backupKeep} days)`) : warn("BACKUP_DIR", "empty: no automatic database backups"));
 
   // ---- Stripe ----

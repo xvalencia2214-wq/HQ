@@ -4,6 +4,7 @@ import { backupIfNeeded } from "./backups.js";
 import { RESCHED_TTL } from "./shared.js";
 import { expirePending } from "./shared.js";
 import { fillDemoAvailability } from "./seed.js";
+import { expandSilentRequests } from "./routes/requests.js";
 
 // Text customers a day or so after their event asking for a review (only if they opted in to texts).
 export function sendReviewReminders(ctx) {
@@ -58,9 +59,9 @@ export function housekeeping(ctx) {
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
-  try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }
+  try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }
   return () => timers.forEach(clearInterval);
 }

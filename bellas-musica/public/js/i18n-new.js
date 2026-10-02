@@ -1,6 +1,7 @@
 // Strings for password recovery, the Chicago page, publishing, balance payments, rescheduling, custom offers,
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
+  "rq.later": "Added after a day with no reply",
   "show.arrived": "The group arrived", "show.arrivedConfirm": "Confirm that the group has arrived at your event?", "show.arrivedDone": "Thanks, arrival recorded",
   "show.locked": "Check-in is locked after 3 wrong codes. Ask the customer to tap \"The group arrived\" in their booking.",
   // quote wizard
@@ -117,6 +118,7 @@ export const EN2 = {
 };
 
 export const ES2 = {
+  "rq.later": "Añadido tras un día sin respuesta",
   "show.arrived": "El grupo ya llegó", "show.arrivedConfirm": "¿Confirmas que el grupo ya llegó a tu evento?", "show.arrivedDone": "Gracias, llegada registrada",
   "show.locked": "El registro está bloqueado tras 3 códigos incorrectos. Pídele al cliente que toque \"El grupo ya llegó\" en su reserva.",
   "rq.step": "Paso {i} de {n}", "rq.next": "Siguiente", "rq.back": "Atrás", "rq.need": "Responde esta pregunta para continuar.", "rq.needZip": "Escribe un código postal de 5 dígitos.", "rq.needBudget": "Tu mínimo es mayor que tu máximo.",

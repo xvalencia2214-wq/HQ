@@ -27,6 +27,7 @@ import claimRoutes from "./routes/claim.js";
 import feedRoutes from "./routes/feed.js";
 import favoriteRoutes from "./routes/favorites.js";
 import requestRoutes from "./routes/requests.js";
+import telemetryRoutes from "./routes/telemetry.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -76,13 +77,14 @@ export function createApp(config) {
     chat: createLimiter({ windowMs: 60_000, max: L.chat }),
     upload: createLimiter({ windowMs: 60 * 60_000, max: L.upload }),
     booking: createLimiter({ windowMs: 60 * 60_000, max: L.booking }),
-    feedEvent: createLimiter({ windowMs: 30 * 60_000, max: L.feedEvent })
+    feedEvent: createLimiter({ windowMs: 30 * 60_000, max: L.feedEvent }),
+    clientError: createLimiter({ windowMs: 60_000, max: L.clientError })
   } };
   ctx.notify = createNotifier(ctx);
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {

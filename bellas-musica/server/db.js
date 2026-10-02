@@ -270,6 +270,9 @@ export function openDb(config) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
     return true;
   };
+  ensureColumn("event_requests", "expanded", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("event_request_groups", "round", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("event_request_groups", "asked_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_requests", "start_time", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("event_requests", "budget_min", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_requests", "budget_max", "INTEGER NOT NULL DEFAULT 0");

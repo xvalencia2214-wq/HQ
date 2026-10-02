@@ -38,7 +38,7 @@ export function loadConfig(env = process.env) {
     // Rate limits (max requests per window per client); tests raise these
     limits: {
       api: int(env.RATE_API, 300), register: int(env.RATE_REGISTER, 10), forgot: int(env.RATE_FORGOT, 5), waitlist: int(env.RATE_WAITLIST, 5), auth: int(env.RATE_AUTH, 10),
-      chat: int(env.RATE_CHAT, 20), upload: int(env.RATE_UPLOAD, 30), booking: int(env.RATE_BOOKING, 20), feedEvent: int(env.RATE_FEEDEVENT, 3)
+      chat: int(env.RATE_CHAT, 20), upload: int(env.RATE_UPLOAD, 30), booking: int(env.RATE_BOOKING, 20), feedEvent: int(env.RATE_FEEDEVENT, 3), clientError: int(env.RATE_CLIENTERROR, 10)
     },
     // Money
     platformFeePct: int(env.PLATFORM_FEE_PCT, 10), // % of the booking total, taken from the deposit
@@ -53,6 +53,7 @@ export function loadConfig(env = process.env) {
     emailReplyTo: env.EMAIL_REPLY_TO || "",
     emailApi: env.EMAIL_API_BASE || "https://api.resend.com",
     // Operations
+    sentryDsn: env.SENTRY_DSN || "",            // optional: errors also go to Sentry (https://sentry.io, free plan) with the same de-duplication
     alertWebhook: env.ALERT_WEBHOOK_URL || "",  // Slack/Discord/any JSON webhook: told when something breaks
     backupDir: env.BACKUP_DIR ? path.resolve(env.BACKUP_DIR) : "", // daily database copies go here (empty = off)
     backupKeep: int(env.BACKUP_KEEP, 14),
