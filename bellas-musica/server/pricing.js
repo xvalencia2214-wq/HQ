@@ -2,7 +2,22 @@ import { daysBetween } from "./util.js";
 
 export const SLOTS = ["12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM", "8:00 PM"];
 export const EVENT_TYPES = ["Wedding", "Quinceañera", "Birthday", "Anniversary", "Serenata", "Corporate / Restaurant", "Other"];
-export const GROUP_TYPES = ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"];
+// Everything a party needs, in one place. Music came first; the other categories use the same listings, calendar, deposits,
+// reviews and chat. A listing's category follows from its type ("Other" stays music, as it always was).
+export const CATEGORIES = {
+  music: ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"],
+  food: ["Food truck", "Taquería / taco catering", "Catering", "Cakes and desserts", "Aguas frescas and drinks"],
+  rentals: ["Tents", "Tables and chairs", "Bounce house", "Dance floor and stage", "Linens and tableware"],
+  decor: ["Balloon decorations", "Event decorator", "Flowers", "Backdrops and photo walls"],
+  photo: ["Photographer", "Videographer", "Photo booth"],
+  services: ["Security / bouncer", "Bartender", "Party host / MC", "Kids entertainment", "Quinceañera choreographer", "Hair and makeup", "Clean-up crew"],
+  venues: ["Party hall", "Outdoor venue"]
+};
+export const GROUP_TYPES = Object.values(CATEGORIES).flat();
+export const CATEGORY_OF = Object.fromEntries(Object.entries(CATEGORIES).flatMap(([c, types]) => types.map((t) => [t, c])));
+export const categoryOf = (type) => CATEGORY_OF[type] || "music";
+// Whether a new listing in this category is booked by the hour by default (a tent or a food truck is booked by package).
+export const HOURLY_BY_DEFAULT = { music: true, photo: true, services: true, food: false, rentals: false, decor: false, venues: false };
 
 // Cancellation policies: [minimum days before the event, share of the deposit refunded].
 // The first row whose minimum is met applies. Everything is computed on the server.
@@ -44,7 +59,16 @@ export const ADDON_PRESETS = {
     { en: "Audio and video setup", es: "Equipo de audio y video" },
     { en: "Wireless microphone for speeches", es: "Micrófono inalámbrico para discursos" }
   ],
-  _: [{ en: "Sound system", es: "Equipo de sonido" }, { en: "Wireless microphone", es: "Micrófono inalámbrico" }]
+  "Tents": [{ en: "Side walls", es: "Paredes laterales" }, { en: "Lighting inside the tent", es: "Iluminación dentro de la carpa" }, { en: "Heaters", es: "Calentadores" }, { en: "Setup and takedown", es: "Montaje y desmontaje" }],
+  "Tables and chairs": [{ en: "Tablecloths", es: "Manteles" }, { en: "Kids' tables and chairs", es: "Mesas y sillas para niños" }, { en: "Delivery and setup", es: "Entrega y montaje" }],
+  "Bounce house": [{ en: "Extra hour", es: "Hora extra" }, { en: "Attendant on site", es: "Encargado en el lugar" }, { en: "Generator", es: "Generador" }],
+  "Food truck": [{ en: "Extra 50 servings", es: "50 porciones extra" }, { en: "Aguas frescas", es: "Aguas frescas" }],
+  "Taquería / taco catering": [{ en: "Extra 50 tacos", es: "50 tacos extra" }, { en: "Aguas frescas", es: "Aguas frescas" }, { en: "Servers", es: "Meseros" }],
+  "Balloon decorations": [{ en: "Balloon arch", es: "Arco de globos" }, { en: "Number or letter balloons", es: "Globos de números o letras" }],
+  "Event decorator": [{ en: "Centerpieces", es: "Centros de mesa" }, { en: "Backdrop", es: "Telón de fondo" }, { en: "Setup and takedown", es: "Montaje y desmontaje" }],
+  "Photo booth": [{ en: "Unlimited prints", es: "Impresiones ilimitadas" }, { en: "Props", es: "Accesorios" }, { en: "Digital gallery", es: "Galería digital" }],
+  "Photographer": [{ en: "Second photographer", es: "Segundo fotógrafo" }, { en: "Printed album", es: "Álbum impreso" }],
+  _: [{ en: "Sound system", es: "Equipo de sonido" }, { en: "Wireless microphone", es: "Micrófono inalámbrico" }, { en: "Delivery and setup", es: "Entrega y montaje" }]
 };
 export const MAX_ADDONS = 12;
 export const MAX_HOURS = 8;

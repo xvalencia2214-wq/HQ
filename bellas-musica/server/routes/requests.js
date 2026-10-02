@@ -1,5 +1,5 @@
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES } from "../pricing.js";
+import { EVENT_TYPES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { maskContact } from "./messages.js";
 import { LIVE_SQL, activeOffers, isBookable, openSlots, ratingMap, ratingOf, responseTime } from "../shared.js";
@@ -32,6 +32,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     if (g.owner_id === customerId) continue;
     if (!g.demo && !g.owner_id) continue;              // an unclaimed invitation has nobody to answer
     if (!isBookable(ctx, g)) continue;
+    if (categoryOf(g.type) !== "music") continue; // Get quotes asks for music; other vendors are found in Plan a party
     if (g.max_guests < guests) continue;
     if (!EVENT_FIT_ANY(safeJson(g.events, []), event)) continue;
     if (!openSlots(db, g.id, date).length) continue;   // free that day
@@ -39,7 +40,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     const d = z ? miles(origin, z) : 999;
     if (d > RADIUS) continue;
     // A budget is a promise not to waste a group's time: skip groups whose cheapest way to do this event is far above it.
-    if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, g.rate_cents * Math.max(hours, g.min_hours || 1)); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
+    if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, (g.hourly !== 0 ? g.rate_cents * Math.max(hours, g.min_hours || 1) : Infinity)); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
     const r = ratingOf(g, ratings);
     // Prefer proven, close groups; a bonus for being free at the asked start time and for the right group size.
     const sizeFit = !size || (SIZES[size] && g.members >= SIZES[size][0] && g.members <= SIZES[size][1]);

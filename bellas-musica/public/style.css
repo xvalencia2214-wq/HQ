@@ -457,3 +457,21 @@ fieldset.addons { border: 1px solid var(--line); border-radius: 10px; padding: 6
 fieldset.addons legend { padding: 0 6px; font-weight: 600; font-size: .95rem; }
 .addon { margin: 8px 0 0; align-items: center; }
 .addon .addon-p { margin-left: auto; font-weight: 600; white-space: nowrap; }
+
+/* party categories: a scrollable row of chips (search, Discover, Plan a party) */
+.catrow { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 0 10px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.catchip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: .95rem; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.catchip:hover, .catchip:focus-visible { border-color: var(--gold); }
+.catchip.on { background: var(--gold); border-color: var(--gold); color: #fff; font-weight: 600; }
+.hero .catrow { margin: 4px 0 12px; }
+.feedwrap-cats { max-width: 480px; margin: 0 auto; }
+@media (pointer: coarse) { .catchip { min-height: 44px; } }
+/* Plan a party */
+.party-hero h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); }
+.points { list-style: none; padding: 0; margin: 6px 0 14px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .95rem; }
+.needs .need { margin: 0; }
+.needs .need.done { border: 1px solid #2f8f5b; }
+.party-cat .grid { margin-top: 6px; }
+.center { text-align: center; }
+.hero .catrow, .hero .points { grid-column: 1 / -1; }
+.hero .catrow { margin-top: 18px; }

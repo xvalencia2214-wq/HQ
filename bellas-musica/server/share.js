@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { lookupZip, miles, zipsWithin } from "./geo.js";
 import { MARKET } from "./market.js";
-import { LIVE_SQL, ratingMap, ratingOf } from "./shared.js";
+import { LIVE_SQL, fromCents, ratingMap, ratingOf } from "./shared.js";
+import { categoryOf } from "./pricing.js";
 import { safeJson } from "./util.js";
 
 const h = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -99,7 +100,8 @@ function hoodGroups(ctx, hood, shared = {}) {
     if (!z) continue;
     const d = miles(origin, z);
     if (d > LANDING_RADIUS) continue;
-    out.push({ g, distance: d, from: minPrice.get(g.id) ?? g.rate_cents, r: ratingOf(g, ratings), place: `${z.city}, ${z.state}` });
+    if (categoryOf(g.type) !== "music") continue; // these pages are about music
+    out.push({ g, distance: d, from: fromCents(g, minPrice), r: ratingOf(g, ratings), place: `${z.city}, ${z.state}` });
   }
   return out.sort((a, b) => a.distance - b.distance || b.r.rating - a.r.rating);
 }

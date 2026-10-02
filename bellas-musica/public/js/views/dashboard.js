@@ -4,6 +4,11 @@ import { t, lang } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
+import { CAT_ORDER, catLabel } from "../cats.js";
+
+// Type picker grouped by category (music, food, rentals...).
+const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
+const catOfType = (meta, type) => CAT_ORDER.find((c) => meta.categories[c].includes(type)) || "music";
 
 const TABS = ["requests", "calendar", "listing", "extras", "media", "reviews", "payments", "messages"];
 
@@ -67,17 +72,24 @@ function createForm(app) {
   const meta = state.meta;
   app.innerHTML = `<h1 class="sec">${esc(t("dash.create"))}</h1><p class="dim">${esc(t("dash.createSub"))}</p><div class="panel narrow"><form id="cform">
     <label for="c-name">${esc(t("dash.name"))}</label><input id="c-name" name="name" required minlength="2" maxlength="80">
-    <label for="c-type">${esc(t("f.type"))}</label><select id="c-type" name="type">${meta.group_types.map((x) => `<option value="${esc(x)}">${esc(t("type." + x))}</option>`).join("")}</select>
+    <label for="c-type">${esc(t("f.type"))}</label><select id="c-type" name="type">${typeOptions(meta, "Mariachi")}</select><div class="dim small">${esc(t("dash.typeHint"))}</div>
     <div class="row"><div><label for="c-zip">${esc(t("dash.zip"))}</label><input id="c-zip" name="zip" inputmode="numeric" maxlength="5" required></div>
-    <div><label for="c-mem">${esc(t("dash.members"))}</label><input id="c-mem" name="members" type="number" min="1" max="40" value="5" required></div></div>
-    <label for="c-rate">${esc(t("dash.rate"))}</label><input id="c-rate" name="rate" type="number" min="50" max="5000" step="5" value="300" required>
+    <div><label for="c-mem" id="c-mem-l">${esc(t("dash.members"))}</label><input id="c-mem" name="members" type="number" min="1" max="40" value="5" required></div></div>
+    <label class="chk"><input type="checkbox" id="c-hourly" name="hourly" checked> <span>${esc(t("dash.hourly"))}</span></label><div class="dim small">${esc(t("dash.hourlyHint"))}</div>
+    <div id="c-rate-w"><label for="c-rate">${esc(t("dash.rate"))}</label><input id="c-rate" name="rate" type="number" min="50" max="5000" step="5" value="300"></div>
     <label for="c-story">${esc(t("g.story"))}</label><textarea id="c-story" name="story" maxlength="800"></textarea>
     <div id="cerr" class="err" role="alert"></div><button class="btn wide" type="submit">${esc(t("dash.createBtn"))}</button></form></div>`;
+  // choosing a type sets sensible defaults: a tent company sells packages, a mariachi is booked by the hour
+  const typeSel = document.getElementById("c-type"), hourlyBox = document.getElementById("c-hourly");
+  const syncRate = () => { document.getElementById("c-rate-w").hidden = !hourlyBox.checked; };
+  typeSel.onchange = () => { const c = catOfType(meta, typeSel.value); hourlyBox.checked = meta.hourly_by_default[c]; document.getElementById("c-mem-l").textContent = t(c === "music" ? "dash.members" : "dash.team"); syncRate(); };
+  hourlyBox.onchange = syncRate;
   document.getElementById("cform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("cerr"); err.textContent = "";
     try {
-      const g = await api.post("/api/groups", { name: f.name, type: f.type, zip: f.zip, members: Number(f.members), rate: Number(f.rate), story: f.story });
+      const hourly = hourlyBox.checked;
+      const g = await api.post("/api/groups", { name: f.name, type: f.type, zip: f.zip, members: Number(f.members), hourly, ...(hourly ? { rate: Number(f.rate) } : {}), story: f.story });
       toast(t("dash.created")); location.hash = `#/dashboard?g=${g.id}&tab=calendar`;
     } catch (ex) { err.textContent = ex.message; }
   };
@@ -203,21 +215,22 @@ function nextWeekendMonth() {
 
 // ---- listing ----
 function listing({ g, body, refresh }) {
-  const meta = state.meta;
+  const meta = state.meta, music = g.category === "music";
   body.innerHTML = `<div class="panel"><form id="lform">
     <div class="row"><div><label for="l-name">${esc(t("dash.name"))}</label><input id="l-name" name="name" required maxlength="80" value="${esc(g.name)}"></div>
-    <div><label for="l-type">${esc(t("f.type"))}</label><select id="l-type" name="type">${meta.group_types.map((x) => `<option value="${esc(x)}"${sel(x, g.type)}>${esc(t("type." + x))}</option>`).join("")}</select></div></div>
+    <div><label for="l-type">${esc(t("f.type"))}</label><select id="l-type" name="type">${typeOptions(meta, g.type)}</select></div></div>
     <div class="row"><div><label for="l-zip">${esc(t("dash.zip"))}</label><input id="l-zip" name="zip" inputmode="numeric" maxlength="5" required value="${esc(g.zip)}"></div>
-    <div><label for="l-mem">${esc(t("dash.members"))}</label><input id="l-mem" name="members" type="number" min="1" max="40" value="${g.members}"></div></div>
-    <div class="row"><div><label for="l-rate">${esc(t("dash.rate"))}</label><input id="l-rate" name="rate" type="number" min="50" max="5000" step="5" value="${g.rate_cents / 100}"></div>
+    <div><label for="l-mem">${esc(t(music ? "dash.members" : "dash.team"))}</label><input id="l-mem" name="members" type="number" min="1" max="40" value="${g.members}"></div></div>
+    <label class="chk"><input type="checkbox" id="l-hourly" name="hourly"${g.hourly ? " checked" : ""}> <span>${esc(t("dash.hourly"))}</span></label><div class="dim small">${esc(t("dash.hourlyHint"))}</div>
+    <div class="row"><div id="l-rate-w"${g.hourly ? "" : " hidden"}><label for="l-rate">${esc(t("dash.rate"))}</label><input id="l-rate" name="rate" type="number" min="50" max="5000" step="5" value="${g.rate_cents ? g.rate_cents / 100 : ""}"></div>
     <div><label for="l-guests">${esc(t("dash.maxGuests"))}</label><input id="l-guests" name="max_guests" type="number" min="1" max="5000" value="${g.max_guests}"></div></div>
-    <label for="l-minh">${esc(t("dash.minHours"))}</label><select id="l-minh" name="min_hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === g.min_hours ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select><div class="dim small">${esc(t("dash.minHoursHint"))}</div>
+    <div id="l-minh-w"${g.hourly ? "" : " hidden"}><label for="l-minh">${esc(t("dash.minHours"))}</label><select id="l-minh" name="min_hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === g.min_hours ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select><div class="dim small">${esc(t("dash.minHoursHint"))}</div></div>
     <label for="l-story">${esc(t("g.story"))}</label><textarea id="l-story" name="story" maxlength="800">${esc(g.story)}</textarea>
     <label>${esc(t("dash.eventsDo"))}</label><div class="chips">${meta.events.map((e) => `<label class="chk chip"><input type="checkbox" name="ev" value="${esc(e)}"${g.events.includes(e) ? " checked" : ""}> <span>${esc(t("event." + e))}</span></label>`).join("")}</div>
     <h2 class="sec">${esc(t("dash.extras"))}</h2>
-    <label class="chk"><input type="checkbox" name="sound"${g.sound_system ? " checked" : ""}> <span>${esc(t("dash.sound"))}</span></label>
+    <div${music ? "" : " hidden"}><label class="chk"><input type="checkbox" name="sound"${g.sound_system ? " checked" : ""}> <span>${esc(t("dash.sound"))}</span></label>
     <div class="row"><div><label for="l-dress">${esc(t("g.dress"))}</label><input id="l-dress" name="dress_code" maxlength="120" value="${esc(g.dress_code)}"></div>
-    <div><label for="l-set">${esc(t("dash.setMin"))}</label><input id="l-set" name="set_minutes" type="number" min="10" max="240" value="${g.set_minutes}"></div></div>
+    <div><label for="l-set">${esc(t("dash.setMin"))}</label><input id="l-set" name="set_minutes" type="number" min="10" max="240" value="${g.set_minutes}"></div></div></div>
     <div class="row"><div><label for="l-tm">${esc(t("dash.travelMiles"))}</label><input id="l-tm" name="travel_miles" type="number" min="0" max="500" value="${g.travel_miles}"></div>
     <div><label for="l-tf">${esc(t("dash.travelFee"))}</label><input id="l-tf" name="travel_fee" type="number" min="0" max="2000" value="${g.travel_fee_cents / 100}"></div></div>
     <h2 class="sec">${esc(t("dash.terms"))}</h2>
@@ -228,12 +241,14 @@ function listing({ g, body, refresh }) {
     <div id="lerr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>`;
   const hint = () => { document.getElementById("polhint").textContent = meta.policies[document.getElementById("l-pol").value][lang()]; };
   document.getElementById("l-pol").onchange = hint; hint();
+  const hb = document.getElementById("l-hourly");
+  hb.onchange = () => { document.getElementById("l-rate-w").hidden = !hb.checked; document.getElementById("l-minh-w").hidden = !hb.checked; };
   document.getElementById("lform").onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target), f = Object.fromEntries(fd), err = document.getElementById("lerr"); err.textContent = "";
     try {
       await api.patch(`/api/groups/${encodeURIComponent(g.id)}`, {
-        name: f.name, type: f.type, zip: f.zip, members: Number(f.members), rate: Number(f.rate), min_hours: Number(f.min_hours), max_guests: Number(f.max_guests), story: f.story,
+        name: f.name, type: f.type, zip: f.zip, members: Number(f.members), hourly: hb.checked, ...(hb.checked ? { rate: Number(f.rate), min_hours: Number(f.min_hours) } : {}), max_guests: Number(f.max_guests), story: f.story,
         events: fd.getAll("ev"), sound_system: f.sound === "on", dress_code: f.dress_code, set_minutes: Number(f.set_minutes),
         travel_miles: Number(f.travel_miles), travel_fee: Number(f.travel_fee), deposit_pct: Number(f.deposit_pct), cancel_policy: f.cancel_policy, contact_phone: f.contact_phone
       });
@@ -252,7 +267,7 @@ function extras({ g, body, refresh }) {
     <label for="k-desc">${esc(t("dash.pkgDesc"))}</label><input id="k-desc" name="description" maxlength="200">
     <div class="row"><div><label for="k-h">${esc(t("g.hoursLabel"))}</label><input id="k-h" name="hours" type="number" min="1" max="12" value="2" required></div><div><label for="k-p">${esc(t("dash.price"))}</label><input id="k-p" name="price" type="number" min="20" max="50000" required></div></div>
     <div id="kerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("dash.addPkg"))}</button></form></div>
-    <div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))}</h2><p class="dim small">${esc(t("dash.songsHint"))}</p><form id="sform2"><textarea id="songs" rows="12" maxlength="6000" aria-label="${esc(t("g.songs"))}">${esc(g.songs.join("\n"))}</textarea><div id="serr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div></div>
+    <div class="panel"${g.category === "music" ? "" : " hidden"}><h2 class="sec">♪ ${esc(t("g.songs"))}</h2><p class="dim small">${esc(t("dash.songsHint"))}</p><form id="sform2"><textarea id="songs" rows="12" maxlength="6000" aria-label="${esc(t("g.songs"))}">${esc(g.songs.join("\n"))}</textarea><div id="serr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div></div>
     <div class="panel" id="addons-panel"><h2 class="sec">${esc(t("ao.manage"))}</h2><p class="dim small">${esc(t("ao.hint"))}${g.type === "DJ" ? " " + esc(t("ao.djTip")) : ""}</p>
     ${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong><br><button type="button" class="btn ghost small" data-delao="${a.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("ao.none"))}</div>`}
     <form id="aoform" novalidate>${presets.length ? `<div class="dim small">${esc(t("ao.quick"))}</div><div class="chips" id="ao-presets">${presets.map((p) => `<button type="button" class="chip" data-preset="${esc(p[lang()])}">+ ${esc(p[lang()])}</button>`).join("")}</div>` : ""}

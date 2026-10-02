@@ -5,8 +5,9 @@ import { esc, money, sel, tomorrowKey, groupPhoto, shareButtons, wireShare, toas
 import { drawMap } from "../map.js";
 import { waitlistBox } from "./waitlist.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
+import { catChips, catLabel } from "../cats.js";
 
-const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius"];
+const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius", "category"];
 
 // What the customer already told us, carried into the group page so they don't have to type it twice.
 const carry = (p) => new URLSearchParams(Object.entries({ event: p.event, guests: p.guests, date: p.date, zip: p.zip }).filter(([, v]) => v)).toString();
@@ -23,7 +24,7 @@ export function groupCard(g, i, ctx = "") {
   return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}${heart(g.id, "on-card")}
     <h3>${esc(g.name)}</h3>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${g.reviews})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${tags.join("")}</div>
-    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span>${g.distance_miles == null ? "" : `<span>${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span>`}<span>${esc(t("card.members", { n: g.members }))}</span></div>
+    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span>${g.distance_miles == null ? "" : `<span>${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span>`}${g.category === "music" || !g.category ? `<span>${esc(t("card.members", { n: g.members }))}</span>` : ""}</div>
     ${g.fits_event ? `<div class="fit">✓ ${esc(t("card.fits"))}</div>` : ""}
     ${g.matched_songs?.length ? `<div class="fit">♪ ${esc(t("card.plays"))}: ${esc(g.matched_songs.join(", "))}</div>` : ""}
     ${g.open_slots?.length ? `<div class="fit">📅 ${esc(t("card.open"))}: ${esc(g.open_slots.join(", "))}</div>` : ""}
@@ -38,18 +39,22 @@ export async function home(app, params) {
   const view = p.view === "map" ? "map" : "list";
   const meta = state.meta;
   const moreOpen = ["song", "type", "max", "radius"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
+  const cat = meta.categories[p.category] ? p.category : "music", music = cat === "music";
+  // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
+  const catHref = (c) => { const u = new URLSearchParams(); for (const k of ["zip", "event", "date", "guests", "radius", "view"]) if (p[k]) u.set(k, p[k]); if (c !== "music") u.set("category", c); return "#/?" + u.toString(); };
 
-  app.innerHTML = `<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t("home.title"))}</h1><p>${esc(t("home.sub"))}</p>
-    <form class="search" id="sform">
+  app.innerHTML = `<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t(music ? "home.title" : "home.titleAny"))}</h1><p>${esc(t(music ? "home.sub" : "home.subAny"))}</p>
+    ${catChips(cat, { href: catHref })}
+    <form class="search" id="sform"><input type="hidden" id="s-category" value="${music ? "" : esc(cat)}">
       <div class="row"><div><label for="s-zip">${esc(t("f.zip"))}</label><input id="s-zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" required placeholder="60608" value="${esc(p.zip || "")}" autocomplete="postal-code">
         ${navigator.geolocation ? `<button type="button" class="locate" id="locate">${esc(t("f.locate"))}</button>` : ""}</div>
       <div><label for="s-event">${esc(t("f.event"))}</label><select id="s-event"><option value="">${esc(t("f.anyEvent"))}</option>${meta.events.map((e) => `<option value="${esc(e)}"${sel(e, p.event)}>${esc(t("event." + e))}</option>`).join("")}</select></div></div>
       <div class="row"><div><label for="s-date">${esc(t("f.date"))}</label><input id="s-date" type="date" min="${tomorrowKey()}" value="${esc(p.date || "")}"></div>
       <div><label for="s-guests">${esc(t("f.guests"))}</label><input id="s-guests" type="number" min="1" max="5000" inputmode="numeric" placeholder="100" value="${esc(p.guests || "")}"></div></div>
       <details class="more"${moreOpen ? " open" : ""}><summary>${esc(t("f.more"))}</summary>
-        <div class="row"><div><label for="s-song">${esc(t("f.song"))}</label><input id="s-song" maxlength="60" placeholder="Las Mañanitas" value="${esc(p.song || "")}"></div>
-        <div><label for="s-type">${esc(t("f.type"))}</label><select id="s-type"><option value="">${esc(t("f.any"))}</option>${meta.group_types.map((x) => `<option value="${esc(x)}"${sel(x, p.type)}>${esc(t("type." + x))}</option>`).join("")}</select></div></div>
-        <div class="row"><div><label for="s-max">${esc(t("f.max"))}</label><select id="s-max"><option value="">${esc(t("f.any"))}</option>${[250, 350, 500, 900].map((v) => `<option value="${v}"${sel(v, p.max)}>${esc(t("f.upTo", { price: money(v * 100) }))}</option>`).join("")}</select></div>
+        <div class="row">${music ? `<div><label for="s-song">${esc(t("f.song"))}</label><input id="s-song" maxlength="60" placeholder="Las Mañanitas" value="${esc(p.song || "")}"></div>` : ""}
+        <div><label for="s-type">${esc(t("f.type"))}</label><select id="s-type"><option value="">${esc(t("f.any"))}</option>${meta.categories[cat].map((x) => `<option value="${esc(x)}"${sel(x, p.type)}>${esc(t("type." + x))}</option>`).join("")}</select></div></div>
+        <div class="row"><div><label for="s-max">${esc(t(music ? "f.max" : "f.maxAny"))}</label><select id="s-max"><option value="">${esc(t("f.any"))}</option>${[250, 350, 500, 900].map((v) => `<option value="${v}"${sel(v, p.max)}>${esc(t("f.upTo", { price: money(v * 100) }))}</option>`).join("")}</select></div>
         <div><label for="s-radius">${esc(t("f.radius"))}</label><select id="s-radius">${[[10, ""], [25, ""], [60, ""], [100, ""], [200, ""]].map(([n]) => `<option value="${n}"${sel(n, p.radius || 60)}>${esc(t("f.miles", { n }))}</option>`).join("")}</select></div></div>
         <div class="row"><div><label for="s-sort">${esc(t("f.sort"))}</label><select id="s-sort">${[["rating", "sort.rating"], ["price", "sort.price"], ["distance", "sort.distance"]].map(([v, k]) => `<option value="${v}"${sel(v, p.sort || "rating")}>${esc(t(k))}</option>`).join("")}</select></div></div>
       </details>
@@ -95,12 +100,13 @@ export async function home(app, params) {
   catch (e) { box.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
 
   const viewLink = (v) => { const u = new URLSearchParams(location.hash.split("?")[1] || ""); if (v === "map") u.set("view", "map"); else u.delete("view"); return "#/?" + u.toString(); };
-  const filtered = FIELDS.some((k) => k !== "zip" && p[k]);
+  const filtered = FIELDS.some((k) => k !== "zip" && k !== "category" && p[k]);
+  const clearHref = `#/?zip=${encodeURIComponent(data.origin.zip)}${music ? "" : "&category=" + encodeURIComponent(cat)}`;
   const ctx = carry(p);
-  box.innerHTML = `<div class="titlebar"><h2>${esc(t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
+  box.innerHTML = `<div class="titlebar"><h2>${esc(music ? t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }) : t("home.topAny", { cat: t("cat." + cat).toLowerCase(), city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
     <div class="seg"><a href="${esc(viewLink("list"))}" class="${view === "list" ? "on" : ""}">${esc(t("home.list"))}</a><a href="${esc(viewLink("map"))}" class="${view === "map" ? "on" : ""}">${esc(t("home.map"))}</a></div></div>
-    <div class="links"><a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>${filtered ? `<a href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}<a href="#/quotes?${esc(ctx)}">✉ ${esc(t("rq.cta"))}</a></div>` +
-    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}<br><a class="btn small ghost" href="#/quotes?${esc(ctx)}">${esc(t("rq.cta"))}</a></div>`
+    <div class="links">${music ? `<a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>` : ""}${filtered ? `<a href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<a href="#/quotes?${esc(ctx)}">✉ ${esc(t("rq.cta"))}</a>` : ""}<a href="#/party?${esc(ctx)}">🎉 ${esc(t("party.cta"))}</a></div>` +
+    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<br><a class="btn small ghost" href="#/quotes?${esc(ctx)}">${esc(t("rq.cta"))}</a>` : ""}</div>`
       : view === "map" ? `<div id="map" class="map" role="region" aria-label="${esc(t("home.map"))}"></div><div class="legend">${esc(t("map.note"))}</div>`
         : `<div class="grid">${data.results.map((g, i) => groupCard(g, i, ctx)).join("")}</div>`);
   wireShare(box); wireHearts(box);

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -33,6 +33,7 @@ export default function bookingRoutes(ctx, add) {
         if (pkg.expires_at <= now()) throw new HttpError(400, "This custom offer has expired. Ask the group for a new one.");
       }
     }
+    if (!pkg && group.hourly === 0) throw new HttpError(400, `${group.name} is booked by package. Pick one of their packages.`);
     const minHours = group.min_hours || 1; // the group's own minimum applies to booking by the hour; its listed packages are priced as shown
     const hours = pkg ? pkg.hours : int(body.hours, "Hours", { min: 1, max: MAX_HOURS });
     if (!pkg && hours < minHours) throw new HttpError(400, `${group.name} plays a minimum of ${minHours} hours`);
@@ -82,7 +83,7 @@ export default function bookingRoutes(ctx, add) {
     const status = displayStatus(b);
     const today = todayStr();
     const out = {
-      id: b.id, group_id: b.group_id, group_name: b.group_name, date: b.date, time: b.time, hours: b.hours, package_name: b.package_name,
+      id: b.id, group_id: b.group_id, group_name: b.group_name, group_type: b.group_type, category: categoryOf(b.group_type), date: b.date, time: b.time, hours: b.hours, package_name: b.package_name,
       event_type: b.event_type, guests: b.guests, event_zip: b.event_zip, address: b.address, message: b.message,
       subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, addons: addonsOf(b), addons_cents: b.addons_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
       balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
@@ -119,7 +120,7 @@ export default function bookingRoutes(ctx, add) {
     }
     return out;
   }
-  const BOOKING_SELECT = `SELECT b.*, g.name AS group_name, (SELECT 1 FROM reviews r WHERE r.booking_id = b.id) AS reviewed FROM bookings b JOIN groups g ON g.id = b.group_id`;
+  const BOOKING_SELECT = `SELECT b.*, g.name AS group_name, g.type AS group_type, (SELECT 1 FROM reviews r WHERE r.booking_id = b.id) AS reviewed FROM bookings b JOIN groups g ON g.id = b.group_id`;
 
   add("GET", "/api/my/bookings", ({ user }) => {
     expirePending(db);

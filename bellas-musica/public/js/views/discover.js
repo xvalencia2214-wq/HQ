@@ -4,6 +4,7 @@ import { t } from "../i18n.js";
 import { esc, money, share } from "../ui.js";
 import { waitlistBox } from "./waitlist.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
+import { catChips } from "../cats.js";
 
 const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -53,12 +54,13 @@ export async function discover(app) {
   const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seed = sessionStorage.getItem("bm_feed_seed"); if (!seed) { seed = Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem("bm_feed_seed", seed); } catch { /* ok */ } }
   const st = { items: [], page: 0, next: 0, loading: false, sound: false, active: -1, origin: null };
+  let cat = "all"; try { cat = sessionStorage.getItem("bm_feed_cat") || "all"; } catch { /* ok */ }
 
   async function load() {
     if (st.loading || st.next === null) return;
     st.loading = true;
     try {
-      const r = await api.get(`/api/feed?zip=${encodeURIComponent(zip)}&seed=${encodeURIComponent(seed)}&page=${st.next}`);
+      const r = await api.get(`/api/feed?zip=${encodeURIComponent(zip)}&seed=${encodeURIComponent(seed)}&page=${st.next}${cat !== "all" ? "&category=" + encodeURIComponent(cat) : ""}`);
       st.origin = r.origin; st.next = r.next;
       return r;
     } finally { st.loading = false; }
@@ -66,11 +68,13 @@ export async function discover(app) {
 
   app.innerHTML = `<h1 class="sr-only">${esc(t("feed.title"))}</h1><div class="feedbar"><span>📍 <span id="feedplace"></span></span>
     <form id="zipform" class="zipform"><label class="sr-only" for="feed-zip">${esc(t("f.zip"))}</label><input id="feed-zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" value="${esc(zip)}" aria-label="${esc(t("f.zip"))}"><button class="btn small" type="submit">${esc(t("feed.change"))}</button></form></div>
+    <div class="feedwrap-cats">${catChips(cat, { withAll: true })}</div>
     <div class="feedwrap"><div class="feed" id="feed" tabindex="0" role="feed" aria-label="${esc(t("feed.title"))}" aria-busy="true"></div>
     <div class="feed-nav"><button type="button" class="rail-btn" id="fprev" aria-label="${esc(t("feed.prev"))}">↑</button><button type="button" class="rail-btn" id="fnext" aria-label="${esc(t("feed.next"))}">↓</button></div></div>`;
   const feed = document.getElementById("feed");
   const fit = () => { const top = feed.getBoundingClientRect().top; feed.style.height = Math.max(420, window.innerHeight - top - 10) + "px"; };
   fit(); window.addEventListener("resize", fit);
+  app.querySelectorAll(".feedwrap-cats [data-cat]").forEach((b) => { b.onclick = () => { try { sessionStorage.setItem("bm_feed_cat", b.dataset.cat); } catch { /* ok */ } discover(app); }; });
   document.getElementById("zipform").onsubmit = (e) => {
     e.preventDefault();
     const v = document.getElementById("feed-zip").value.trim();

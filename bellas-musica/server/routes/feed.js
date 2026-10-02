@@ -2,7 +2,9 @@ import { HttpError, int, isZip, str } from "../util.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { MARKET } from "../market.js";
 import { embedUrl } from "../media.js";
-import { LIVE_SQL, firstPhotos, isPromoted, ratingMap, ratingOf } from "../shared.js";
+import { LIVE_SQL, firstPhotos, fromCents, isPromoted, ratingMap, ratingOf } from "../shared.js";
+import { CATEGORIES, categoryOf } from "../pricing.js";
+import { oneOf } from "../util.js";
 
 const PAGE = 6;           // cards per request
 const MAX_ITEMS = 60;     // the longest one session of scrolling can be; usually it ends sooner with "you've seen everyone nearby"
@@ -31,6 +33,7 @@ export default function feedRoutes(ctx, add) {
     const radius = query.radius ? int(query.radius, "radius", { min: 5, max: 150 }) : 60;
     const page = query.page ? int(query.page, "page", { min: 0, max: 100 }) : 0;
     const seed = str(query.seed || "x", "seed", { max: 40 });
+    const category = query.category ? oneOf(query.category, "category", ["all", ...Object.keys(CATEGORIES)]) : "all";
 
     const nearby = zipsWithin(origin, radius);
     const rows = nearby.length ? db.all(`SELECT * FROM groups WHERE ${LIVE_SQL} AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby) : [];
@@ -41,11 +44,12 @@ export default function feedRoutes(ctx, add) {
       if (!z) continue;
       const d = miles(origin, z);
       if (d > radius) continue;
+      if (category !== "all" && categoryOf(g.type) !== category) continue;
       const r = ratingOf(g, ratings);
       cards.set(g.id, {
         g, tier: g.video_provider ? 0 : photos.has(g.id) ? 1 : 2,
         item: {
-          id: g.id, name: g.name, type: g.type, city: z.city, state: z.state, distance_miles: Math.round(d),
+          id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), city: z.city, state: z.state, distance_miles: Math.round(d),
           rating: Math.round(r.rating * 10) / 10, reviews: r.reviews, members: g.members, story: String(g.story || "").slice(0, 160),
           from_cents: null, verified: Boolean(g.verified), insured: Boolean(g.insured), demo: Boolean(g.demo),
           promoted: isPromoted(g),
@@ -55,7 +59,7 @@ export default function feedRoutes(ctx, add) {
       });
     }
     const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
-    for (const c of cards.values()) c.item.from_cents = minPrice.get(c.g.id) ?? c.g.rate_cents;
+    for (const c of cards.values()) c.item.from_cents = fromCents(c.g, minPrice);
 
     const rand = rng(`${seed}|${zip}`);
     const all = [...cards.values()];

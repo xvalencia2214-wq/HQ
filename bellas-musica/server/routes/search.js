@@ -1,8 +1,8 @@
 import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
-import { ADDON_PRESETS, EVENT_TYPES, GROUP_TYPES, MAX_HOURS, POLICIES, SLOTS } from "../pricing.js";
+import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, POLICIES, SLOTS, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
-import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
+import { expirePending, firstPhotos, fromCents, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
 
 // Which music suits which event when a group hasn't said what it plays.
 const EVENT_FIT = {
@@ -24,6 +24,8 @@ export default function searchRoutes(ctx, add) {
     if (!origin) throw new HttpError(404, "We don't recognize that ZIP code");
     const radius = q.radius ? int(q.radius, "radius", { min: 5, max: 250 }) : defaultRadius;
     const type = q.type ? oneOf(q.type, "type", GROUP_TYPES) : "";
+    // Music unless asked otherwise ("all" = every kind of vendor); a type implies its category.
+    const category = type ? categoryOf(type) : q.category ? oneOf(q.category, "category", ["all", ...Object.keys(CATEGORIES)]) : "music";
     const event = q.event ? oneOf(q.event, "event", EVENT_TYPES) : "";
     const maxPrice = q.max ? int(q.max, "max", { min: 1, max: 100000 }) * 100 : 0;
     const guests = q.guests ? int(q.guests, "guests", { min: 1, max: 5000 }) : 0;
@@ -37,6 +39,8 @@ export default function searchRoutes(ctx, add) {
     const ratings = ratingMap(db), photos = firstPhotos(db);
     const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
 
+    // Price filters and sorting compare the hourly price, or the cheapest package for listings booked by package only.
+    const priceKey = (g) => (g.hourly !== 0 ? g.rate_cents : fromCents(g, minPrice));
     let list = [];
     // Only groups whose ZIP is inside the radius can match, so let SQL skip everything else.
     const nearby = zipsWithin(origin, radius);
@@ -47,7 +51,8 @@ export default function searchRoutes(ctx, add) {
       const distance = miles(origin, z);
       if (distance > radius) continue;
       if (type && g.type !== type) continue;
-      if (maxPrice && g.rate_cents > maxPrice) continue;
+      if (category !== "all" && categoryOf(g.type) !== category) continue;
+      if (maxPrice && priceKey(g) > maxPrice) continue;
       if (guests && g.max_guests < guests) continue;
       const songs = safeJson(g.songs, []);
       const matched = song ? songs.filter((s) => norm(s).includes(song)) : [];
@@ -63,7 +68,7 @@ export default function searchRoutes(ctx, add) {
       const pa = isPromoted(a.g), pb = isPromoted(b.g);
       if (pa !== pb) return pa ? -1 : 1;
       if (event && a.fits !== b.fits) return a.fits ? -1 : 1;
-      if (sort === "price") return a.g.rate_cents - b.g.rate_cents;
+      if (sort === "price") return priceKey(a.g) - priceKey(b.g);
       if (sort === "distance") return a.distance - b.distance;
       return b.score - a.score || b.r.reviews - a.r.reviews;
     });
@@ -77,7 +82,7 @@ export default function searchRoutes(ctx, add) {
           rating: x.r,
           fields: {
             distance_miles: Math.round(x.distance), photo: photos.has(x.g.id) ? "/uploads/" + photos.get(x.g.id) : null,
-            from_cents: minPrice.get(x.g.id) ?? x.g.rate_cents, fits_event: x.fits, matched_songs: x.matched.slice(0, 3),
+            from_cents: fromCents(x.g, minPrice), fits_event: x.fits, matched_songs: x.matched.slice(0, 3),
             open_slots: x.openForDate, lat: lookupZip(x.g.zip).lat, lon: lookupZip(x.g.zip).lon
           }
         });
@@ -92,7 +97,7 @@ export default function searchRoutes(ctx, add) {
   add("GET", "/api/health", () => ({ ok: true }));
 
   add("GET", "/api/meta", () => ({
-    events: EVENT_TYPES, group_types: GROUP_TYPES, slots: SLOTS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
+    events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
     payments: stripe.mode, sms: sms.mode, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()

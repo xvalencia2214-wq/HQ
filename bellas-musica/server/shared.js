@@ -1,5 +1,5 @@
 import { HttpError, now, safeJson, todayStr, addDays, rid, withLock } from "./util.js";
-import { SLOTS } from "./pricing.js";
+import { SLOTS, categoryOf } from "./pricing.js";
 import { lookupZip } from "./geo.js";
 import { embedUrl } from "./media.js";
 
@@ -62,6 +62,9 @@ export function doneCount(db, groupId) {
 
 export const isPromoted = (g) => g.promoted_until > now();
 
+// The "from" price on cards: the cheapest package, else the hourly price (for listings that can be booked by the hour).
+export const fromCents = (g, minPrice) => minPrice.get(g.id) ?? (g.hourly !== 0 ? g.rate_cents : 0);
+
 export function isBookable(ctx, g) {
   // In live Stripe mode only real groups that finished payout setup can take deposits.
   return ctx.stripe.live ? !g.demo && Boolean(g.stripe_ready) : true;
@@ -78,7 +81,7 @@ export function publicGroup(ctx, g, extras = {}) {
   const zip = lookupZip(g.zip);
   const { rating, reviews } = extras.rating || ratingOf(g, ratingMap(ctx.db));
   return {
-    id: g.id, name: g.name, type: g.type, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
+    id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), hourly: g.hourly !== 0, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
     rate_cents: g.rate_cents, min_hours: g.min_hours || 1, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
     events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,

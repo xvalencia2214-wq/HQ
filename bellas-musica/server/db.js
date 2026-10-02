@@ -279,6 +279,7 @@ export function openDb(config) {
     return true;
   };
   ensureColumn("groups", "min_hours", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("groups", "hourly", "INTEGER NOT NULL DEFAULT 1"); // 0: booked by package only (tents, food trucks...)
   ensureColumn("bookings", "addons_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn("bookings", "addons_cents", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_requests", "expanded", "INTEGER NOT NULL DEFAULT 0");

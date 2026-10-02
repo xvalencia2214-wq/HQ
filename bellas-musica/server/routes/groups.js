@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES, GROUP_TYPES, MAX_ADDONS, MAX_HOURS, POLICIES, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_HOURS, POLICIES, SLOTS, categoryOf } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
@@ -34,7 +34,7 @@ export default function groupRoutes(ctx, add) {
       { key: "video", done: Boolean(g.video_provider), tab: "media" },
       { key: "story", done: g.story.trim().length >= 80, tab: "listing" },
       { key: "events", done: detail.events.length >= 1, tab: "listing" },
-      { key: "songs", done: detail.songs.length >= 5, tab: "extras" },
+      ...(detail.category === "music" ? [{ key: "songs", done: detail.songs.length >= 5, tab: "extras" }] : []),
       { key: "packages", done: detail.packages.length >= 1, tab: "extras" },
       { key: "dates", done: openDates >= 4, tab: "calendar" },
       { key: "payouts", done: Boolean(g.stripe_ready), tab: "payments" },
@@ -49,6 +49,7 @@ export default function groupRoutes(ctx, add) {
     if (detail.photos.length < 1) missing.push("photos");
     if (g.story.trim().length < 40) missing.push("story");
     if (detail.events.length < 1) missing.push("events");
+    if (g.hourly === 0 && detail.packages.length < 1) missing.push("packages"); // booked by package only: needs one to book
     if (db.get("SELECT COUNT(*) c FROM availability WHERE group_id = ? AND date > ?", g.id, todayStr()).c < 1) missing.push("dates");
     if (stripe.live && !g.stripe_ready) missing.push("payouts");
     return missing;
@@ -81,9 +82,13 @@ export default function groupRoutes(ctx, add) {
     const zip = str(body.zip, "ZIP", { required: true, max: 5 });
     if (!isZip(zip) || !lookupZip(zip)) throw new HttpError(400, "Enter a valid US ZIP code");
     const id = `${slug(name)}-${rid(3).toLowerCase().replace(/[^a-z0-9]/g, "x")}`;
+    const type = oneOf(body.type, "Type", GROUP_TYPES);
+    // Booked by the hour (music, photographers, security...) or only by package (tents, food trucks...). Hourly listings need a price per hour.
+    const hourly = body.hourly === undefined ? HOURLY_BY_DEFAULT[categoryOf(type)] : body.hourly === true;
+    const rate = hourly || (body.rate !== undefined && body.rate !== null && body.rate !== "") ? dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 }) : 0;
     db.run(
-      `INSERT INTO groups (id, owner_id, name, type, zip, rate_cents, members, story, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, user.id, name, oneOf(body.type, "Type", GROUP_TYPES), zip, dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 }),
+      `INSERT INTO groups (id, owner_id, name, type, zip, rate_cents, members, story, created_at, hourly) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${hourly ? 1 : 0})`,
+      id, user.id, name, type, zip, rate,
       int(body.members ?? 1, "Musicians", { min: 1, max: 40 }), str(body.story, "Story", { max: 800 }), now());
     // No payout account yet: in simulated mode this is instant; live mode requires Stripe onboarding.
     if (!stripe.live) db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", id);
@@ -122,6 +127,11 @@ export default function groupRoutes(ctx, add) {
     if (body.type !== undefined) set.type = oneOf(body.type, "Type", GROUP_TYPES);
     if (body.zip !== undefined) { if (!isZip(body.zip) || !lookupZip(body.zip)) throw new HttpError(400, "Enter a valid US ZIP code"); set.zip = body.zip; }
     if (body.rate !== undefined) set.rate_cents = dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 });
+    if (body.hourly !== undefined) {
+      if (typeof body.hourly !== "boolean") throw new HttpError(400, "Booking by the hour must be on or off");
+      set.hourly = body.hourly ? 1 : 0;
+      if (body.hourly && (set.rate_cents ?? g.rate_cents) < 5000) throw new HttpError(400, "Set a price per hour (at least $50) to take bookings by the hour");
+    }
     if (body.min_hours !== undefined) set.min_hours = int(body.min_hours, "Minimum hours", { min: 1, max: MAX_HOURS });
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
     if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
