@@ -22,6 +22,7 @@ function card(b) {
       ${b.can_pay_balance ? `<button class="btn small" data-balance="${esc(b.id)}">${esc(t("bal.payNow", { amount: money(b.balance_cents) }))}</button> ` : ""}
       ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}
       ${b.can_cancel ? `<button class="btn ghost small" data-cancel="${esc(b.id)}" data-refund="${b.refund_if_cancel_cents}">${esc(t("bk.cancel"))}</button>` : ""}
+      ${b.can_confirm_arrival ? `<button class="btn ghost small" data-arrived="${esc(b.id)}">${esc(t("show.arrived"))}</button> ` : ""}
       ${b.can_report_noshow ? `<button class="btn ghost small" data-noshow="${esc(b.id)}">${esc(t("show.report"))}</button> ` : ""}
       ${b.can_review ? `<button class="btn small" data-review="${esc(b.id)}">${esc(t("bk.review"))}</button>` : ""}
       ${b.reviewed ? `<span class="dim small">✓ ${esc(t("bk.reviewed"))}</span>` : ""}</div>
@@ -110,6 +111,12 @@ function wire(root, reload) {
     b.onclick = async () => {
       try { await api.del(`/api/bookings/${encodeURIComponent(b.dataset.unresched)}/reschedule`); toast(t("rs.withdrawn")); reload(); }
       catch (e) { toast(e.message, "error"); }
+    };
+  });
+  root.querySelectorAll("[data-arrived]").forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm(t("show.arrivedConfirm"))) return;
+      try { await api.post(`/api/bookings/${encodeURIComponent(b.dataset.arrived)}/arrived`); toast(t("show.arrivedDone")); reload(); } catch (e) { toast(e.message, "error"); }
     };
   });
   root.querySelectorAll("[data-noshow]").forEach((b) => {

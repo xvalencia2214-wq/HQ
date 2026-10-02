@@ -82,26 +82,31 @@ export const LANDING_EVENTS = {
 const LANDING_RADIUS = 20; // miles from the neighborhood's ZIP
 
 // Real live groups serving a neighborhood, nearest first; with an event, those that play it (or haven't limited their events).
-export function landingGroups(ctx, hood, eventKey) {
+const playsEvent = (x, eventKey) => { if (!eventKey) return true; const events = safeJson(x.g.events, []); return !events.length || events.includes(LANDING_EVENTS[eventKey].event); };
+
+// All real live groups near a neighborhood, nearest first. `shared` lets the sitemap load ratings and prices once for every neighborhood.
+function hoodGroups(ctx, hood, shared = {}) {
   const { db } = ctx;
   const origin = lookupZip(hood.zip);
   if (!origin) return [];
   const nearby = zipsWithin(origin, LANDING_RADIUS);
   if (!nearby.length) return [];
-  const ratings = ratingMap(db);
-  const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
-  const want = eventKey ? LANDING_EVENTS[eventKey].event : "";
+  const ratings = shared.ratings || ratingMap(db);
+  const minPrice = shared.minPrice || new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
   const out = [];
   for (const g of db.all(`SELECT * FROM groups WHERE demo = 0 AND ${LIVE_SQL} AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby)) {
     const z = lookupZip(g.zip);
     if (!z) continue;
     const d = miles(origin, z);
     if (d > LANDING_RADIUS) continue;
-    const events = safeJson(g.events, []);
-    if (want && events.length && !events.includes(want)) continue;
     out.push({ g, distance: d, from: minPrice.get(g.id) ?? g.rate_cents, r: ratingOf(g, ratings), place: `${z.city}, ${z.state}` });
   }
   return out.sort((a, b) => a.distance - b.distance || b.r.rating - a.r.rating);
+}
+
+// Real live groups serving a neighborhood; with an event, those that play it (or haven't limited their events).
+export function landingGroups(ctx, hood, eventKey) {
+  return hoodGroups(ctx, hood).filter((x) => playsEvent(x, eventKey));
 }
 
 export function renderLandingPage(ctx, hoodId, eventKey) {
@@ -139,16 +144,25 @@ export function robotsTxt(config) {
   return `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${config.baseUrl}/sitemap.xml\n`;
 }
 
+// Built from every real group, so with thousands of groups it is not free. This server handles one request at a time, so the result
+// is kept for a few minutes (SITEMAP_CACHE seconds; a crawler doesn't need it to be fresher) and each neighborhood is loaded once.
+let sitemapCache = { at: 0, key: "", xml: "" };
 export function sitemapXml(ctx) {
   const { db, config } = ctx;
+  const ttl = config.sitemapCacheSeconds * 1000;
+  if (ttl > 0 && sitemapCache.key === config.baseUrl && Date.now() - sitemapCache.at < ttl) return sitemapCache.xml;
   const urls = [config.baseUrl + "/", `${config.baseUrl}/c/${MARKET.key}`];
   const zips = new Set();
   for (const g of db.all(`SELECT id, zip FROM groups WHERE demo = 0 AND ${LIVE_SQL} ORDER BY created_at`)) { urls.push(`${config.baseUrl}/g/${g.id}`); zips.add(g.zip); }
   for (const z of zips) urls.push(`${config.baseUrl}/b/${z}`);
   // landing pages only when a real group stands behind them
+  const shared = { ratings: ratingMap(db), minPrice: new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m])) };
   for (const hood of MARKET.neighborhoods) {
-    if (landingGroups(ctx, hood, "").length) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}`);
-    for (const k of Object.keys(LANDING_EVENTS)) if (landingGroups(ctx, hood, k).length) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}/${k}`);
+    const all = hoodGroups(ctx, hood, shared);
+    if (all.length) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}`);
+    for (const k of Object.keys(LANDING_EVENTS)) if (all.some((x) => playsEvent(x, k))) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}/${k}`);
   }
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${h(u)}</loc></url>`).join("\n")}\n</urlset>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${h(u)}</loc></url>`).join("\n")}\n</urlset>\n`;
+  sitemapCache = { at: Date.now(), key: config.baseUrl, xml };
+  return xml;
 }

@@ -52,10 +52,33 @@ test("check-in: the customer's 4-digit code appears only around the event, only 
     const b2 = (await cust.post("/api/bookings", bookingBody(gid, inDays(31), { time: "4:00 PM" }))).json.booking; setDate(S, b2.id, inDays(0));
     assert.equal((await owner.post(`/api/bookings/${b2.id}/checkin`, { code: "1234" })).status, 400);
     await cust.post(`/api/bookings/${b2.id}/simulate-pay`); await owner.patch(`/api/bookings/${b2.id}`, { action: "accept" });
-    const real = (await custView(cust, b2.id)).checkin_code; let got429 = false;
-    for (let i = 0; i < 14; i++) { const r = await owner.post(`/api/bookings/${b2.id}/checkin`, { code: i % 2 ? "0001" : "0002" }); if (r.status === 429) got429 = true; }
-    assert.ok(got429, "guessing the code is rate limited");
-    assert.equal(S.db.get("SELECT checked_in_at c FROM bookings WHERE id = ?", b2.id).c, 0); assert.ok(real);
+    const real = (await custView(cust, b2.id)).checkin_code, miss = real === "1111" ? "2222" : "1111";
+    // guessing is hard-capped: 3 wrong codes lock this booking's check-in, and even the RIGHT code is refused while locked
+    const tries = [];
+    for (let i = 0; i < 3; i++) tries.push(await owner.post(`/api/bookings/${b2.id}/checkin`, { code: miss }));
+    assert.deepEqual(tries.map((r) => r.status), [400, 400, 400]);
+    assert.match(tries[0].json.error, /2 tries left/); assert.match(tries[2].json.error, /locked/);
+    const locked = await owner.post(`/api/bookings/${b2.id}/checkin`, { code: real });
+    assert.equal(locked.status, 429); assert.match(locked.json.error, /The group arrived/);
+    assert.equal(S.db.get("SELECT checked_in_at c FROM bookings WHERE id = ?", b2.id).c, 0);
+    const ov2 = await ownView(owner, gid, b2.id); assert.deepEqual([ov2.checkin_locked, ov2.can_checkin], [true, false]);
+    // the lock is stored with the booking (a restart or a different IP doesn't reset it) and ends after 3 hours
+    assert.ok(S.db.get("SELECT checkin_locked_until u FROM bookings WHERE id = ?", b2.id).u > Math.floor(Date.now() / 1000) + 3 * 3600 - 60);
+    S.db.run("UPDATE bookings SET checkin_locked_until = ? WHERE id = ?", Math.floor(Date.now() / 1000) - 1, b2.id);
+    assert.equal((await owner.post(`/api/bookings/${b2.id}/checkin`, { code: miss })).status, 400); // unlocked again: the next miss counts from zero
+    assert.equal((await owner.post(`/api/bookings/${b2.id}/checkin`, { code: real })).status, 200);
+    // the way out for a locked-out honest group: the customer confirms the arrival in their own app (event day only, theirs only)
+    const b3 = (await cust.post("/api/bookings", bookingBody(gid, inDays(31), { time: "12:00 PM" }))).json.booking;
+    await cust.post(`/api/bookings/${b3.id}/simulate-pay`); await owner.patch(`/api/bookings/${b3.id}`, { action: "accept" });
+    const arrived = (c, id) => c.post(`/api/bookings/${id}/arrived`, {});
+    assert.equal((await arrived(cust, b3.id)).status, 400); // not the event day yet
+    setDate(S, b3.id, inDays(0));
+    assert.equal((await custView(cust, b3.id)).can_confirm_arrival, true);
+    assert.equal((await arrived(owner, b3.id)).status, 404); assert.equal((await arrived(client(S.base), b3.id)).status, 401); // only the customer
+    const done = await arrived(cust, b3.id); assert.equal(done.status, 200); assert.deepEqual([done.json.booking.checked_in, done.json.booking.can_confirm_arrival], [true, false]);
+    assert.equal((await arrived(cust, b3.id)).status, 400); // once
+    assert.equal(S.db.get("SELECT checked_in_at c FROM bookings WHERE id = ?", b3.id).c > 0, true);
+    setDate(S, b3.id, inDays(-1)); assert.equal((await custView(cust, b3.id)).can_report_noshow, false); // and a confirmed arrival blocks a no-show report, like a code check-in
   } finally { await S.close(); }
 });
 

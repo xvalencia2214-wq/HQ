@@ -8,7 +8,7 @@ import { createApp } from "../server/app.js";
 
 export async function startApp(env = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bm-test-"));
-  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_FORGOT: "1000", RATE_WAITLIST: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", ...env });
+  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_FORGOT: "1000", RATE_WAITLIST: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", SITEMAP_CACHE: "0", ...env });
   const app = createApp(config);
   const port = await app.listen(0);
   const base = `http://127.0.0.1:${port}`;

@@ -33,6 +33,7 @@ export function loadConfig(env = process.env) {
     secret,
     demoSeed: env.DEMO_SEED !== "0",
     adminEmails: String(env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean), // who may open the admin page
+    sitemapCacheSeconds: int(env.SITEMAP_CACHE, 600), // sitemap.xml is rebuilt at most this often (0 = every request; tests use 0)
     timezone: env.BUSINESS_TZ || "America/Chicago", // the calendar day used for "today", holds and refund windows
     // Rate limits (max requests per window per client); tests raise these
     limits: {

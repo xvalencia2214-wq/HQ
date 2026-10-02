@@ -275,6 +275,8 @@ export function openDb(config) {
   ensureColumn("event_requests", "budget_max", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_requests", "stage", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("event_requests", "size", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "checkin_fails", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "checkin_locked_until", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "checkin_code", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("bookings", "checked_in_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "noshow_status", "TEXT NOT NULL DEFAULT ''");   // '' | reported | refunded | rejected

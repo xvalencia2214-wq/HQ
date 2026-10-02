@@ -11,11 +11,11 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 98 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 99 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
 node e2e/e2e.mjs [dir]                     # 48-step end-to-end run: manager sets up and publishes, customer books, chats, cancels, admin
 node e2e/e2e3.mjs [dir]                    # 14-step run of the Discover feed (video mounting, promoted slots, counters, reduced motion, desktop)
-node e2e/e2e4.mjs [dir]                    # 15-step run of the show-up guarantee and the agreement
+node e2e/e2e4.mjs [dir]                    # 17-step run of the show-up guarantee (incl. the check-in lock and the customer's "group arrived") and the agreement
 node e2e/e2e6.mjs [dir]                    # 22-step run of Get quotes: the step-by-step flow, group offer, booking the offer, account-last, resume after refresh, no-match, Spanish
 node e2e/e2e5.mjs [dir]                    # 22-step run of saved groups, shortlists, neighborhood landing pages, TikTok/Instagram clips
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
@@ -46,7 +46,7 @@ In test mode payments and texts are **simulated** (a banner says so), and fictio
 | Booked here | Each group shows how many events it has actually played through the site (confirmed, past, money not refunded). A refunded no-show doesn't count |
 | Saved groups | A heart on every card, profile and Discover reel; `#/saved` lists them and makes a **shortlist link** (a read-only snapshot with the sharer's first name only) to send a partner or family chat; links can be revoked |
 | Landing pages | `/chicago/<neighborhood>` and `/chicago/<neighborhood>/<event>`: server-rendered pages for searches like "mariachi for a quinceañera in Pilsen", listing the **real** (non-sample) live groups within 20 miles with prices and structured data. A page with no real group behind it is served but `noindex` and left out of the sitemap. Inside the app they open the matching search |
-| Show-up guarantee | Arrival code for the customer on the event day, group check-in, no-show reports for 3 days, admin review queue with a one-click full refund (deposit and balance, payout reversed) |
+| Show-up guarantee | Arrival code for the customer on the event day, group check-in (3 wrong codes lock it for 3 hours; the customer can confirm the arrival in their own app instead), no-show reports for 3 days, admin review queue with a one-click full refund (deposit and balance, payout reversed) |
 | Agreement | Printable one-page booking agreement for either side (`#/agreement/<id>`) |
 | Chicago | `#/chicago` landing page (neighborhood quick-picks, how it works, FAQ, top groups), launch-market waitlist for other cities, Chicagoland sample groups |
 | Publishing | New listings are drafts; the group sees exactly what is missing (photo, story, events, an open date, payouts in live mode) and publishes or pauses with one tap |

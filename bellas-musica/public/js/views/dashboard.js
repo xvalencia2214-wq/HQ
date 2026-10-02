@@ -100,6 +100,7 @@ async function requests({ g, body, refresh }) {
        <button class="btn small" data-rs="accept" data-id="${esc(b.id)}">${esc(t("rs.accept"))}</button> <button class="btn ghost small" data-rs="decline" data-id="${esc(b.id)}">${esc(t("rs.decline"))}</button></div>` : "");
   const showBox = (b) => {
     let out = b.checked_in ? `<br><span class="dim small">✓ ${esc(t("show.checkedIn"))}</span>` : "";
+    if (b.checkin_locked && !b.checked_in) out += `<div class="note warn small">${esc(t("show.locked"))}</div>`;
     if (b.noshow && b.noshow.status === "reported") out += `<div class="note warn small">${esc(t("show.groupReport", { note: b.noshow.note }))}${b.noshow.reply ? `<br>${esc(t("show.answered", { text: b.noshow.reply }))}` : ""}${b.can_reply_noshow ? `<br><button class="btn small" data-nsreply="${esc(b.id)}">${esc(t("show.answer"))}</button>` : ""}</div>`;
     else if (b.noshow) out += `<div class="dim small">${esc(t(b.noshow.status === "refunded" ? "show.stRefunded" : "show.stRejected"))}</div>`;
     return out + `<div class="ci-slot"></div>`;

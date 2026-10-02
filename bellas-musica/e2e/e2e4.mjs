@@ -67,6 +67,20 @@ try {
   await go(Cu, "#/bookings"); await Cu.waitForSelector(".req");
   ok("the customer sees the outcome", (await Cu.locator("#app").innerText()).includes("No-show confirmed: refunded"));
 
+  // a group that mistypes the code 3 times is locked out; the customer confirms the arrival instead
+  const third = await make(dates[2], "4:00 PM"); S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(0), third.id);
+  await go(Ow, `#/dashboard?g=${gid}&tab=requests&lk=1`); await Ow.waitForSelector(`[data-checkin="${third.id}"]`);
+  for (let k = 0; k < 3; k++) {
+    await Ow.click(`[data-checkin="${third.id}"]`); await Ow.fill(".ci-slot input", "0000"); await Ow.click(".ci-slot button[type=submit]");
+    await Ow.waitForSelector(".ci-slot .err:not(:empty)");
+    if (k < 2) await Ow.reload().then(() => Ow.waitForSelector(`[data-checkin="${third.id}"]`)); 
+  }
+  await go(Ow, `#/dashboard?g=${gid}&tab=requests&lk=2`); await Ow.waitForSelector(".note.warn.small");
+  ok("after 3 wrong codes the group sees that check-in is locked, with the way out", (await Ow.locator("#app").innerText()).includes("locked after 3 wrong codes") && (await Ow.locator(`[data-checkin="${third.id}"]`).count()) === 0);
+  await go(Cu, "#/bookings"); await Cu.waitForSelector(`[data-arrived="${third.id}"]`);
+  Cu.once("dialog", (d) => d.accept()); await Cu.click(`[data-arrived="${third.id}"]`); await Cu.waitForFunction(() => !document.querySelector("[data-arrived]"));
+  ok("the customer confirms the arrival in their own app", S.db.get("SELECT checked_in_at c FROM bookings WHERE id = ?", third.id).c > 0);
+
   // agreement
   await Cu.click(`a[href="#/agreement/${today.id}"]`); await Cu.waitForSelector(".agreement");
   const text = await Cu.locator(".agreement").innerText();

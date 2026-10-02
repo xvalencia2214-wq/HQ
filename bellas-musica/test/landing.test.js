@@ -60,3 +60,21 @@ test("landing pages: real groups only, honest counts, escaped, noindex when empt
     assert.ok(!sm.includes(sample.id));
   } finally { await S.close(); }
 });
+
+test("sitemap is cached for SITEMAP_CACHE seconds (a crawler never makes the single-threaded server rebuild it every time) and rebuilt after", async () => {
+  const S = await startApp({ DEMO_SEED: "0", SITEMAP_CACHE: "600" });
+  try {
+    const first = await page(S, "/sitemap.xml");
+    const o = client(S.base); await o.signup("sc@example.com", "Cache Owner");
+    const gid = await makeGroup(o, { name: "Late Band", dates: [inDays(20)] });
+    const second = await page(S, "/sitemap.xml");
+    assert.equal(second.html, first.html); assert.ok(!second.html.includes(gid)); // cached: the new group isn't there yet
+    assert.ok(!second.html.includes("/chicago/pilsen</loc>"));
+  } finally { await S.close(); }
+  const S2 = await startApp({ DEMO_SEED: "0", SITEMAP_CACHE: "0" }); // 0 = always fresh
+  try {
+    const o = client(S2.base); await o.signup("sc2@example.com", "Fresh Owner");
+    const gid = await makeGroup(o, { name: "Fresh Band", dates: [inDays(20)] });
+    assert.ok((await page(S2, "/sitemap.xml")).html.includes(gid));
+  } finally { await S2.close(); }
+});
