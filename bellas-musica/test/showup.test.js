@@ -127,6 +127,7 @@ test("no-show: reportable only after the day, within 3 days, never after a check
     const after = S.db.get("SELECT payment_status, refund_cents, balance_status, balance_refund_cents, noshow_status FROM bookings WHERE id = ?", a.id);
     assert.deepEqual({ ...after }, { payment_status: "refunded", refund_cents: 15000, balance_status: "refunded", balance_refund_cents: 45000, noshow_status: "refunded" });
     assert.match(mails(S, "noshow.refunded.customer")[0].subject, /\$600/);
+    assert.equal((await custView(cust, a.id)).status, "cancelled"); assert.equal((await ownView(owner, gid, a.id)).status, "cancelled"); // not "Completed": the event didn't happen
     assert.equal((await boss.post(`/api/admin/bookings/${a.id}/noshow`, { refund: true })).status, 400); // decided once
     assert.equal((await custView(cust, a.id)).can_review, false); // no review for an event that didn't happen
     assert.ok(S.db.get("SELECT 1 AS x FROM admin_log WHERE action = 'no-show refund'"));

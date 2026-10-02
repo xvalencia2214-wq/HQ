@@ -30,6 +30,12 @@ function checkInvariants(db, fake, log) {
     if (b.balance_status !== "unpaid" && !["confirmed", "cancelled"].includes(b.status)) fail("balance touched on a booking that was never confirmed", b);
     if (b.status === "cancelled" && b.balance_status === "paid" && b.refund_cents === b.deposit_cents && b.payment_status === "refunded") fail("cancelled with everything refunded but the balance was left paid", b);
   }
+  for (const b of db.all("SELECT * FROM bookings WHERE noshow_status != '' OR checked_in_at > 0")) { // show-up guarantee
+    if (b.checked_in_at > 0 && b.noshow_status !== "") fail("a no-show was reported on a booking the group checked in to", b);
+    if (b.noshow_status === "reported" && b.status !== "confirmed") fail("open no-show report on a booking that isn't confirmed", b);
+    if (b.noshow_status === "refunded" && (b.payment_status !== "refunded" || ["paid", "partial_refund"].includes(b.balance_status))) fail("no-show refund left money behind", b);
+    if (b.noshow_status === "rejected" && b.payment_status === "refunded") fail("no-show rejected but everything was refunded", b);
+  }
   if (db.get("SELECT 1 AS x FROM extra_refunds WHERE cents <= 0")) fail("empty stray refund", {});
   const dup = db.get(`SELECT group_id, date, time, COUNT(*) c FROM bookings WHERE status IN ('pending_payment','requested','confirmed') GROUP BY group_id, date, time HAVING c > 1`);
   if (dup) fail("double-booked slot", dup);
@@ -49,11 +55,12 @@ function checkInvariants(db, fake, log) {
 async function run(mode, seed, steps) {
   const R = rng(seed), pick = (a) => a[Math.floor(R() * a.length)];
   const fake = mode === "live" ? await fakeStripe() : null;
-  const S = await startApp(mode === "live" ? { STRIPE_SECRET_KEY: "sk_test_f", STRIPE_WEBHOOK_SECRET: "whsec_f", STRIPE_API_BASE: fake.url } : {});
+  const S = await startApp({ ADMIN_EMAILS: "fz-admin@example.com", ...(mode === "live" ? { STRIPE_SECRET_KEY: "sk_test_f", STRIPE_WEBHOOK_SECRET: "whsec_f", STRIPE_API_BASE: fake.url } : {}) });
   const log = [];
   try {
     const owners = [client(S.base), client(S.base)], custs = [0, 1, 2, 3].map(() => client(S.base));
     await Promise.all([...owners.map((o, i) => o.signup(`fo${i}@example.com`, `Owner ${i}`)), ...custs.map((c, i) => c.signup(`fc${i}@example.com`, `Cust ${i} Name`))]);
+    const admin = client(S.base); await admin.signup("fz-admin@example.com", "Fuzz Admin");
     const dates = [12, 13, 14, 19, 20].map(inDays);
     const groups = [];
     for (const [i, o] of owners.entries()) for (const pol of ["flexible", "moderate", "strict"].slice(i, i + 2)) {
@@ -69,6 +76,19 @@ async function run(mode, seed, steps) {
     for (let i = 0; i < steps; i++) {
       const roll = R() * 100, b = bookings.length ? pick(bookings) : null;
       let what;
+      if (b && R() < 0.05) { // show-up guarantee: the event passes, the customer may report a no-show, the admin decides (sometimes twice at once)
+        what = `no-show ${b.id}`;
+        if (R() < 0.6) S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-1), b.id);
+        if (R() < 0.2) await b.cust.post(`/api/bookings/${b.id}/arrived`, {}); // the customer confirming an arrival (only valid on the day, so mostly refused)
+        ok(await b.cust.post(`/api/bookings/${b.id}/noshow`, { note: "Nobody came at all" }), what);
+        if (R() < 0.7) {
+          const refund = R() < 0.7; if (fake) fake.state.failRefunds = R() < 0.25;
+          if (R() < 0.25) (await Promise.all([admin.post(`/api/admin/bookings/${b.id}/noshow`, { refund }), admin.post(`/api/admin/bookings/${b.id}/noshow`, { refund })])).forEach((r) => ok(r, what + " double decide"));
+          else ok(await admin.post(`/api/admin/bookings/${b.id}/noshow`, { refund }), what + ` decide refund=${refund}`);
+          if (fake) fake.state.failRefunds = false;
+        }
+        log.push(what); checkInvariants(S.db, fake, log); continue;
+      }
       if (roll < 22 || !b) { // create
         const g = pick(groups), c = pick(custs);
         const body = bookingBody(g.id, pick(dates), { time: pick(["12:00 PM", "2:00 PM", "4:00 PM"]), hours: pick([1, 2, 3]), eventZip: pick(["60608", "77003"]) });

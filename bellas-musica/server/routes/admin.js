@@ -119,7 +119,8 @@ export default function adminRoutes(ctx, add) {
     if (body.refund === true) {
       let cur = await refundBooking(ctx, b, b.deposit_cents - b.refund_cents); // if Stripe fails this throws and nothing else changes
       cur = await refundBalance(ctx, cur, balanceCents(cur) - cur.balance_refund_cents);
-      db.run("UPDATE bookings SET noshow_status = 'refunded', updated_at = ? WHERE id = ?", now(), b.id);
+      // The event did not happen, so the booking ends as cancelled (otherwise a past, fully refunded booking would read "Completed").
+      db.run("UPDATE bookings SET noshow_status = 'refunded', status = 'cancelled', updated_at = ? WHERE id = ?", now(), b.id);
       const total = cur.refund_cents + cur.balance_refund_cents;
       ctx.notify.to(b.customer_id, "noshow.refunded.customer", { ...ctx.notify.bookingVars(b, g), refund: usd(total), url });
       log(user, "no-show refund", b.id, `${usd(total)} refunded, group ${b.group_name}`);
