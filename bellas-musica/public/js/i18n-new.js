@@ -1,6 +1,13 @@
 // Strings for password recovery, the Chicago page, publishing, balance payments, rescheduling, custom offers,
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
+  // get quotes + booked-here count
+  "nav.quotes": "Get quotes", "rq.title": "Get quotes for your event", "rq.sub": "Tell us about your event once. We send it to up to 5 groups that are actually free that day, fit your guest count and play your kind of event. They reply with a price.",
+  "rq.note": "Anything the group should know? (optional)", "rq.notePh": "Outdoor patio, we want Las Mañanitas at midnight…", "rq.send": "Send to the best groups",
+  "rq.p1": "Only groups that are free that day see it, never a blast to everyone.", "rq.p2": "It's free. Groups don't pay for requests either.", "rq.p3": "No deposit until you pick a group and book.",
+  "rq.sent": "Sent to {n} groups. Replies will show here.", "rq.none": "No group that fits is free that day near that ZIP.", "rq.wider": "Search with more flexibility",
+  "rq.yours": "Your requests", "rq.summary": "{guests} guests · sent to {n} · {a} answered", "rq.waiting": "Waiting for a reply", "rq.replied": "Replied in {n} min. See your messages.", "rq.gone": "No longer available", "rq.open": "Open profile",
+  "rq.cta": "Not sure who to pick? Let groups send you quotes", "card.done": "{n} events booked here", "card.doneOne": "1 event booked here",
   // saved groups and shortlists
   "nav.saved": "Saved", "fav.save": "Save this group", "fav.unsave": "Remove from saved", "fav.saved": "Saved ♥", "fav.removed": "Removed from saved",
   "fav.title": "Saved groups", "fav.none": "Tap the ♡ on any group to keep it here.", "fav.share": "Send my shortlist",
@@ -100,6 +107,12 @@ export const EN2 = {
 };
 
 export const ES2 = {
+  "nav.quotes": "Cotizaciones", "rq.title": "Pide cotizaciones para tu evento", "rq.sub": "Cuéntanos de tu evento una sola vez. Lo enviamos hasta a 5 grupos que de verdad están libres ese día, caben tus invitados y tocan tu tipo de evento. Ellos te responden con un precio.",
+  "rq.note": "¿Algo que el grupo deba saber? (opcional)", "rq.notePh": "Patio al aire libre, queremos Las Mañanitas a medianoche…", "rq.send": "Enviar a los mejores grupos",
+  "rq.p1": "Solo lo ven grupos libres ese día, nunca se manda a todos.", "rq.p2": "Es gratis. Los grupos tampoco pagan por las solicitudes.", "rq.p3": "Sin depósito hasta que elijas un grupo y reserves.",
+  "rq.sent": "Enviado a {n} grupos. Las respuestas aparecerán aquí.", "rq.none": "Ningún grupo que encaje está libre ese día cerca de ese código postal.", "rq.wider": "Buscar con más flexibilidad",
+  "rq.yours": "Tus solicitudes", "rq.summary": "{guests} invitados · enviado a {n} · {a} respondieron", "rq.waiting": "Esperando respuesta", "rq.replied": "Respondió en {n} min. Mira tus mensajes.", "rq.gone": "Ya no está disponible", "rq.open": "Abrir perfil",
+  "rq.cta": "¿No sabes a quién elegir? Deja que los grupos te envíen cotizaciones", "card.done": "{n} eventos reservados aquí", "card.doneOne": "1 evento reservado aquí",
   "nav.saved": "Guardados", "fav.save": "Guardar este grupo", "fav.unsave": "Quitar de guardados", "fav.saved": "Guardado ♥", "fav.removed": "Quitado de guardados",
   "fav.title": "Grupos guardados", "fav.none": "Toca el ♡ en cualquier grupo para guardarlo aquí.", "fav.share": "Enviar mi lista",
   "fav.shareHint": "Crea un enlace a estos grupos para tu pareja o el chat de la familia. Verán los grupos y precios, y solo tu nombre de pila.",

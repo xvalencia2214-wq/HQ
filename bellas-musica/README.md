@@ -11,11 +11,12 @@ English and Spanish. Blue / white / silver / dark navy theme with a charro-hat l
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 95 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 97 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
 node e2e/e2e.mjs [dir]                     # 48-step end-to-end run: manager sets up and publishes, customer books, chats, cancels, admin
 node e2e/e2e3.mjs [dir]                    # 14-step run of the Discover feed (video mounting, promoted slots, counters, reduced motion, desktop)
 node e2e/e2e4.mjs [dir]                    # 15-step run of the show-up guarantee and the agreement
+node e2e/e2e6.mjs [dir]                    # 9-step run of Get quotes: request, group offer, booking the offer, no-match, Spanish
 node e2e/e2e5.mjs [dir]                    # 22-step run of saved groups, shortlists, neighborhood landing pages, TikTok/Instagram clips
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/qa.mjs <dir>                      # seeds a realistic marketplace and screenshots every screen (iPad + phone)
@@ -41,6 +42,8 @@ In test mode payments and texts are **simulated** (a banner says so), and fictio
 | Sharing | `/g/<id>` links show a photo card in WhatsApp/iMessage/Facebook (Open Graph), plus robots.txt, sitemap.xml, home-screen icon |
 | Owner page | `#/admin` for you: fees kept, deposits, refunds, funnel, top searched ZIPs, waitlist by city (+CSV), health (email, alerts, backups); invite a group with a private claim link, mark groups Verified/Insured, hide, comp a featured spot, reset a password; every action is logged |
 | Discover | `#/discover`: a swipe feed of nearby groups' short clips (links to a YouTube Short, Vimeo, TikTok or Instagram Reel the group already posted), one at a time, muted until tapped (sound control works for YouTube and Vimeo; TikTok and Instagram show their own controls), with Message and Profile & book. Groups that bought Featured get every 4th slot, labelled **Promoted**; everyone else still appears. Groups see feed views and taps on their dashboard |
+| Get quotes | `#/quotes`: describe the event once and it goes to **at most 5 groups that can really do it** (live, claimed, free that day, play that event, fit the guest count, within 60 miles), never a blast. Groups answer in chat or with a private offer; the customer sees every reply and offer on one page and books from it. Free for both sides, 3 requests a day, phone numbers masked |
+| Booked here | Each group shows how many events it has actually played through the site (confirmed, past, money not refunded). A refunded no-show doesn't count |
 | Saved groups | A heart on every card, profile and Discover reel; `#/saved` lists them and makes a **shortlist link** (a read-only snapshot with the sharer's first name only) to send a partner or family chat; links can be revoked |
 | Landing pages | `/chicago/<neighborhood>` and `/chicago/<neighborhood>/<event>`: server-rendered pages for searches like "mariachi for a quinceañera in Pilsen", listing the **real** (non-sample) live groups within 20 miles with prices and structured data. A page with no real group behind it is served but `noindex` and left out of the sitemap. Inside the app they open the matching search |
 | Show-up guarantee | Arrival code for the customer on the event day, group check-in, no-show reports for 3 days, admin review queue with a one-click full refund (deposit and balance, payout reversed) |

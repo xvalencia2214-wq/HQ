@@ -172,6 +172,23 @@ CREATE TABLE IF NOT EXISTS shortlist_items (
   position INTEGER NOT NULL,
   PRIMARY KEY (token, group_id)
 );
+-- "Get quotes": a customer describes an event once and it goes to the few groups that can really do it.
+CREATE TABLE IF NOT EXISTS event_requests (
+  id TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event TEXT NOT NULL,
+  date TEXT NOT NULL,
+  guests INTEGER NOT NULL,
+  hours INTEGER NOT NULL,
+  zip TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS event_request_groups (
+  request_id TEXT NOT NULL REFERENCES event_requests(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  PRIMARY KEY (request_id, group_id)
+);
 CREATE TABLE IF NOT EXISTS stats_daily (
   day TEXT NOT NULL,
   key TEXT NOT NULL,

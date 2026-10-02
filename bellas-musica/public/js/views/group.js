@@ -33,7 +33,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
   <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
-    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
+    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${g.events_done ? `<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>` : ""}${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
     ${gallery}${video}
     <div class="facts">
       ${fact("g.members", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${fact("g.set", esc(t("g.minutes", { n: g.set_minutes })))}

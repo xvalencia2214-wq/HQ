@@ -54,6 +54,12 @@ export function activeOffers(db, groupId, customerId) {
      ORDER BY p.id DESC`, groupId, customerId, now());
 }
 
+// Events this group has actually played through the site: confirmed, in the past, and the money was not sent back
+// (a no-show that was refunded does not count). This is the number shown as "booked here".
+export function doneCount(db, groupId) {
+  return db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'confirmed' AND date < ? AND payment_status IN ('paid','partial_refund')", groupId, todayStr()).c;
+}
+
 export const isPromoted = (g) => g.promoted_until > now();
 
 export function isBookable(ctx, g) {
@@ -74,7 +80,7 @@ export function publicGroup(ctx, g, extras = {}) {
   return {
     id: g.id, name: g.name, type: g.type, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
     rate_cents: g.rate_cents, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
-    verified: Boolean(g.verified), insured: Boolean(g.insured), promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
+    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
     events: safeJson(g.events, []), songs: safeJson(g.songs, []),

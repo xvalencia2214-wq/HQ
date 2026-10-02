@@ -15,6 +15,7 @@ export function groupCard(g, i, ctx = "") {
   const tags = [];
   if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
+  if (g.events_done) tags.push(`<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>`);
   if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
   if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
   const href = `#/group/${esc(g.id)}${ctx ? "?" + esc(ctx) : ""}`;
@@ -97,8 +98,8 @@ export async function home(app, params) {
   const ctx = carry(p);
   box.innerHTML = `<div class="titlebar"><h2>${esc(t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
     <div class="seg"><a href="${esc(viewLink("list"))}" class="${view === "list" ? "on" : ""}">${esc(t("home.list"))}</a><a href="${esc(viewLink("map"))}" class="${view === "map" ? "on" : ""}">${esc(t("home.map"))}</a></div></div>
-    <div class="links"><a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>${filtered ? `<a href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}</div>` +
-    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}</div>`
+    <div class="links"><a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>${filtered ? `<a href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}<a href="#/quotes?${esc(ctx)}">✉ ${esc(t("rq.cta"))}</a></div>` +
+    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="#/?zip=${esc(data.origin.zip)}">${esc(t("f.clear"))}</a>` : ""}<br><a class="btn small ghost" href="#/quotes?${esc(ctx)}">${esc(t("rq.cta"))}</a></div>`
       : view === "map" ? `<div id="map" class="map" role="region" aria-label="${esc(t("home.map"))}"></div><div class="legend">${esc(t("map.note"))}</div>`
         : `<div class="grid">${data.results.map((g, i) => groupCard(g, i, ctx)).join("")}</div>`);
   wireShare(box); wireHearts(box);

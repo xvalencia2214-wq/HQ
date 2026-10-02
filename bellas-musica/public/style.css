@@ -422,3 +422,9 @@ table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line); }
 @media (min-width: 640px) { .why { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 980px) { .why { grid-template-columns: repeat(3, 1fr); } }
 .why .panel { margin-bottom: 0; border-top: 3px solid var(--gold); }
+.rq-promise { margin: 12px 0 4px; padding-left: 20px; color: var(--ink-2); font-size: .9rem; }
+.rq-card.past { opacity: .65; }
+.rq-card h3 { font-size: 1.1rem; }
+.btn.ghost-light { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); margin-top: 8px; }
+.btn.ghost-light:hover { background: rgba(255,255,255,.12); }
+.btn.ghost-light { white-space: normal; text-align: center; }

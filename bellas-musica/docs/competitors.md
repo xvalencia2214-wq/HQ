@@ -40,6 +40,9 @@ Research date: September 2026. Sources are web-search results (linked at the bot
 - **Saved groups and shareable shortlists:** heart a group anywhere; send a link to your partner or family chat.
 - **TikTok and Instagram clips in Discover**, next to YouTube and Vimeo. Verified with stand-in players only, not the real TikTok and Instagram embeds (see the README note).
 
+- **Get quotes, with a twist (GigSalad's headline feature):** GigSalad's "fast free quote" reaches many performers and performers complain the leads are blanket blasts they pay for. Here a request goes to at most 5 groups that are free that day, play that event, fit the guest count and are in range, and costs groups nothing.
+- **"Events booked here":** the equivalent of GigSalad's verified-booking count. It only counts confirmed events that already happened with the money not refunded, so a refunded no-show removes itself. It starts at zero for everyone, and that is the honest starting line.
+
 ## Ideas not built yet, in the order I would do them
 
 1. **Serenata-now:** a same-day, short "surprise serenata" flow (Mother's Day is the peak). Serenattia's whole product is this. It needs same-day booking (today a booking must be for a future date) and time-of-day rules for groups.

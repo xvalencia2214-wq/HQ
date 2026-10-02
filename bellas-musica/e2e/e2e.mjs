@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { startApp } from "../test/helpers.js";
+import { startApp, inDays } from "../test/helpers.js";
 import { png } from "./png.mjs";
 const { chromium } = createRequire(import.meta.url)("playwright");
 
@@ -135,6 +135,8 @@ try {
 
   // ---------------- customer: bookings, Spanish, cancel ----------------
   ok("phone header collapses into a menu", await C.locator("#nav").isHidden());
+  // The first open weekend can be tomorrow, where the moderate policy refunds nothing. Move the event out so the refund check is about the policy, not today's date.
+  S.db.run("UPDATE bookings SET date = ?", inDays(20));
   await C.goto(S.base + "/#/bookings"); await C.waitForSelector(".req");
   const icsHref = await C.locator("a[href$='/ics']").first().getAttribute("href");
   const icsRes = await C.request.get(S.base + icsHref);

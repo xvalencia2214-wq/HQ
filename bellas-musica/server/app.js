@@ -26,6 +26,7 @@ import waitlistRoutes from "./routes/waitlist.js";
 import claimRoutes from "./routes/claim.js";
 import feedRoutes from "./routes/feed.js";
 import favoriteRoutes from "./routes/favorites.js";
+import requestRoutes from "./routes/requests.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -81,7 +82,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
