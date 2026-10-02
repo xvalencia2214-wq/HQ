@@ -16,6 +16,7 @@ export function groupCard(g, i, ctx = "") {
   if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
   if (g.events_done) tags.push(`<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>`);
+  if (g.min_hours > 1) tags.push(`<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>`);
   if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
   if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
   const href = `#/group/${esc(g.id)}${ctx ? "?" + esc(ctx) : ""}`;

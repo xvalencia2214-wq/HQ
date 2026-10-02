@@ -2,6 +2,12 @@
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
   "rq.later": "Added after a day with no reply",
+  "dash.minHours": "Minimum hours to book", "dash.minHoursHint": "People booking by the hour can't choose fewer. Your listed packages can still be shorter.",
+  "g.hourlyMin": "Hourly ({price}/hr, {n}-hour minimum)", "g.minHours": "{n}-hour minimum",
+  "ao.title": "Add-ons", "ao.pick": "Add extras to your booking", "ao.included": "Included", "ao.line": "Add-ons: {list}", "q.addons": "Add-ons",
+  "ao.manage": "Add-ons (extras customers can add)", "ao.hint": "A flat price per event. Use $0 for something that is included. Customers tick what they want when they book, and the total updates.",
+  "ao.djTip": "DJs: list your fog machine, lights, visuals and audio/video setups here, each with its own price.",
+  "ao.name": "Add-on name", "ao.desc": "Short description (optional)", "ao.price": "Price ($)", "ao.add": "Add this extra", "ao.none": "No add-ons yet.", "ao.quick": "Quick add:",
   "show.arrived": "The group arrived", "show.arrivedConfirm": "Confirm that the group has arrived at your event?", "show.arrivedDone": "Thanks, arrival recorded",
   "show.locked": "Check-in is locked after 3 wrong codes. Ask the customer to tap \"The group arrived\" in their booking.",
   // quote wizard
@@ -214,5 +220,11 @@ export const ES2 = {
   "tab.reviews": "Reseñas", "rv.reply": "Responder", "rv.replyTitle": "Tu respuesta pública", "rv.replyBtn": "Publicar respuesta", "rv.edit": "Editar respuesta", "rv.remove": "Quitar respuesta",
   "rv.ownerReply": "Respuesta del grupo", "rv.none": "Aún no hay reseñas. Aparecen aquí después del evento de un cliente.", "rv.noContact": "Las respuestas son públicas. Los teléfonos y correos se eliminan.", "rv.saved": "Respuesta publicada", "rv.removed": "Respuesta eliminada",
   "badge.verified": "Verificado", "badge.insured": "Asegurado", "badge.verifiedTip": "Bella's Música comprobó que es un grupo real y en activo", "badge.insuredTip": "Bella's Música vio comprobante de seguro de responsabilidad",
+  "dash.minHours": "Horas mínimas para contratar", "dash.minHoursHint": "Quien contrate por hora no puede elegir menos. Tus paquetes pueden ser más cortos.",
+  "g.hourlyMin": "Por hora ({price}/h, mínimo {n} horas)", "g.minHours": "Mínimo {n} horas",
+  "ao.title": "Extras", "ao.pick": "Agrega extras a tu reserva", "ao.included": "Incluido", "ao.line": "Extras: {list}", "q.addons": "Extras",
+  "ao.manage": "Extras (lo que el cliente puede agregar)", "ao.hint": "Un precio fijo por evento. Usa $0 si ya está incluido. Los clientes marcan lo que quieren al reservar y el total se actualiza.",
+  "ao.djTip": "DJs: anota aquí tu máquina de humo, luces, visuales y equipos de audio y video, cada uno con su precio.",
+  "ao.name": "Nombre del extra", "ao.desc": "Descripción corta (opcional)", "ao.price": "Precio ($)", "ao.add": "Agregar este extra", "ao.none": "Aún no hay extras.", "ao.quick": "Agregar rápido:",
   "resp.hour": "Suele responder en menos de una hora", "resp.hours": "Suele responder en unas horas", "resp.day": "Suele responder en un día"
 };

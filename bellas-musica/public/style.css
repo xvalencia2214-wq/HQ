@@ -448,3 +448,12 @@ table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line); }
   .btn.small { min-height: 40px; }
   #nav a, #nav button { min-height: 44px; display: inline-flex; align-items: center; }
 }
+
+/* add-ons on the booking form and the group's own dashboard */
+button.chip { border: 0; cursor: pointer; font: inherit; color: var(--ink); }
+button.chip:hover, button.chip:focus-visible { background: #e8f0ff; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+fieldset.addons { border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px 10px; margin: 14px 0 0; }
+fieldset.addons legend { padding: 0 6px; font-weight: 600; font-size: .95rem; }
+.addon { margin: 8px 0 0; align-items: center; }
+.addon .addon-p { margin-left: auto; font-weight: 600; white-space: nowrap; }

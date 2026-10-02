@@ -33,18 +33,37 @@ export function refundForCancel(booking, today) {
   return p.deposit + p.balance;
 }
 
-// Build a quote. `pkg` is a package row or null (hourly). All values integer cents.
-export function buildQuote({ group, pkg, hours, distanceMiles, feePct }) {
+// Add-ons a group can offer on top of its music (flat price per event). Presets are only suggestions shown when a group is set up:
+// a DJ gets the lighting and effects list, everyone gets a sound system. The group chooses which to offer and the price (0 = included).
+export const ADDON_PRESETS = {
+  DJ: [
+    { en: "Fog machine", es: "Máquina de humo" },
+    { en: "Dance floor lights", es: "Luces para la pista de baile" },
+    { en: "Special lighting (uplights, spotlights)", es: "Iluminación especial (uplights, reflectores)" },
+    { en: "Visuals and video screen", es: "Visuales y pantalla de video" },
+    { en: "Audio and video setup", es: "Equipo de audio y video" },
+    { en: "Wireless microphone for speeches", es: "Micrófono inalámbrico para discursos" }
+  ],
+  _: [{ en: "Sound system", es: "Equipo de sonido" }, { en: "Wireless microphone", es: "Micrófono inalámbrico" }]
+};
+export const MAX_ADDONS = 12;
+export const MAX_HOURS = 8;
+
+// Build a quote. `pkg` is a package row or null (hourly). `addons` are the add-on rows the customer picked. All values integer cents.
+export function buildQuote({ group, pkg, hours, distanceMiles, feePct, addons = [] }) {
   const useHours = pkg ? pkg.hours : hours;
   const subtotal = pkg ? pkg.price_cents : group.rate_cents * useHours;
   const travel = distanceMiles != null && distanceMiles > group.travel_miles ? group.travel_fee_cents : 0;
-  const total = subtotal + travel;
+  const addonsCents = addons.reduce((n, a) => n + a.price_cents, 0);
+  const total = subtotal + travel + addonsCents;
   const deposit = Math.ceil((total * group.deposit_pct) / 100);
   const platformFee = Math.min(Math.round((total * feePct) / 100), deposit);
   return {
     hours: useHours,
     subtotal_cents: subtotal,
     travel_fee_cents: travel,
+    addons: addons.map((a) => ({ id: a.id, name: a.name, price_cents: a.price_cents })),
+    addons_cents: addonsCents,
     total_cents: total,
     deposit_cents: deposit,
     balance_cents: total - deposit,

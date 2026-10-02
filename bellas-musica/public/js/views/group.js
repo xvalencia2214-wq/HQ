@@ -33,7 +33,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
   <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
-    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${g.events_done ? `<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>` : ""}${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
+    <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${g.events_done ? `<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>` : ""}${g.min_hours > 1 ? `<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>` : ""}${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
     ${gallery}${video}
     <div class="facts">
       ${fact("g.members", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${fact("g.set", esc(t("g.minutes", { n: g.set_minutes })))}
@@ -47,6 +47,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   </div>
   ${g.songs.length ? `<div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h2><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
   ${offers.length ? `<div class="panel offer"><h2 class="sec">${esc(t("off.title"))}</h2><div class="pkgs">${offers.map((o) => `<div class="pkg"><div><span class="tag trust">${esc(t("off.tag"))}</span> <strong>${esc(o.name)}</strong><br><span class="dim">${o.description ? esc(o.description) + " · " : ""}${esc(t("g.hours", { n: o.hours }))} · ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div><div class="pkg-r"><strong>${money(o.price_cents)}</strong><br><button type="button" class="btn small" data-pkg="${o.id}">${esc(t("off.book"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${g.addons.length ? `<div class="panel"><h2 class="sec">${esc(t("ao.title"))}</h2><div class="pkgs">${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong></div></div>`).join("")}</div></div>` : ""}
   ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
@@ -97,10 +98,13 @@ export async function group(app, id, params = new URLSearchParams()) {
     if (!user) { box.innerHTML = `<div class="note">${esc(t("g.loginToBook"))}</div><a class="btn" href="#/login?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.login"))}</a> <a class="btn ghost" href="#/signup?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.signup"))}</a>`; return; }
     if (!st.date || !st.time) { box.innerHTML = `<div class="empty small">${esc(t("g.pickDate"))}</div>`; return; }
     const prev = box.querySelector("form") ? Object.fromEntries(new FormData(box.querySelector("form"))) : {};
+    const prevAddons = box.querySelector("form") ? new FormData(box.querySelector("form")).getAll("addon") : [];
+    const hourChoices = Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i);
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
-      <label for="b-pkg">${esc(t("g.package"))}</label><select id="b-pkg" name="packageId"><option value="">${esc(t("g.hourly", { price: money(g.rate_cents) }))}</option>${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
-      <div id="hrs-wrap"><label for="b-hrs">${esc(t("g.hoursLabel"))}</label><select id="b-hrs" name="hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === Number(prev.hours || 2) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
+      <label for="b-pkg">${esc(t("g.package"))}</label><select id="b-pkg" name="packageId"><option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
+      <div id="hrs-wrap"><label for="b-hrs">${esc(t("g.hoursLabel"))}</label><select id="b-hrs" name="hours">${hourChoices.map((h) => `<option value="${h}"${h === Number(prev.hours || Math.max(2, g.min_hours)) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
+      ${g.addons.length ? `<fieldset class="addons"><legend>${esc(t("ao.pick"))}</legend>${g.addons.map((a) => `<label class="chk addon"><input type="checkbox" name="addon" value="${a.id}"${prevAddons.includes(String(a.id)) ? " checked" : ""}> <span>${esc(a.name)}</span><span class="addon-p">${a.price_cents ? "+" + money(a.price_cents) : esc(t("ao.included"))}</span></label>`).join("")}</fieldset>` : ""}
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
       <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
       <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
@@ -122,11 +126,12 @@ export async function group(app, id, params = new URLSearchParams()) {
       const f = Object.fromEntries(new FormData(form));
       if (!/^\d{5}$/.test(f.eventZip) || !Number(f.guests)) { q.innerHTML = `<div class="dim">${esc(t("g.quoteHint"))}</div>`; return; }
       try {
-        const r = await api.post("/api/quote", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), event: f.event, guests: Number(f.guests), eventZip: f.eventZip });
+        const r = await api.post("/api/quote", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip });
         const qt = r.quote;
         if (!form.isConnected) return;
         q.innerHTML = `<div class="sum"><span>${esc(t("q.subtotal"))}</span><span>${money(qt.subtotal_cents)}</span></div>` +
           (qt.travel_fee_cents ? `<div class="sum"><span>${esc(t("q.travel"))}</span><span>${money(qt.travel_fee_cents)}</span></div>` : "") +
+          qt.addons.map((a) => `<div class="sum"><span>${esc(a.name)}</span><span>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</span></div>`).join("") +
           `<div class="sum"><span>${esc(t("q.total"))}</span><span>${money(qt.total_cents)}</span></div>
            <div class="sum strong"><span>${esc(t("q.deposit", { pct: qt.deposit_pct }))}</span><span>${money(qt.deposit_cents)}</span></div>
            <div class="sum"><span>${esc(t("q.balance"))}</span><span>${money(qt.balance_cents)}</span></div>
@@ -143,7 +148,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       if (!document.getElementById("b-agree").checked) { err.textContent = t("g.mustAgree"); return; }
       btn.disabled = true;
       try {
-        const r = await api.post("/api/bookings", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true });
+        const r = await api.post("/api/bookings", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true });
         goto(r.payment.url);
       } catch (ex) {
         err.textContent = ex.message; btn.disabled = false;
@@ -160,7 +165,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       <form novalidate><label for="qr-ev">${esc(t("f.event"))}</label><select id="qr-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${sel(e, ctx.event)}>${esc(t("event." + e))}</option>`).join("")}</select>
       <div class="row"><div><label for="qr-date">${esc(t("f.date"))}</label><input id="qr-date" name="date" type="date" min="${tomorrowKey()}" value="${esc(st.date || ctx.date || "")}" required></div>
       <div><label for="qr-guests">${esc(t("f.guests"))}</label><input id="qr-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" value="${esc(ctx.guests)}" required></div></div>
-      <label for="qr-hrs">${esc(t("g.hoursLabel"))}</label><select id="qr-hrs" name="hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === 2 ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select>
+      <label for="qr-hrs">${esc(t("g.hoursLabel"))}</label><select id="qr-hrs" name="hours">${Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i).map((h) => `<option value="${h}"${h === Math.max(2, g.min_hours) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select>
       <label for="qr-note">${esc(t("quote.note"))}</label><input id="qr-note" name="note" maxlength="200"><div class="err" role="alert"></div>
       <button class="btn small" type="submit">${esc(t("quote.send"))}</button></form></details>`;
     qb.querySelector("form").onsubmit = async (e) => {

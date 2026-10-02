@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -33,9 +33,18 @@ export default function bookingRoutes(ctx, add) {
         if (pkg.expires_at <= now()) throw new HttpError(400, "This custom offer has expired. Ask the group for a new one.");
       }
     }
-    const hours = pkg ? pkg.hours : int(body.hours, "Hours", { min: 1, max: 8 });
+    const minHours = group.min_hours || 1; // the group's own minimum applies to booking by the hour; its listed packages are priced as shown
+    const hours = pkg ? pkg.hours : int(body.hours, "Hours", { min: 1, max: MAX_HOURS });
+    if (!pkg && hours < minHours) throw new HttpError(400, `${group.name} plays a minimum of ${minHours} hours`);
+    let addons = [];
+    if (body.addonIds !== undefined && body.addonIds !== null) {
+      if (!Array.isArray(body.addonIds) || body.addonIds.length > MAX_ADDONS) throw new HttpError(400, "Pick add-ons from the list");
+      const ids = [...new Set(body.addonIds.map((x) => int(x, "Add-on", { min: 1 })))];
+      addons = ids.map((id) => db.get("SELECT id, name, price_cents FROM addons WHERE id = ? AND group_id = ?", id, group.id));
+      if (addons.some((a) => !a)) throw new HttpError(400, "One of those add-ons isn't offered by this group");
+    }
     if (requireSlot && !openSlots(db, group.id, date).includes(time)) throw new HttpError(409, "That time isn't available");
-    const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: config.platformFeePct });
+    const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: config.platformFeePct, addons });
     return { group, pkg, date, time, event, guests, eventZip, quote };
   }
 
@@ -68,13 +77,14 @@ export default function bookingRoutes(ctx, add) {
   const canReschedule = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !reschedPending(b) && b.resched_count < RESCHED_MAX && daysBetween(today, b.date) >= RESCHED_MIN_DAYS;
   const clearResched = (id, extraSql = "") => db.run(`UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = ''${extraSql}, updated_at = ? WHERE id = ?`, now(), id);
 
+  const addonsOf = (b) => { try { return JSON.parse(b.addons_json || "[]"); } catch { return []; } };
   function view(b, role) {
     const status = displayStatus(b);
     const today = todayStr();
     const out = {
       id: b.id, group_id: b.group_id, group_name: b.group_name, date: b.date, time: b.time, hours: b.hours, package_name: b.package_name,
       event_type: b.event_type, guests: b.guests, event_zip: b.event_zip, address: b.address, message: b.message,
-      subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
+      subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, addons: addonsOf(b), addons_cents: b.addons_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
       balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
       balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
       reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
@@ -296,9 +306,10 @@ export default function bookingRoutes(ctx, add) {
     if (!b || (!isCustomer && !isOwner)) throw new HttpError(404, "Booking not found");
     if (!["requested", "confirmed"].includes(b.status)) throw new HttpError(400, "Only active bookings can be added to a calendar");
     const money = (c) => `$${(c / 100).toFixed(2)}`;
+    const addonText = (x) => { const a = addonsOf(x); return a.length ? ` Add-ons: ${a.map((i) => i.name).join(", ")}.` : ""; };
     const description = isCustomer
-      ? `${b.event_type} with ${b.group_name}. Deposit paid: ${money(b.deposit_cents)}. Balance due to the group at the event: ${money(b.total_cents - b.deposit_cents)}. ${b.status === "requested" ? "Waiting for the group to confirm." : "Confirmed."} Booking ${b.id}`
-      : `${b.event_type} for ${b.name}, ${b.guests} guests. Deposit ${money(b.deposit_cents)}, balance due at the event ${money(b.total_cents - b.deposit_cents)}.${b.status === "confirmed" ? " Phone: " + b.phone : ""}${b.message ? " Request: " + b.message : ""}`;
+      ? `${b.event_type} with ${b.group_name}.${addonText(b)} Deposit paid: ${money(b.deposit_cents)}. Balance due to the group at the event: ${money(b.total_cents - b.deposit_cents)}. ${b.status === "requested" ? "Waiting for the group to confirm." : "Confirmed."} Booking ${b.id}`
+      : `${b.event_type} for ${b.name}, ${b.guests} guests.${addonText(b)} Deposit ${money(b.deposit_cents)}, balance due at the event ${money(b.total_cents - b.deposit_cents)}.${b.status === "confirmed" ? " Phone: " + b.phone : ""}${b.message ? " Request: " + b.message : ""}`;
     const body = bookingToIcs({
       id: b.id, date: b.date, time: b.time, hours: b.hours, status: b.status, location: b.address, description,
       summary: isCustomer ? `${b.group_name}: ${b.event_type}` : `${b.event_type} for ${b.name} (${b.group_name})`
@@ -338,11 +349,11 @@ export default function bookingRoutes(ctx, add) {
     try {
       db.run(
         `INSERT INTO bookings (id, group_id, customer_id, date, time, hours, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
-           subtotal_cents, travel_fee_cents, total_cents, deposit_cents, platform_fee_cents, policy, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
+           subtotal_cents, travel_fee_cents, addons_json, addons_cents, total_cents, deposit_cents, platform_fee_cents, policy, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
         id, r.group.id, user.id, r.date, r.time, q.hours, r.pkg?.id ?? null, r.pkg?.name ?? "", r.event, r.guests, r.eventZip,
         str(body.name, "Name", { required: true, max: 80 }), phone, str(body.address, "Event location", { required: true, max: 160 }), str(body.message, "Message", { max: 500 }),
-        q.subtotal_cents, q.travel_fee_cents, q.total_cents, q.deposit_cents, q.platform_fee_cents, q.policy, t, t);
+        q.subtotal_cents, q.travel_fee_cents, JSON.stringify(q.addons.map((a) => ({ name: a.name, price_cents: a.price_cents }))), q.addons_cents, q.total_cents, q.deposit_cents, q.platform_fee_cents, q.policy, t, t);
     } catch (e) {
       if (/UNIQUE/i.test(String(e.message))) throw new HttpError(409, "That time was just taken. Please pick another.");
       throw e;

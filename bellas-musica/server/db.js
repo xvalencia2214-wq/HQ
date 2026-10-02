@@ -72,6 +72,14 @@ CREATE TABLE IF NOT EXISTS packages (
   private_customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   expires_at INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS addons (
+  id INTEGER PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  price_cents INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_addons_group ON addons(group_id);
 CREATE TABLE IF NOT EXISTS availability (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
   date TEXT NOT NULL,
@@ -270,6 +278,9 @@ export function openDb(config) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
     return true;
   };
+  ensureColumn("groups", "min_hours", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("bookings", "addons_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn("bookings", "addons_cents", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_requests", "expanded", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("event_request_groups", "round", "INTEGER NOT NULL DEFAULT 1");
   ensureColumn("event_request_groups", "asked_at", "INTEGER NOT NULL DEFAULT 0");

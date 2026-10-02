@@ -1,5 +1,5 @@
 import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
-import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
+import { ADDON_PRESETS, EVENT_TYPES, GROUP_TYPES, MAX_HOURS, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
 import { expirePending, firstPhotos, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
@@ -92,7 +92,7 @@ export default function searchRoutes(ctx, add) {
   add("GET", "/api/health", () => ({ ok: true }));
 
   add("GET", "/api/meta", () => ({
-    events: EVENT_TYPES, group_types: GROUP_TYPES, slots: SLOTS,
+    events: EVENT_TYPES, group_types: GROUP_TYPES, slots: SLOTS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
     payments: stripe.mode, sms: sms.mode, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()

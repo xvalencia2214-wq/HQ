@@ -79,7 +79,7 @@ export function publicGroup(ctx, g, extras = {}) {
   const { rating, reviews } = extras.rating || ratingOf(g, ratingMap(ctx.db));
   return {
     id: g.id, name: g.name, type: g.type, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
-    rate_cents: g.rate_cents, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
+    rate_cents: g.rate_cents, min_hours: g.min_hours || 1, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
     events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
@@ -96,6 +96,7 @@ export function groupDetail(ctx, g) {
       next_open: firstOpenDate(db, g.id),
       photos: db.all("SELECT id, file FROM photos WHERE group_id = ? ORDER BY position, created_at", g.id).map((p) => ({ id: p.id, url: "/uploads/" + p.file })),
       packages: db.all("SELECT id, name, description, hours, price_cents FROM packages WHERE group_id = ? AND private_customer_id IS NULL ORDER BY price_cents", g.id),
+      addons: db.all("SELECT id, name, description, price_cents FROM addons WHERE group_id = ? ORDER BY id", g.id),
       recent_reviews: db.all(
         `SELECT r.id, r.rating, r.text, r.created_at, r.reply, r.reply_at, u.name FROM reviews r JOIN users u ON u.id = r.customer_id
          WHERE r.group_id = ? ORDER BY r.id DESC LIMIT 20`, g.id

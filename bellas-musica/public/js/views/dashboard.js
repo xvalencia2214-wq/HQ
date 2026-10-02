@@ -107,7 +107,7 @@ async function requests({ g, body, refresh }) {
   };
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
-      ${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
+      ${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
@@ -211,6 +211,7 @@ function listing({ g, body, refresh }) {
     <div><label for="l-mem">${esc(t("dash.members"))}</label><input id="l-mem" name="members" type="number" min="1" max="40" value="${g.members}"></div></div>
     <div class="row"><div><label for="l-rate">${esc(t("dash.rate"))}</label><input id="l-rate" name="rate" type="number" min="50" max="5000" step="5" value="${g.rate_cents / 100}"></div>
     <div><label for="l-guests">${esc(t("dash.maxGuests"))}</label><input id="l-guests" name="max_guests" type="number" min="1" max="5000" value="${g.max_guests}"></div></div>
+    <label for="l-minh">${esc(t("dash.minHours"))}</label><select id="l-minh" name="min_hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === g.min_hours ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select><div class="dim small">${esc(t("dash.minHoursHint"))}</div>
     <label for="l-story">${esc(t("g.story"))}</label><textarea id="l-story" name="story" maxlength="800">${esc(g.story)}</textarea>
     <label>${esc(t("dash.eventsDo"))}</label><div class="chips">${meta.events.map((e) => `<label class="chk chip"><input type="checkbox" name="ev" value="${esc(e)}"${g.events.includes(e) ? " checked" : ""}> <span>${esc(t("event." + e))}</span></label>`).join("")}</div>
     <h2 class="sec">${esc(t("dash.extras"))}</h2>
@@ -232,7 +233,7 @@ function listing({ g, body, refresh }) {
     const fd = new FormData(e.target), f = Object.fromEntries(fd), err = document.getElementById("lerr"); err.textContent = "";
     try {
       await api.patch(`/api/groups/${encodeURIComponent(g.id)}`, {
-        name: f.name, type: f.type, zip: f.zip, members: Number(f.members), rate: Number(f.rate), max_guests: Number(f.max_guests), story: f.story,
+        name: f.name, type: f.type, zip: f.zip, members: Number(f.members), rate: Number(f.rate), min_hours: Number(f.min_hours), max_guests: Number(f.max_guests), story: f.story,
         events: fd.getAll("ev"), sound_system: f.sound === "on", dress_code: f.dress_code, set_minutes: Number(f.set_minutes),
         travel_miles: Number(f.travel_miles), travel_fee: Number(f.travel_fee), deposit_pct: Number(f.deposit_pct), cancel_policy: f.cancel_policy, contact_phone: f.contact_phone
       });
@@ -243,13 +244,29 @@ function listing({ g, body, refresh }) {
 
 // ---- packages + songs ----
 function extras({ g, body, refresh }) {
+  const have = new Set(g.addons.map((a) => a.name.toLowerCase()));
+  const presets = (state.meta.addon_presets[g.type] || state.meta.addon_presets._ || []).filter((p) => !have.has(p.en.toLowerCase()) && !have.has(p.es.toLowerCase()));
   body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2>
     ${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button class="btn ghost small" data-del="${p.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("dash.noPkg"))}</div>`}
     <form id="pkform"><h3>${esc(t("dash.addPkg"))}</h3><label for="k-name">${esc(t("dash.pkgName"))}</label><input id="k-name" name="name" required maxlength="60" placeholder="${esc(t("dash.pkgEx"))}">
     <label for="k-desc">${esc(t("dash.pkgDesc"))}</label><input id="k-desc" name="description" maxlength="200">
     <div class="row"><div><label for="k-h">${esc(t("g.hoursLabel"))}</label><input id="k-h" name="hours" type="number" min="1" max="12" value="2" required></div><div><label for="k-p">${esc(t("dash.price"))}</label><input id="k-p" name="price" type="number" min="20" max="50000" required></div></div>
     <div id="kerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("dash.addPkg"))}</button></form></div>
-    <div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))}</h2><p class="dim small">${esc(t("dash.songsHint"))}</p><form id="sform2"><textarea id="songs" rows="12" maxlength="6000" aria-label="${esc(t("g.songs"))}">${esc(g.songs.join("\n"))}</textarea><div id="serr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div></div>`;
+    <div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))}</h2><p class="dim small">${esc(t("dash.songsHint"))}</p><form id="sform2"><textarea id="songs" rows="12" maxlength="6000" aria-label="${esc(t("g.songs"))}">${esc(g.songs.join("\n"))}</textarea><div id="serr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div></div>
+    <div class="panel" id="addons-panel"><h2 class="sec">${esc(t("ao.manage"))}</h2><p class="dim small">${esc(t("ao.hint"))}${g.type === "DJ" ? " " + esc(t("ao.djTip")) : ""}</p>
+    ${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong><br><button type="button" class="btn ghost small" data-delao="${a.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("ao.none"))}</div>`}
+    <form id="aoform" novalidate>${presets.length ? `<div class="dim small">${esc(t("ao.quick"))}</div><div class="chips" id="ao-presets">${presets.map((p) => `<button type="button" class="chip" data-preset="${esc(p[lang()])}">+ ${esc(p[lang()])}</button>`).join("")}</div>` : ""}
+    <label for="ao-name">${esc(t("ao.name"))}</label><input id="ao-name" name="name" required maxlength="60">
+    <label for="ao-desc">${esc(t("ao.desc"))}</label><input id="ao-desc" name="description" maxlength="160">
+    <label for="ao-price">${esc(t("ao.price"))}</label><input id="ao-price" name="price" type="number" min="0" max="5000" step="5" inputmode="numeric" value="0" required>
+    <div id="aoerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("ao.add"))}</button></form></div>`;
+  body.querySelectorAll("[data-preset]").forEach((b) => { b.onclick = () => { const n = document.getElementById("ao-name"); n.value = b.dataset.preset; document.getElementById("ao-price").focus(); document.getElementById("ao-price").select(); }; });
+  body.querySelectorAll("[data-delao]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del("/api/addons/" + b.dataset.delao); refresh(); } catch (e) { toast(e.message, "error"); } }; });
+  document.getElementById("aoform").onsubmit = async (e) => {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
+    try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/addons`, { name: f.name, description: f.description, price: Number(f.price) }); refresh(); }
+    catch (ex) { document.getElementById("aoerr").textContent = ex.message; }
+  };
   body.querySelectorAll("[data-del]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del("/api/packages/" + b.dataset.del); refresh(); } catch (e) { toast(e.message, "error"); } }; });
   document.getElementById("pkform").onsubmit = async (e) => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));

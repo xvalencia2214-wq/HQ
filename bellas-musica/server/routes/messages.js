@@ -83,6 +83,7 @@ export default function messageRoutes(ctx, add) {
     const event = oneOf(body.event, "Event type", EVENT_TYPES);
     const guests = int(body.guests, "Guests", { min: 1, max: 5000 });
     const hours = int(body.hours, "Hours", { min: 1, max: 12 });
+    if (hours < (group.min_hours || 1)) throw new HttpError(400, `${group.name} plays a minimum of ${group.min_hours} hours`);
     const date = body.date;
     if (!isDate(date) || date <= todayStr() || date > addDays(todayStr(), 730)) throw new HttpError(400, "Pick a future date");
     const note = str(body.note, "Note", { max: 200 });

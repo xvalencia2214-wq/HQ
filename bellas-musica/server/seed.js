@@ -58,6 +58,14 @@ export function fillDemoAvailability(db) {
   });
 }
 
+// Sample min-hours and add-ons so the new features show up in the demo: a DJ with fog/lights/visuals/AV, and a couple of groups with a 2-hour minimum.
+const DEMO_EXTRAS = {
+  "dj-fiesta-chicago": { min_hours: 3, addons: [["Fog machine", "Low-lying fog for the first dance", 75], ["Dance floor lights", "Moving-head and LED effects", 120], ["Special lighting (uplights, spotlights)", "Uplights in your colors and a spotlight for the couple", 150], ["Visuals and video screen", "Projector or LED screen with photo and video slideshow", 200], ["Audio and video setup", "Full speaker, mic and video setup for speeches and slideshows", 0]] },
+  "banda-la-costa-de-waukegan": { min_hours: 2, addons: [["Sound system", "Speakers and mixer for up to 300 guests", 150]] },
+  "grupo-sabor-tropical": { min_hours: 2, addons: [["Sound system", "", 100], ["Dance floor lights", "", 90]] },
+  "mariachi-real-de-berwyn": { min_hours: 1, addons: [["Wireless microphone", "For toasts and dedications", 25]] }
+};
+
 export function seedDemo(db) {
   // Older sample sets are retired: removed, or just hidden if anyone already booked or messaged them.
   const keep = DEMO.map((g) => g.id);
@@ -81,6 +89,11 @@ export function seedDemo(db) {
         db.run("INSERT INTO packages (group_id, name, description, hours, price_cents) VALUES (?, ?, ?, ?, ?)", g.id, "Full event (4 hours)", "Four hours, setup included", 4, Math.round(hr * 4 * 0.9));
       }
     });
+  }
+  for (const [id, x] of Object.entries(DEMO_EXTRAS)) {
+    if (!db.get("SELECT 1 AS x FROM groups WHERE id = ? AND demo = 1", id) || db.get("SELECT COUNT(*) c FROM addons WHERE group_id = ?", id).c) continue;
+    db.run("UPDATE groups SET min_hours = ? WHERE id = ?", x.min_hours, id);
+    for (const [name, description, price] of x.addons) db.run("INSERT INTO addons (group_id, name, description, price_cents) VALUES (?, ?, ?, ?)", id, name, description, price * 100);
   }
   fillDemoAvailability(db);
 }

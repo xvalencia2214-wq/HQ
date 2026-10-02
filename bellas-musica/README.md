@@ -11,13 +11,14 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 105 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 107 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
 node e2e/e2e.mjs [dir]                     # 48-step end-to-end run: manager sets up and publishes, customer books, chats, cancels, admin
 node e2e/e2e3.mjs [dir]                    # 14-step run of the Discover feed (video mounting, promoted slots, counters, reduced motion, desktop)
 node e2e/e2e4.mjs [dir]                    # 17-step run of the show-up guarantee (incl. the check-in lock and the customer's "group arrived") and the agreement
 node e2e/e2e6.mjs [dir]                    # 22-step run of Get quotes: the step-by-step flow, group offer, booking the offer, account-last, resume after refresh, no-match, Spanish
 node e2e/e2e5.mjs [dir]                    # 22-step run of saved groups, shortlists, neighborhood landing pages, TikTok/Instagram clips
+node e2e/e2e8.mjs [dir]                    # 26-step run of minimum hours and add-ons: a DJ sets a 3-hour minimum and adds fog/lighting/AV, a customer ticks them and the total updates, booking, agreement, Spanish
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/touch.mjs                         # iPad-style touch run: real finger swipes on Discover, and a tap-target size check on the main screens
 npm run spanish-sheet                      # writes docs/spanish-review.md: every screen string and email, English next to Spanish, for a native speaker to correct
@@ -41,6 +42,7 @@ In test mode payments and texts are **simulated** (a banner says so), and fictio
 | Accounts | Sign-up, login, sessions, password change, self-serve account deletion (anonymizes, keeps payment records), English/Spanish, optional text alerts (opt-in) |
 | Inbox | Customers see every conversation in one place; unread badges for customers and managers |
 | Calendar | "Add to calendar" (.ics) for customers and groups |
+| Minimum hours and add-ons | A group sets a minimum number of hours for booking by the hour (listed packages stay as priced). Groups can list priced extras customers tick when booking (DJs get quick-add buttons for fog machine, dance-floor lights, special lighting, visuals/video screen, audio and video setup); the total, deposit, agreement, calendar entry and the group's request list all include them |
 | Launch checklist | Tells a new group exactly what's missing (photos, video, story, songs, package, dates, payouts, text alerts) |
 | Sharing | `/g/<id>` links show a photo card in WhatsApp/iMessage/Facebook (Open Graph), plus robots.txt, sitemap.xml, home-screen icon |
 | Owner page | `#/admin` for you: fees kept, deposits, refunds, funnel, top searched ZIPs, waitlist by city (+CSV), health (email, alerts, backups); invite a group with a private claim link, mark groups Verified/Insured, hide, comp a featured spot, reset a password; every action is logged |

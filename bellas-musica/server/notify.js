@@ -49,7 +49,8 @@ export function createNotifier(ctx) {
     return {
       group: g.name, customer: b.name, event: b.event_type, date: b.date, time: b.time, hours: b.hours, guests: b.guests, address: b.address,
       total: usd(b.total_cents), deposit: usd(b.deposit_cents), balance: usd(b.total_cents - b.deposit_cents),
-      payout: usd(Math.max(0, b.deposit_cents - b.platform_fee_cents)), policyKey: b.policy
+      payout: usd(Math.max(0, b.deposit_cents - b.platform_fee_cents)), policyKey: b.policy,
+      addons: (() => { try { return JSON.parse(b.addons_json || "[]").map((a) => a.name).join(", "); } catch { return ""; } })()
     };
   }
   const ownerOf = (g) => g.owner_id || null;

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES, GROUP_TYPES, POLICIES, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, GROUP_TYPES, MAX_ADDONS, MAX_HOURS, POLICIES, SLOTS } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
@@ -122,6 +122,7 @@ export default function groupRoutes(ctx, add) {
     if (body.type !== undefined) set.type = oneOf(body.type, "Type", GROUP_TYPES);
     if (body.zip !== undefined) { if (!isZip(body.zip) || !lookupZip(body.zip)) throw new HttpError(400, "Enter a valid US ZIP code"); set.zip = body.zip; }
     if (body.rate !== undefined) set.rate_cents = dollarsToCents(body.rate, "Price per hour", { min: 50, max: 5000 });
+    if (body.min_hours !== undefined) set.min_hours = int(body.min_hours, "Minimum hours", { min: 1, max: MAX_HOURS });
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
     if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
     if (body.events !== undefined) set.events = JSON.stringify(stringList(body.events, "Events", { maxItems: 10, maxLen: 40 }).filter((e) => EVENT_TYPES.includes(e)));
@@ -181,6 +182,40 @@ export default function groupRoutes(ctx, add) {
     const p = ownedPackage(user, params.pid);
     db.run("DELETE FROM packages WHERE id = ?", p.id);
     return manageView(getGroup(db, p.group_id));
+  }, { auth: true });
+
+  // ---- add-ons: extras a customer can tick when booking (fog machine, lights, visuals...), a flat price per event; 0 means included ----
+  function addonFields(body) {
+    return {
+      name: str(body.name, "Add-on name", { min: 2, max: 60 }),
+      description: str(body.description, "Description", { max: 160 }),
+      price_cents: dollarsToCents(body.price ?? 0, "Price", { min: 0, max: 5000 })
+    };
+  }
+  add("POST", "/api/groups/:id/addons", ({ params, body, user }) => {
+    const g = requireOwner(db, user, params.id);
+    if (db.get("SELECT COUNT(*) c FROM addons WHERE group_id = ?", g.id).c >= MAX_ADDONS) throw new HttpError(400, `At most ${MAX_ADDONS} add-ons`);
+    const f = addonFields(body);
+    if (db.get("SELECT 1 AS x FROM addons WHERE group_id = ? AND LOWER(name) = LOWER(?)", g.id, f.name)) throw new HttpError(400, "You already have an add-on with that name");
+    db.run("INSERT INTO addons (group_id, name, description, price_cents) VALUES (?, ?, ?, ?)", g.id, f.name, f.description, f.price_cents);
+    return manageView(getGroup(db, g.id));
+  }, { auth: true });
+  const ownedAddon = (user, id) => {
+    const a = db.get("SELECT a.*, g.owner_id FROM addons a JOIN groups g ON g.id = a.group_id WHERE a.id = ?", id);
+    if (!a) throw new HttpError(404, "Add-on not found");
+    if (a.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
+    return a;
+  };
+  add("PATCH", "/api/addons/:aid", ({ params, body, user }) => {
+    const a = ownedAddon(user, params.aid);
+    const f = addonFields({ name: body.name ?? a.name, description: body.description ?? a.description, price: body.price ?? a.price_cents / 100 });
+    db.run("UPDATE addons SET name = ?, description = ?, price_cents = ? WHERE id = ?", f.name, f.description, f.price_cents, a.id);
+    return manageView(getGroup(db, a.group_id));
+  }, { auth: true });
+  add("DELETE", "/api/addons/:aid", ({ params, user }) => {
+    const a = ownedAddon(user, params.aid);
+    db.run("DELETE FROM addons WHERE id = ?", a.id); // bookings keep their own copy of what was ordered
+    return manageView(getGroup(db, a.group_id));
   }, { auth: true });
 
   // ---- custom offers: a private, custom-priced package for one customer who has messaged the group ----

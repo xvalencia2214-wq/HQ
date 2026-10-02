@@ -39,7 +39,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     const d = z ? miles(origin, z) : 999;
     if (d > RADIUS) continue;
     // A budget is a promise not to waste a group's time: skip groups whose cheapest way to do this event is far above it.
-    if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, g.rate_cents * hours); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
+    if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, g.rate_cents * Math.max(hours, g.min_hours || 1)); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
     const r = ratingOf(g, ratings);
     // Prefer proven, close groups; a bonus for being free at the asked start time and for the right group size.
     const sizeFit = !size || (SIZES[size] && g.members >= SIZES[size][0] && g.members <= SIZES[size][1]);
