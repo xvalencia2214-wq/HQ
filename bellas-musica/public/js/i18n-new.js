@@ -1,6 +1,14 @@
 // Strings for password recovery, the Chicago page, publishing, balance payments, rescheduling, custom offers,
 // review replies and trust badges. Merged into the main dictionaries by i18n.js.
 export const EN2 = {
+  // quote wizard
+  "rq.step": "Step {i} of {n}", "rq.next": "Next", "rq.back": "Back", "rq.need": "Please answer this one to continue.", "rq.needZip": "Enter a 5-digit ZIP code.", "rq.needBudget": "Your minimum is above your maximum.",
+  "rq.q.event": "What kind of event is it?", "rq.q.date": "When is your event?", "rq.q.time": "What time should the music start?", "rq.q.hours": "How long should they play?", "rq.q.zip": "Where is your event being held?",
+  "rq.q.guests": "About how many guests?", "rq.q.size": "What size group do you prefer?", "rq.q.budget": "What's your budget?", "rq.q.stage": "Where are you in the planning?", "rq.q.account": "Last step: create your account to see the replies",
+  "rq.h.time": "Pick a start time, or say you're not sure.", "rq.h.zip": "Groups near this ZIP code get your request.", "rq.h.budget": "Optional. It helps groups quote the right package, and groups far above it aren't bothered.", "rq.h.stage": "Optional. Tell groups how soon you need an answer.",
+  "rq.time.any": "Not sure yet", "rq.size.any": "No preference", "rq.size.solo-duo": "A solo or duo", "rq.size.trio": "A trio (3)", "rq.size.small": "4 to 6 musicians", "rq.size.large": "7 or more musicians",
+  "rq.min": "Minimum ($)", "rq.max": "Maximum ($)", "rq.stage.any": "Skip this", "rq.stage.just-looking": "Just looking", "rq.stage.comparing": "Comparing options", "rq.stage.ready": "Ready to book",
+  "rq.privacy": "We never share your phone or email with groups. They answer you here.", "rq.hasAcct": "I already have an account", "rq.newAcct": "Create a new account instead", "rq.sendAcct": "Create account and send",
   // get quotes + booked-here count
   "nav.quotes": "Get quotes", "rq.title": "Get quotes for your event", "rq.sub": "Tell us about your event once. We send it to up to 5 groups that are actually free that day, fit your guest count and play your kind of event. They reply with a price.",
   "rq.note": "Anything the group should know? (optional)", "rq.notePh": "Outdoor patio, we want Las Mañanitas at midnight…", "rq.send": "Send to the best groups",
@@ -107,6 +115,13 @@ export const EN2 = {
 };
 
 export const ES2 = {
+  "rq.step": "Paso {i} de {n}", "rq.next": "Siguiente", "rq.back": "Atrás", "rq.need": "Responde esta pregunta para continuar.", "rq.needZip": "Escribe un código postal de 5 dígitos.", "rq.needBudget": "Tu mínimo es mayor que tu máximo.",
+  "rq.q.event": "¿Qué tipo de evento es?", "rq.q.date": "¿Cuándo es tu evento?", "rq.q.time": "¿A qué hora debe empezar la música?", "rq.q.hours": "¿Cuánto tiempo deben tocar?", "rq.q.zip": "¿Dónde será tu evento?",
+  "rq.q.guests": "¿Cuántos invitados, aproximadamente?", "rq.q.size": "¿Qué tamaño de grupo prefieres?", "rq.q.budget": "¿Cuál es tu presupuesto?", "rq.q.stage": "¿En qué punto de la planeación estás?", "rq.q.account": "Último paso: crea tu cuenta para ver las respuestas",
+  "rq.h.time": "Elige una hora de inicio, o di que no estás seguro.", "rq.h.zip": "Los grupos cerca de este código postal reciben tu solicitud.", "rq.h.budget": "Opcional. Ayuda a los grupos a cotizar el paquete correcto, y no se molesta a los que están muy por encima.", "rq.h.stage": "Opcional. Dile a los grupos qué tan pronto necesitas respuesta.",
+  "rq.time.any": "Aún no estoy seguro", "rq.size.any": "Sin preferencia", "rq.size.solo-duo": "Un solista o dúo", "rq.size.trio": "Un trío (3)", "rq.size.small": "4 a 6 músicos", "rq.size.large": "7 o más músicos",
+  "rq.min": "Mínimo ($)", "rq.max": "Máximo ($)", "rq.stage.any": "Omitir", "rq.stage.just-looking": "Solo estoy mirando", "rq.stage.comparing": "Comparando opciones", "rq.stage.ready": "Listo para reservar",
+  "rq.privacy": "Nunca compartimos tu teléfono ni tu correo con los grupos. Ellos te responden aquí.", "rq.hasAcct": "Ya tengo una cuenta", "rq.newAcct": "Mejor crear una cuenta nueva", "rq.sendAcct": "Crear cuenta y enviar",
   "nav.quotes": "Cotizaciones", "rq.title": "Pide cotizaciones para tu evento", "rq.sub": "Cuéntanos de tu evento una sola vez. Lo enviamos hasta a 5 grupos que de verdad están libres ese día, caben tus invitados y tocan tu tipo de evento. Ellos te responden con un precio.",
   "rq.note": "¿Algo que el grupo deba saber? (opcional)", "rq.notePh": "Patio al aire libre, queremos Las Mañanitas a medianoche…", "rq.send": "Enviar a los mejores grupos",
   "rq.p1": "Solo lo ven grupos libres ese día, nunca se manda a todos.", "rq.p2": "Es gratis. Los grupos tampoco pagan por las solicitudes.", "rq.p3": "Sin depósito hasta que elijas un grupo y reserves.",

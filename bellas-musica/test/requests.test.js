@@ -74,6 +74,32 @@ test("get quotes: an event request goes only to groups that can really do it, ma
   } finally { await S.close(); }
 });
 
+test("get quotes: start time, group size, budget and planning stage are validated, shown to the group, and shape who is asked", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const cust = client(S.base);
+    await cust.signup("rx-c@example.com", "Rita Cliente");
+    const d = inDays(30);
+    const mk = async (i, name, rate, members, dates = [d]) => { const o = client(S.base); await o.signup(`rx${i}@example.com`, `Owner ${i}`); return { o, id: await makeGroup(o, { name, dates, rate, extra: { events: ["Quinceañera"], max_guests: 400, members } }) }; };
+    const cheap = await mk(1, "Cheap Trio", 150, 3), mid = await mk(2, "Mid Mariachi", 300, 8), pricey = await mk(3, "Pricey Banda", 1500, 14);
+    const base = { event: "Quinceañera", date: d, guests: 100, hours: 3, zip: "60608" };
+    for (const bad of [{ time: "9:00 AM" }, { size: "huge" }, { stage: "maybe" }, { budgetMax: -5 }, { budgetMin: 900, budgetMax: 400 }, { budgetMax: "abc" }]) assert.equal((await cust.post("/api/requests", { ...base, ...bad })).status, 400, JSON.stringify(bad));
+    // a budget of $1000 for 3 hours: Pricey Banda ($4,500) is far out of range and is not asked; the other two are
+    const r = await cust.post("/api/requests", { ...base, time: "2:00 PM", size: "small", budgetMin: 500, budgetMax: 1000, stage: "ready", note: "Patio" });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.json.groups.map((g) => g.id).sort(), [cheap.id, mid.id].sort());
+    const msg = S.db.get("SELECT text FROM messages WHERE group_id = ? AND sender = 'customer'", mid.id).text;
+    assert.match(msg, /on .* at 2:00 PM, about 100 guests, 3 hr, near Chicago, IL\. Looking for 4 to 6 musicians\. Budget \$500 to \$1000\. Planning: ready to book\. Patio/);
+    const row = S.db.get("SELECT start_time, budget_min, budget_max, stage, size FROM event_requests");
+    assert.deepEqual({ ...row }, { start_time: "2:00 PM", budget_min: 500, budget_max: 1000, stage: "ready", size: "small" });
+    // everything stays optional: the old minimal request still works and mentions none of the extras
+    const cust2 = client(S.base); await cust2.signup("rx-c2@example.com", "Sam Cliente");
+    const min = await cust2.post("/api/requests", base); assert.equal(min.status, 200); assert.equal(min.json.sent, 3);
+    assert.doesNotMatch(S.db.get("SELECT text FROM messages WHERE customer_id = (SELECT id FROM users WHERE email = 'rx-c2@example.com') LIMIT 1").text, /Budget|Planning|Looking for| at \d/);
+    void pricey;
+  } finally { await S.close(); }
+});
+
 test("'booked here' count: only confirmed, past, still-paid events; a refunded no-show doesn't count", async () => {
   const S = await startApp({ DEMO_SEED: "0", ADMIN_EMAILS: "boss@example.com" });
   try {

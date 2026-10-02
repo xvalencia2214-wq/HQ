@@ -1,39 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a charro hat with veins running through it">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a silver-blue charro sombrero with an embroidered leather band">
 <defs>
 <radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#1b2c55"/><stop offset="1" stop-color="#0a1022"/></radialGradient>
-<linearGradient id="hat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f8cff"/><stop offset="1" stop-color="#1c48b8"/></linearGradient>
-<linearGradient id="brim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a72e8"/><stop offset="1" stop-color="#173a96"/></linearGradient>
 <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#aab4c6"/></linearGradient>
-<linearGradient id="vein" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e9eef8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+<linearGradient id="felt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d3dae6"/><stop offset="1" stop-color="#9aa7bd"/></linearGradient>
+<linearGradient id="brim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c3cddd"/><stop offset="1" stop-color="#8795ad"/></linearGradient>
+<linearGradient id="leather" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b98458"/><stop offset="1" stop-color="#7a4d2c"/></linearGradient>
 </defs>
 <rect width="128" height="128" rx="30" fill="url(#bg)"/>
 <rect x="3" y="3" width="122" height="122" rx="27" fill="none" stroke="url(#silver)" stroke-width="2"/>
-<g transform="translate(64 66) scale(1.05) translate(-64 -66)">
-<!-- brim -->
-<path d="M6 70 C14 96 42 106 64 106 C86 106 114 96 122 70 C110 83 90 90 64 90 C38 90 18 83 6 70 Z" fill="url(#brim)" stroke="url(#silver)" stroke-width="2.2" stroke-linejoin="round"/>
+<!-- brim: underside edge, then the top surface with a raised rim -->
+<ellipse cx="64" cy="82" rx="58" ry="20" fill="#6f7d95"/>
+<ellipse cx="64" cy="78" rx="58" ry="20" fill="url(#brim)" stroke="#e9eef8" stroke-width="1.4"/>
+<ellipse cx="64" cy="78" rx="51" ry="15.5" fill="none" stroke="#eef2f9" stroke-width="1" opacity=".55"/>
 <!-- crown -->
-<path d="M39 90 C39 72 41 52 44 38 C45.5 30 50 26 56 25 C60.5 24.4 67.5 24.4 72 25 C78 26 82.5 30 84 38 C87 52 89 72 89 90 C76 94 52 94 39 90 Z" fill="url(#hat)" stroke="url(#silver)" stroke-width="2" stroke-linejoin="round"/>
-<path d="M46.5 36 C56 41 72 41 81.5 36" fill="none" stroke="#9dbcff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
-<!-- band with conchos -->
-<path d="M39.6 81 C54 87 74 87 88.4 81 L88.9 89.6 C75 94 53 94 39.1 89.6 Z" fill="#0d1a3d" stroke="url(#silver)" stroke-width="1.4"/>
-<g fill="url(#silver)"><circle cx="49" cy="87.6" r="2.3"/><circle cx="64" cy="89.2" r="2.6"/><circle cx="79" cy="87.6" r="2.3"/></g>
-<!-- veins running through the crown and along the brim -->
-<g fill="none" stroke="url(#vein)" stroke-linecap="round" stroke-linejoin="round">
-<path d="M64 83 C62.5 68 65.5 52 64 30" stroke-width="2.2"/>
-<path d="M64.2 70 C58 66 54 60 52.5 50" stroke-width="1.7"/>
-<path d="M64.2 70 C70.5 65 74.5 59 76 49" stroke-width="1.7"/>
-<path d="M64 56 C60 52 58.5 47 58.5 42" stroke-width="1.4"/>
-<path d="M64 56 C68 52 69.5 47 69.5 42" stroke-width="1.4"/>
-<path d="M58.5 63 C55 62 52 59 50.5 56" stroke-width="1.2"/>
-<path d="M70 62 C73.5 61 76.5 58 78 55" stroke-width="1.2"/>
-<path d="M52 97 C40 96 26 91 13 79" stroke-width="1.9"/>
-<path d="M76 97 C88 96 102 91 115 79" stroke-width="1.9"/>
-<path d="M40 95 C36 92 33 90 30 86" stroke-width="1.3"/>
-<path d="M88 95 C92 92 95 90 98 86" stroke-width="1.3"/>
-<path d="M28 90 C25 89 22 86 20 83" stroke-width="1.2"/>
-<path d="M100 90 C103 89 106 86 108 83" stroke-width="1.2"/>
-<path d="M64 98 C64 101 64 103 64 105" stroke-width="1.5"/>
+<path d="M39 76 C39 55 41 34 49 25 C55 18 73 18 79 25 C87 34 89 55 89 76 C80 83 48 83 39 76 Z" fill="url(#felt)" stroke="#eef2f9" stroke-width="1.2" stroke-linejoin="round"/>
+<path d="M52 26.5 C58 23.5 70 23.5 76 26.5" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>
+<path d="M44 52 C44.6 42 46.5 34 50 29" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity=".35"/>
+<!-- embroidered leather band -->
+<path d="M38.8 71 C47 78 81 78 89.2 71 L88.8 60 C80 67 48 67 39.2 60 Z" fill="url(#leather)" stroke="#e7c9a6" stroke-width="1.1" stroke-linejoin="round"/>
+<path d="M39.6 62.4 C48 69 80 69 88.4 62.4" fill="none" stroke="#e7c9a6" stroke-width=".7" stroke-dasharray="1.6 1.6" opacity=".9"/>
+<path d="M39.6 69 C48 75.4 80 75.4 88.4 69" fill="none" stroke="#e7c9a6" stroke-width=".7" stroke-dasharray="1.6 1.6" opacity=".9"/>
+<!-- vines (the veins) and flowers in white thread -->
+<g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+<path d="M41.5 67 C46 66 48 69 52 68 C57 67 59 70 64 69.5 C69 69 71 66.5 76 67.5 C80 68.5 83 66 86.5 66.5" stroke-width="1.2"/>
+<path d="M48 67.5 C47 65 48.5 63.5 50 63" stroke-width=".9"/>
+<path d="M58 69 C57.5 71.5 59 73 61 73.4" stroke-width=".9"/>
+<path d="M70 68.6 C71 71.2 69.5 72.8 67.5 73.2" stroke-width=".9"/>
+<path d="M79 67.4 C79.6 65 78.4 63.6 77 63.2" stroke-width=".9"/>
 </g>
-<g fill="#fff"><circle cx="64" cy="30" r="1.9"/><circle cx="52.5" cy="50" r="1.5"/><circle cx="76" cy="49" r="1.5"/><circle cx="58.5" cy="42" r="1.3"/><circle cx="69.5" cy="42" r="1.3"/><circle cx="13" cy="79" r="1.6"/><circle cx="115" cy="79" r="1.6"/></g>
+<g fill="#ffffff">
+<circle cx="52" cy="67.2" r="2.5"/><circle cx="64" cy="70" r="2.9"/><circle cx="76.5" cy="67" r="2.5"/><circle cx="44" cy="66.4" r="1.6"/><circle cx="85" cy="65.8" r="1.6"/>
+<circle cx="50" cy="63" r="1.1"/><circle cx="61" cy="73.4" r="1.1"/><circle cx="67.5" cy="73.2" r="1.1"/><circle cx="77" cy="63.2" r="1.1"/>
 </g>
+<g fill="#7a4d2c"><circle cx="52" cy="67.2" r=".9"/><circle cx="64" cy="70" r="1"/><circle cx="76.5" cy="67" r=".9"/></g>
 </svg>

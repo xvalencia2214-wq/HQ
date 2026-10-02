@@ -64,7 +64,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "agreement", "saved", "quotes", "pay", "dashboard", "account", "messages", "admin"]);
+const needsLogin = new Set(["bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin"]);
 
 async function route() {
   const token = ++routeToken;

@@ -428,3 +428,16 @@ table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .btn.ghost-light { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); margin-top: 8px; }
 .btn.ghost-light:hover { background: rgba(255,255,255,.12); }
 .btn.ghost-light { white-space: normal; text-align: center; }
+
+/* quote wizard */
+.wizpanel { padding: 22px; }
+.wiz-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.wiz-step { font-size: .85rem; color: var(--ink-2); }
+.ring { --p: 0; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--cream-2) 0); }
+.ring span { width: 36px; height: 36px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-size: .68rem; font-weight: 700; color: var(--gold-ink); }
+.wiz-h { font-size: 1.35rem; margin: 6px 0 10px; }
+.wiz-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.wiz-nav .btn { min-width: 110px; }
+.linkbtn-dark { background: none; border: 0; padding: 4px 0; color: var(--gold-ink); text-decoration: underline; }
+.wiz-nav .btn { white-space: normal; }
+.wiz-nav #wnext { flex: 1; }

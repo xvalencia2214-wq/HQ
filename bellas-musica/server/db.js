@@ -270,6 +270,11 @@ export function openDb(config) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
     return true;
   };
+  ensureColumn("event_requests", "start_time", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("event_requests", "budget_min", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("event_requests", "budget_max", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("event_requests", "stage", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("event_requests", "size", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("bookings", "checkin_code", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("bookings", "checked_in_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "noshow_status", "TEXT NOT NULL DEFAULT ''");   // '' | reported | refunded | rejected

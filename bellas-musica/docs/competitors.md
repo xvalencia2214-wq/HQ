@@ -43,6 +43,8 @@ Research date: September 2026. Sources are web-search results (linked at the bot
 - **Get quotes, with a twist (GigSalad's headline feature):** GigSalad's "fast free quote" reaches many performers and performers complain the leads are blanket blasts they pay for. Here a request goes to at most 5 groups that are free that day, play that event, fit the guest count and are in range, and costs groups nothing.
 - **"Events booked here":** the equivalent of GigSalad's verified-booking count. It only counts confirmed events that already happened with the money not refunded, so a refunded no-show removes itself. It starts at zero for everyone, and that is the honest starting line.
 
+- **GigSalad's quote flow, studied from a real run** (12 screens, one question each with a progress ring: category, group size, ZIP, date, start time, length, budget range, planning stage, name, phone, email, password). What we took: one question per screen, the account created last, and the four details groups need to quote (start time, budget, group size, planning stage). What we did differently: their phone step tells you providers will *call* you; ours promises your phone and email are never shared with groups, and the account step is one screen instead of four.
+
 ## Ideas not built yet, in the order I would do them
 
 1. **Serenata-now:** a same-day, short "surprise serenata" flow (Mother's Day is the peak). Serenattia's whole product is this. It needs same-day booking (today a booking must be for a future date) and time-of-day rules for groups.
