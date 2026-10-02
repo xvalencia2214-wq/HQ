@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { TEMPLATES, renderEmail, usd } from "./emails.js";
+import { TEMPLATES, renderEmail, usd, eventLabel } from "./emails.js";
 import { POLICIES } from "./pricing.js";
 
 // One place that decides who hears about what: email (always for receipts and security, otherwise only if the user
@@ -22,6 +22,7 @@ export function createNotifier(ctx) {
     if (!tpl) throw new Error("unknown notification: " + kind);
     const lang = u.lang === "es" ? "es" : "en";
     const v = { name: firstName(u.name), support: config.supportEmail, ...vars };
+    if (v.event) v.event = eventLabel(v.event, lang);
     if (v.policyKey) v.policy = (POLICIES[v.policyKey] || POLICIES.moderate).text[lang];
     const msg = tpl[lang](v);
     if (!opts.noEmail && u.email && (tpl.transactional || u.email_notify)) {
@@ -40,7 +41,7 @@ export function createNotifier(ctx) {
     const tpl = TEMPLATES[kind];
     if (!tpl || !tpl.transactional) throw new Error("toEmail is for transactional notifications only: " + kind);
     const l = lang === "es" ? "es" : "en";
-    email.send({ to: address, ...renderEmail(tpl[l]({ name: "", support: config.supportEmail, ...vars }), { lang: l, config, unsubUrl: "" }), kind }).catch(() => {});
+    email.send({ to: address, ...renderEmail(tpl[l]({ name: "", support: config.supportEmail, ...vars, ...(vars.event ? { event: eventLabel(vars.event, l) } : {}) }), { lang: l, config, unsubUrl: "" }), kind }).catch(() => {});
   }
 
   // The fields most booking messages need, already formatted.

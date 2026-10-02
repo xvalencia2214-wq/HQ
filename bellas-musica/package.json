@@ -9,7 +9,11 @@
     "preflight": "node --disable-warning=ExperimentalWarning server/preflight.js",
     "backup": "node --disable-warning=ExperimentalWarning server/backup.js",
     "admin": "node --disable-warning=ExperimentalWarning server/admin.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
+    "spanish-sheet": "node --disable-warning=ExperimentalWarning server/i18n-sheet.js",
+    "stripe:expect": "node --disable-warning=ExperimentalWarning server/stripe-expect.js"
   },
-  "engines": { "node": ">=22.13" }
+  "engines": {
+    "node": ">=22.13"
+  }
 }

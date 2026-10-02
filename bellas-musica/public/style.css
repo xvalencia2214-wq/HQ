@@ -363,7 +363,7 @@ nav a { font-weight: 500; }
 .reel-media { position: absolute; inset: 0; background: center / cover no-repeat; display: flex; align-items: center; justify-content: center; }
 .reel-media.ph { background: radial-gradient(ellipse at 50% 30%, #1f3f86 0, transparent 65%), linear-gradient(170deg, #12224a, #070c1a); }
 .reel-media.ph img { filter: drop-shadow(0 8px 28px rgba(63,120,255,.5)); margin-bottom: 18%; }
-.reel-video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.reel-video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; pointer-events: none; } /* the app has its own sound button; the clip must never swallow a swipe */
 .reel-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(7,12,26,.0) 42%, rgba(7,12,26,.55) 66%, rgba(7,12,26,.92) 100%); }
 .reel-info { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 6px; }
 .reel-info h2 { font-size: 1.6rem; line-height: 1.15; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
@@ -441,3 +441,10 @@ table.kv td { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .linkbtn-dark { background: none; border: 0; padding: 4px 0; color: var(--gold-ink); text-decoration: underline; }
 .wiz-nav .btn { white-space: normal; }
 .wiz-nav #wnext { flex: 1; }
+
+/* Touch screens (iPad, phones): Apple's guideline is a 44 px tap target, so buttons grow a little when the device has no mouse. */
+@media (pointer: coarse) {
+  .btn, button.linkbtn, .chip, .zipform input, .zipform button { min-height: 44px; }
+  .btn.small { min-height: 40px; }
+  #nav a, #nav button { min-height: 44px; display: inline-flex; align-items: center; }
+}

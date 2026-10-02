@@ -22,7 +22,8 @@ Set these environment variables (see `.env.example` for the full list):
 | `ADMIN_EMAILS` | your email. Sign up with it, and an **Admin** link appears |
 | `BUSINESS_TZ` | `America/Chicago` |
 | `BACKUP_DIR` | e.g. `/data/backups` (nightly copies, verified, 14 kept) |
-| `ALERT_WEBHOOK_URL` | a Slack/Discord webhook so you're told when something breaks |
+| `ALERT_WEBHOOK_URL` | a Slack/Discord webhook so you're told when something breaks (server errors, failed payments, and pages that crash in someone's browser) |
+| `SENTRY_DSN` | optional: also send those alerts to Sentry (free tier is plenty) |
 
 Run `npm run preflight` on the server. It checks every setting and calls Stripe/Resend/Twilio to make sure the keys work. **Fix every FAIL; read every WARN.**
 
@@ -68,3 +69,7 @@ Follow `docs/twilio-a2p.md`. Carriers need a registration that takes days to wee
 ## If something breaks
 
 The site alerts your webhook on failed payments, refunds, texts, emails and backups. Payments and refunds are idempotent and reconciled per booking, so re-running a failed action is safe. If the disk is lost, restore the latest file from `BACKUP_DIR` (copy it back as `DATA_DIR/app.db`, then restart) and re-upload nothing: photos live in `DATA_DIR/uploads`, so back that folder up too.
+
+## Before the public sees it
+
+Three checks only a person can do: a native Spanish speaker reads `docs/spanish-review.md` (regenerate with `npm run spanish-sheet`); someone tries the site on a real iPad with `docs/ipad-checklist.md`; and you run the Stripe test-mode script and record it in `docs/stripe-test-log.md`.

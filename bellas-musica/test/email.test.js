@@ -104,3 +104,36 @@ test("Resend: real requests carry the key, sender, unsubscribe headers; failures
     assert.match(S.db.all("SELECT error FROM email_log ORDER BY id DESC LIMIT 1")[0].error, /Email provider 500/);
   } finally { await S.close(); srv.closeAllConnections?.(); srv.close(); }
 });
+
+test("Spanish emails name the event in Spanish, with the right article (never 'tu Wedding' or 'un boda'); English ones are unchanged", async () => {
+  const { eventLabel, TEMPLATES } = await import("../server/emails.js");
+  assert.deepEqual(["Wedding", "Quinceañera", "Birthday", "Anniversary", "Serenata", "Corporate / Restaurant", "Other"].map((e) => eventLabel(e, "es")), ["boda", "quinceañera", "cumpleaños", "aniversario", "serenata", "evento corporativo o de restaurante", "evento"]);
+  assert.equal(eventLabel("Wedding", "en"), "Wedding"); assert.equal(eventLabel("Something New", "es"), "something new"); // an unknown type still reads sensibly
+  // every template that mentions the event, rendered for every event type in Spanish: no English event name left, no article that clashes with the noun
+  const BAD_ARTICLE = /\b(un|el|al|del|este|ese) (boda|quinceañera|serenata)\b|\b(un|una) (cumpleaños|aniversario|evento)\b|\buna (evento|aniversario|cumpleaños)\b/i;
+  let rendered = 0;
+  for (const [kind, tpl] of Object.entries(TEMPLATES)) {
+    for (const event of ["Wedding", "Quinceañera", "Birthday", "Anniversary", "Serenata", "Corporate / Restaurant", "Other"]) {
+      const v = { name: "Ana", group: "Los Gallos", customer: "Carlos", event: eventLabel(event, "es"), date: "2026-11-07", newDate: "2026-11-14", time: "2:00 PM", newTime: "4:00 PM", address: "Salón", guests: "100", n: "2", total: "$600", deposit: "$150", balance: "$450", refund: "$150", price: "$900", offer: "x", hours: "3", days: "7", url: "https://x.test", when: "tomorrow", phone: "", balanceLine: "", balanceDue: "", note: "" };
+      const m = tpl.es(v), text = [m.subject, ...(m.lines || []), m.sms || ""].join(" | ");
+      if (!new RegExp(v.event.replace(/[/()]/g, "\\$&")).test(text)) continue; // this template doesn't mention the event
+      rendered++;
+      assert.doesNotMatch(text, /\b(Wedding|Birthday|Anniversary|Quinceañera|Corporate)\b/, `${kind}/${event}: ${text}`);
+      assert.doesNotMatch(text, BAD_ARTICLE, `${kind}/${event}: ${text}`);
+    }
+  }
+  assert.ok(rendered >= 40, `only ${rendered} renders checked`);
+  // end to end: a Spanish-speaking customer's confirmation email says "tu boda"
+  const S = await startApp();
+  try {
+    const owner = client(S.base), cust = client(S.base);
+    await owner.signup("es-o@example.com", "Dueño Uno"); await cust.signup("es-c@example.com", "Cliente Uno", { lang: "es" });
+    const d = inDays(30); const gid = await makeGroup(owner, { name: "Los Gallos", dates: [d] });
+    const b = (await cust.post("/api/bookings", bookingBody(gid, d, { event: "Wedding" }))).json.booking;
+    await cust.post(`/api/bookings/${b.id}/simulate-pay`); await owner.patch(`/api/bookings/${b.id}`, { action: "accept" });
+    const mail = S.db.get("SELECT body FROM email_log WHERE kind = 'booking.confirmed.customer' AND to_email = 'es-c@example.com'").body;
+    assert.match(mail, /confirmó tu boda el/); assert.doesNotMatch(mail, /Wedding/);
+    const en = S.db.get("SELECT body FROM email_log WHERE kind = 'booking.requested.group' AND to_email = 'es-o@example.com'").body;
+    assert.match(en, /Wedding/); // the group (English) still sees the event type as before
+  } finally { await S.close(); }
+});

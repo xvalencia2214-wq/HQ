@@ -99,3 +99,21 @@ test("event reminders: a week before and the day before, once each, only in dayt
     assert.equal(S.db.get("SELECT reminder7_sent a, reminder1_sent b FROM bookings WHERE id = ?", far).a, 0); // a booking 40 days out gets nothing
   } finally { await S.close(); }
 });
+
+test("the language someone signs up in is saved: their very first email (the confirmation) is in that language", async () => {
+  const S = await startApp();
+  try {
+    const es = client(S.base), en = client(S.base), junk = client(S.base);
+    const u = await es.signup("lang-es@example.com", "Rosa Lopez", { lang: "es" });
+    assert.equal(u.lang, "es");
+    await en.signup("lang-en@example.com", "Rick Lee", { lang: "en" });
+    await junk.signup("lang-x@example.com", "Odd Lang", { lang: "klingon" }); // anything else falls back to English
+    const lang = (e) => S.db.get("SELECT lang FROM users WHERE email = ?", e).lang;
+    assert.deepEqual(["lang-es@example.com", "lang-en@example.com", "lang-x@example.com"].map(lang), ["es", "en", "en"]);
+    const first = (to) => S.db.get("SELECT subject, body FROM email_log WHERE kind = 'auth.verify' AND to_email = ?", to);
+    assert.match(first("lang-es@example.com").subject, /Confirma/i); assert.match(first("lang-es@example.com").body, /Hola Rosa/);
+    assert.match(first("lang-en@example.com").body, /Hi Rick/);
+    // changing the language later still works and still wins
+    assert.equal((await es.patch("/api/me", { lang: "en" })).json.user.lang, "en");
+  } finally { await S.close(); }
+});

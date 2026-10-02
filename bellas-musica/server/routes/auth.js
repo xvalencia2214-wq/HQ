@@ -30,8 +30,9 @@ export default function authRoutes(ctx, add) {
     const name = str(body.name, "Name", { min: 1, max: 80 });
     const phone = phoneField(body.phone);
     const sms = body.sms_opt_in === true && phone ? 1 : 0;
+    const lang = body.lang === "es" ? "es" : "en"; // the language they signed up in decides the language of every email and text, starting with the confirmation email
     if (db.get("SELECT 1 AS x FROM users WHERE email = ?", email)) throw new HttpError(409, "That email already has an account. Try logging in.");
-    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, pass_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)", email, name, phone, sms, await hashPassword(password), now());
+    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, lang, pass_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", email, name, phone, sms, lang, await hashPassword(password), now());
     startSession(res, req, Number(info.lastInsertRowid));
     ctx.stats.count("signup");
     sendVerification(Number(info.lastInsertRowid));
