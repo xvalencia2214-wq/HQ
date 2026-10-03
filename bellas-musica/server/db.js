@@ -268,6 +268,21 @@ CREATE TABLE IF NOT EXISTS series (
   cart_id TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
+-- Phone notifications: one row per device that turned them on (the browser's push address and its encryption keys)
+CREATE TABLE IF NOT EXISTS push_subs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  device TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  last_ok INTEGER NOT NULL DEFAULT 0,
+  fails INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subs(user_id);
+CREATE TABLE IF NOT EXISTS push_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL);
+
 -- Times blocked by a vendor's own calendar (imported from Google/Apple/Outlook through its private iCal link).
 CREATE TABLE IF NOT EXISTS ext_busy (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -578,6 +593,7 @@ export function openDb(config) {
   ensureColumn("groups", "weekly_discount_pct", "INTEGER NOT NULL DEFAULT 0"); // off each date when booked every week
   ensureColumn("users", "daily_text", "INTEGER NOT NULL DEFAULT 1");        // vendors: the morning summary text
   ensureColumn("users", "daily_text_on", "TEXT NOT NULL DEFAULT ''");       // ...last day it was sent
+  ensureColumn("users", "push_only", "INTEGER NOT NULL DEFAULT 0");          // phone notifications instead of texts
   ensureColumn("bookings", "direct", "INTEGER NOT NULL DEFAULT 0");        // booked through the vendor's own payment link
   ensureColumn("bookings", "link_id", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("groups", "needs_json", "TEXT NOT NULL DEFAULT '[]'");       // what the vendor needs from the family (power, parking...)

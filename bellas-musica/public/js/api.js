@@ -3,11 +3,14 @@ export class ApiError extends Error {
 }
 
 async function call(method, url, body) {
-  const res = await fetch(url, {
-    method, credentials: "same-origin",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
-    body: body !== undefined ? JSON.stringify(body) : undefined
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method, credentials: "same-origin",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+  } catch { throw new ApiError(0, "Connection problem. Please try again."); } // no signal, or the page was left mid-request: not a crash
   let json = null, unreadable = false;
   try { json = await res.json(); } catch { unreadable = res.ok && res.status !== 204; } // e.g. the page was reloaded mid-request
   if (!res.ok) {

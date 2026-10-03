@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { storeApp } from "../appmode.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars, lenLabel, minutesOf } from "../ui.js";
@@ -6,6 +7,7 @@ import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { CAT_ORDER, catLabel } from "../cats.js";
 import { businessTab, bizBox, wireBiz, ownerOnly } from "./business.js";
+import { pushPanel } from "./app.js";
 
 // Type picker grouped by category (music, food, rentals...).
 const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
@@ -24,10 +26,12 @@ export async function dashboard(app, params) {
     <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}${x.my_role === "manager" ? ` (${esc(t("team.manager"))})` : ""}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
     ${g.stripe.mode === "stripe" && !g.stripe.ready ? `<div class="note warn">${esc(t("dash.needPayout"))} <a href="${esc(link({ tab: "payments" }))}">${esc(t("dash.setUp"))}</a></div>` : ""}
     ${statusBanner(g)}
+    <div id="pushnudge" hidden></div>
     ${g.status === "draft" ? "" : checklistCard(g, link)}
     <div class="tabs" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${k === "requests" && g.pending_requests ? `<span class="dot">${g.pending_requests}</span>` : ""}${k === "messages" && g.unread_threads ? `<span class="dot">${g.unread_threads}</span>` : ""}</a>`).join("")}</div>
     <div id="tabbody"></div>`;
   wireShare(app);
+  pushPanel(document.getElementById("pushnudge"), { compact: true });
   const pick = document.getElementById("gpick"); if (pick) pick.onchange = () => { location.hash = `#/dashboard?g=${pick.value}`; };
   const body = document.getElementById("tabbody");
   const refresh = () => dashboard(app, new URLSearchParams(location.hash.split("?")[1] || ""));
@@ -444,10 +448,10 @@ async function payments({ g, body, refresh }) {
     <p class="dim small">${esc(t("dash.feeExplain"))}</p></div>
     <div class="panel"><h2 class="sec">⭐ ${esc(t("dash.featureTitle"))}</h2><p>${esc(t("dash.featureText"))}</p>
     ${until > Date.now() ? `<div class="note ok">${esc(t("dash.featuredUntil", { date: new Date(until).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</div>` : ""}
-    <button class="btn" id="feature">${esc(t("dash.buyFeature", { price: money(state.meta.feature_price_cents) }))}</button></div></div>`;
+    ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : `<button class="btn" id="feature">${esc(t("dash.buyFeature", { price: money(state.meta.feature_price_cents) }))}</button>`}</div></div>`;
   const ob = document.getElementById("onboard");
   if (ob) ob.onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/stripe/onboard`); if (r.url) goto(r.url); else refresh(); } catch (e) { toast(e.message, "error"); } };
-  document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
+  if (document.getElementById("feature")) document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
   await growPanels({ g: cur, body, refresh });
   ownerOnly(body, cur); // payouts, Pro and Featured are the owner's
 }
@@ -463,7 +467,7 @@ async function growPanels({ g, body, refresh }) {
     <div class="panel"><h2 class="sec">★ ${esc(t("pro.title"))}</h2><p>${esc(t("pro.text", { fee: meta.pro_fee_pct, base: meta.fee_pct }))}</p>
       <p class="small">${esc(t("pro.feeNow", { pct: g.fee_pct }))}${discountUntil > Date.now() ? ` · ${esc(t("ref.activeUntil", { date: new Date(discountUntil).toLocaleDateString(loc) }))}` : ""}</p>
       ${proUntil > Date.now() ? `<div class="note ok">${esc(t("pro.until", { date: new Date(proUntil).toLocaleDateString(loc) }))}</div>` : ""}
-      <button class="btn" id="buypro">${esc(t("pro.buy", { price: money(meta.pro_price_cents) }))}</button></div>
+      ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : `<button class="btn" id="buypro">${esc(t("pro.buy", { price: money(meta.pro_price_cents) }))}</button>`}</div>
     <div class="panel"><h2 class="sec">🤝 ${esc(t("ref.title"))}</h2><p>${esc(t("ref.text", { days: ref ? ref.days : 30 }))}</p>
       ${ref ? `<div class="copyrow"><input readonly value="${esc(ref.url)}" aria-label="${esc(t("ref.title"))}" id="reflink"><button type="button" class="btn small" data-copy="reflink">${esc(t("pp.copy"))}</button><a class="btn ghost small" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(t("ref.wa") + " " + ref.url)}">WhatsApp</a></div>
       <p class="dim small">${esc(t("ref.stats", { invited: ref.invited, live: ref.live }))}</p>` : ""}</div>
@@ -484,7 +488,7 @@ async function growPanels({ g, body, refresh }) {
     <tfoot><tr><th scope="row">${esc(t("earn.total"))}</th><td>${e.total.events}</td><td>${money(e.total.deposits_cents)}</td><td>${money(e.total.balances_cents)}</td><td>${money(e.total.extras_cents || 0)}</td><td>${money(e.total.tips_cents || 0)}</td><td>${money(e.total.offline_cents)}</td><td>${money(e.total.fees_cents)}</td></tr></tfoot></table></div>
     <p class="dim small">${esc(t("earn.note"))}</p></div>` : ""}`);
   body.querySelectorAll("[data-copy]").forEach((b) => { b.onclick = async () => { const i = document.getElementById(b.dataset.copy); try { await navigator.clipboard.writeText(i.value); toast(t("share.copied")); } catch { i.select(); } }; });
-  document.getElementById("buypro").onclick = async () => { try { goto((await api.post(`/api/groups/${gid}/pro`)).url); } catch (ex) { toast(ex.message, "error"); } };
+  if (document.getElementById("buypro")) document.getElementById("buypro").onclick = async () => { try { goto((await api.post(`/api/groups/${gid}/pro`)).url); } catch (ex) { toast(ex.message, "error"); } };
   document.getElementById("doc-file").onchange = async (ev) => {
     const f = ev.target.files[0]; if (!f) return;
     const err = document.getElementById("doc-err"); err.textContent = "";

@@ -37,7 +37,9 @@ The site works like the test drive: payments, texts and emails are pretend, and 
 Sample groups fill the search until real ones join.
 
 Now you can send the link and the password to a few vendors and families you trust and let them try it on their
-phones. On iPhone or Android they can tap **Share → Add to Home Screen** to use it like an app.
+phones. The **Get the app** link at the bottom of every page shows them how to put it on their Home Screen, and
+vendors can turn on **phone notifications** (free, instead of paid texts). For Google Play and the App Store, see
+`docs/app-stores.md`.
 
 ## 4. Your own web address (optional, but looks professional)
 

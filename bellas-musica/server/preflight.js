@@ -25,6 +25,8 @@ export async function runPreflight(config) {
   if (config.prod && !config.trustProxy) out.push(warn("TRUST_PROXY", "not set: behind a load balancer every visitor will look like one IP, and rate limits will punish everyone together"));
   try { const f = path.join(config.dataDir, ".preflight"); fs.writeFileSync(f, "x"); fs.rmSync(f); out.push(ok("DATA_DIR is writable", config.dataDir)); } catch (e) { out.push(fail("DATA_DIR", `cannot write to ${config.dataDir}: ${e.message}. Use a persistent disk!`)); }
   try { setTimezone(config.timezone); out.push(ok("BUSINESS_TZ", config.timezone)); } catch { out.push(fail("BUSINESS_TZ", `${config.timezone} is not a valid time zone`)); }
+  out.push(config.vapidPublic ? ok("Phone notifications", "keys from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY") : ok("Phone notifications", `keys kept in ${config.dataDir}/vapid.json (back it up with the database)`));
+  if (config.androidPackage) out.push(config.androidSha256.length ? ok("Android app", `${config.androidPackage}, ${config.androidSha256.length} signing fingerprint(s)`) : fail("ANDROID_SHA256", "ANDROID_PACKAGE is set but no fingerprint: the Play Store app would show a browser bar"));
   if (config.previewPassword) out.push(warn("PREVIEW_PASSWORD", "is set: the site is private (visitors are asked for the password). Remove it on launch day"));
   out.push(config.adminEmails.length ? ok("ADMIN_EMAILS", config.adminEmails.join(", ")) : warn("ADMIN_EMAILS", "empty: nobody can open the owner page"));
   out.push(config.businessAddress ? ok("BUSINESS_ADDRESS (email footer)") : warn("BUSINESS_ADDRESS", "empty: commercial email must include a postal address (CAN-SPAM)"));

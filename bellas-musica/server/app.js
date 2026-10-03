@@ -39,6 +39,8 @@ import extrasRoutes from "./routes/extras.js";
 import specialsRoutes from "./routes/specials.js";
 import tipRoutes from "./routes/tips.js";
 import seriesRoutes from "./routes/series.js";
+import pushRoutes from "./routes/push.js";
+import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
 
 const TYPES = {
@@ -77,10 +79,11 @@ export function createApp(config) {
   const stripe = createStripe(config);
   const alert = createAlerts(config);
   const sms = createSms(config, db, alert);
+  const push = createPush(config, db, alert);
   const email = createEmail(config, db, alert);
   const L = config.limits;
   const stats = createStats(db);
-  const ctx = { config, db, stripe, sms, email, alert, stats, limiters: {
+  const ctx = { config, db, stripe, sms, push, email, alert, stats, limiters: {
     api: createLimiter({ windowMs: 60_000, max: L.api }),
     auth: createLimiter({ windowMs: 15 * 60_000, max: L.auth }),
     register: createLimiter({ windowMs: 60 * 60_000, max: L.register }),
@@ -96,7 +99,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -162,6 +165,15 @@ export function createApp(config) {
     const site = /^\/v\/([\w-]+)\/?$/.exec(pathname); // a vendor's free website page
     if (site) { const page = renderVendorSite(ctx, site[1]); if (page) return sendText(res, "text/html; charset=utf-8", page); }
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));
+    // The store apps prove this site is theirs (Android: Digital Asset Links; iPhone: Apple's app-site association).
+    if (pathname === "/.well-known/assetlinks.json") {
+      if (!config.androidPackage || !config.androidSha256.length) throw new HttpError(404, "Not found");
+      return sendText(res, "application/json", JSON.stringify([{ relation: ["delegate_permission/common.handle_all_urls"], target: { namespace: "android_app", package_name: config.androidPackage, sha256_cert_fingerprints: config.androidSha256 } }]));
+    }
+    if (pathname === "/.well-known/apple-app-site-association") {
+      if (!config.appleAppId) throw new HttpError(404, "Not found");
+      return sendText(res, "application/json", JSON.stringify({ applinks: { apps: [], details: [{ appID: config.appleAppId, paths: ["*"] }] }, webcredentials: { apps: [config.appleAppId] } }));
+    }
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
     let root = config.publicDir, rel = pathname, cache = "no-cache";
     if (pathname.startsWith("/uploads/")) { root = config.uploadDir; rel = pathname.slice("/uploads".length); cache = "public, max-age=86400"; }
@@ -209,7 +221,7 @@ export function createApp(config) {
   };
   const server = http.createServer(async (req, res) => {
     securityHeaders(res, req);
-    if (previewHash && !/^\/api\/(health|stripe\/webhook)$/.test(String(req.url).split("?")[0]) && !previewOk(req)) {
+    if (previewHash && !/^\/(api\/(health|stripe\/webhook)|\.well-known\/(assetlinks\.json|apple-app-site-association))$/.test(String(req.url).split("?")[0]) && !previewOk(req)) {
       res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Bella\'s Musica preview", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
       res.end("Bella's Música is in private preview. Ask the owner for the password.");
       return;

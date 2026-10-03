@@ -29,7 +29,7 @@ export function sendDailyTexts(ctx, { hour = businessHour() } = {}) {
   const { db, config, notify } = ctx;
   const today = todayStr();
   let sent = 0;
-  const people = db.all(`SELECT DISTINCT u.id FROM users u WHERE u.daily_text = 1 AND u.daily_text_on != ? AND u.sms_opt_in = 1 AND u.phone != ''
+  const people = db.all(`SELECT DISTINCT u.id FROM users u WHERE u.daily_text = 1 AND u.daily_text_on != ? AND ((u.sms_opt_in = 1 AND u.phone != '') OR EXISTS (SELECT 1 FROM push_subs p WHERE p.user_id = u.id))
     AND (EXISTS (SELECT 1 FROM groups g WHERE g.owner_id = u.id AND g.demo = 0) OR EXISTS (SELECT 1 FROM group_team t WHERE t.user_id = u.id))`, today);
   for (const { id } of people) {
     const groups = db.all("SELECT id, name FROM groups WHERE (owner_id = ? OR id IN (SELECT group_id FROM group_team WHERE user_id = ?)) AND hidden = 0", id, id);

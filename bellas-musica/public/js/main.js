@@ -22,6 +22,8 @@ import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
 import { admin } from "./views/admin.js";
 import { teamInvitePage, payLinkPage, specialsPage } from "./views/business.js";
+import { appPage, appLink } from "./views/app.js";
+import { syncPush, onInstallChange } from "./appmode.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
@@ -46,7 +48,7 @@ try {
 // ordinary user-facing API errors (wrong password, a full slot) are not crashes and are skipped.
 let reported = 0;
 const reportCrash = (message, source, line) => {
-  if (reported >= 3 || !message || /ResizeObserver loop|Script error/i.test(message)) return;
+  if (reported >= 3 || !message || /ResizeObserver loop|Script error|Connection problem/i.test(message)) return; // no signal isn't a crash
   reported++;
   fetch("/api/client-error", { method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true, body: JSON.stringify({ message: String(message).slice(0, 300), source: source || "", line: Number.isInteger(line) ? line : undefined, route: location.hash }) }).catch(() => {});
 };
@@ -75,7 +77,7 @@ function renderChrome() {
   const lo = document.getElementById("logout");
   if (lo) lo.onclick = async () => { await api.post("/api/auth/logout"); setUser(null); location.hash = "#/"; toast(t("nav.loggedOut")); };
   document.getElementById("langbtn").onclick = () => setLang(lang() === "es" ? "en" : "es");
-  document.getElementById("foot").innerHTML = `${esc(t("foot"))} · <a href="terms.html">${esc(t("foot.terms"))}</a> · <a href="privacy.html">${esc(t("foot.privacy"))}</a>`;
+  document.getElementById("foot").innerHTML = `${esc(t("foot"))} · <a href="terms.html">${esc(t("foot.terms"))}</a> · <a href="privacy.html">${esc(t("foot.privacy"))}</a>${appLink()}`;
   const banner = document.getElementById("banner");
   banner.hidden = state.meta.payments !== "simulated";
   banner.textContent = t("banner.test");
@@ -134,6 +136,7 @@ async function route() {
     else if (seg[0] === "pay" && seg[1] && seg[2]) await simulatedPay(box, seg[1], seg[2]);
     else if (seg[0] === "dashboard") { if (params.get("new")) newGroup(box); else await dashboard(box, params); }
     else if (seg[0] === "account") accountView(box);
+    else if (seg[0] === "app") await appPage(box);
     else await home(box, params);
   } catch (e) {
     if (token !== routeToken) return; // the user already moved on
@@ -157,8 +160,16 @@ initLang(() => { renderChrome(); route(); });
 await init();
 if (state.user && state.user.lang && !localStorage.getItem("bm_lang")) setLang(state.user.lang, { persist: false });
 onChange(renderChrome);
+onInstallChange(renderChrome);
+// a phone that already has notifications on: they follow whoever is logged in on it
+let lastUserId = state.user?.id || null;
+if (lastUserId) syncPush();
+onChange(() => { const id = state.user?.id || null; if (id && id !== lastUserId) syncPush(); lastUserId = id; });
 window.addEventListener("bm:attention", () => refreshAttention());
 setInterval(() => { if (!document.hidden) refreshAttention(); }, 60_000);
 refreshAttention();
 window.addEventListener("hashchange", route);
+// the signal drops while using the app: say so (and say when it's back) instead of failing quietly
+window.addEventListener("offline", () => toast(t("app.offline"), "error"));
+window.addEventListener("online", () => toast(t("app.online")));
 route();

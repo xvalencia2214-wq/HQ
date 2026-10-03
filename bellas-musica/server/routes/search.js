@@ -105,7 +105,8 @@ export default function searchRoutes(ctx, add) {
     events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, times: TIMES, short_minutes: SHORT_MINUTES, needs_presets: NEEDS_PRESETS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
-    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, direct_fee_pct: config.directFeePct, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
+    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, direct_fee_pct: config.directFeePct, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone(),
+    play_url: config.androidPackage ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(config.androidPackage)}` : "", app_store_url: config.appStoreUrl
   }));
 
   add("GET", "/api/nearest-zip", ({ query }) => {

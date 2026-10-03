@@ -76,6 +76,16 @@ export function loadConfig(env = process.env) {
     twilioToken: env.TWILIO_AUTH_TOKEN || "",
     twilioFrom: env.TWILIO_FROM || "",
     twilioWhatsappFrom: env.TWILIO_WHATSAPP_FROM || "", // a WhatsApp-enabled Twilio number (+1...), optional
-    twilioApi: env.TWILIO_API_BASE || "https://api.twilio.com"
+    twilioApi: env.TWILIO_API_BASE || "https://api.twilio.com",
+    // Phone notifications (Web Push). Keys are made automatically and kept in DATA_DIR/vapid.json unless set here.
+    vapidPublic: env.VAPID_PUBLIC_KEY || "",
+    vapidPrivate: env.VAPID_PRIVATE_KEY || "",
+    pushAllowAny: env.PUSH_ALLOW_ANY === "1",   // tests only: accept any push address
+    // App stores: the Android app's package name and signing fingerprints (from PWABuilder / Play Console), and the
+    // iPhone app's TEAMID.bundle.id. They let the store apps open this site as their own.
+    androidPackage: env.ANDROID_PACKAGE || "",
+    androidSha256: String(env.ANDROID_SHA256 || "").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean),
+    appleAppId: env.APPLE_APP_ID || "",
+    appStoreUrl: /^https:\/\/apps\.apple\.com\//.test(env.APP_STORE_URL || "") ? env.APP_STORE_URL : "" // the App Store page, once it's approved
   };
 }

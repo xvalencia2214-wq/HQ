@@ -3,6 +3,7 @@ import { setUser, state } from "../state.js";
 import { setLang, lang } from "../i18n.js";
 import { t } from "../i18n.js";
 import { esc, toast } from "../ui.js";
+import { pushPanel } from "./app.js";
 
 const safeNext = (n) => (n && n.startsWith("#/") ? n : "#/");
 
@@ -54,9 +55,11 @@ export function accountView(app) {
     <label for="w-new">${esc(t("acct.new"))}</label><input id="w-new" name="next" type="password" minlength="8" autocomplete="new-password" required>
     <div id="werr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("acct.change"))}</button></form>
     <p class="dim small">${esc(t("acct.others"))}</p></div></div>
+    <div class="panel"><h2 class="sec">🔔 ${esc(t("push.title"))}</h2><div id="pushbox"></div></div>
     <details class="panel danger"><summary>${esc(t("acct.delete"))}</summary><p class="dim">${esc(t("acct.deleteWarn"))}</p>
     <form id="dform"><label for="d-pw">${esc(t("acct.deletePw"))}</label><input id="d-pw" name="password" type="password" autocomplete="current-password" required>
     <div id="derr" class="err" role="alert"></div><button class="btn dangerbtn" type="submit">${esc(t("acct.deleteBtn"))}</button></form></details>`;
+  pushPanel(document.getElementById("pushbox"));
   document.getElementById("pform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("perr"); err.textContent = "";
