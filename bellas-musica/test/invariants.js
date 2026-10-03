@@ -40,8 +40,19 @@ export function checkInvariants(db, fake, log) {
     if (b.noshow_status === "rejected" && b.payment_status === "refunded") fail("no-show rejected but everything was refunded", b);
   }
   if (db.get("SELECT 1 AS x FROM extra_refunds WHERE cents <= 0")) fail("empty stray refund", {});
-  const dup = db.get(`SELECT group_id, date, time, COUNT(*) c FROM bookings WHERE status IN ('pending_payment','requested','confirmed') GROUP BY group_id, date, time HAVING c > 1`);
-  if (dup) fail("double-booked slot", dup);
+  // No listing ever has more bookings running at the same moment than it has crews/trucks/lineups (capacity).
+  const byGroup = new Map();
+  for (const b of db.all(`SELECT b.id, b.group_id, b.date, b.time, b.hours, b.duration_min, g.capacity FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status IN ('pending_payment','requested','confirmed')`)) {
+    const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(b.time);
+    const s = (Date.parse(b.date + "T00:00:00Z") / 60000) + ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]);
+    const e = s + (b.duration_min > 0 ? b.duration_min : b.hours * 60);
+    if (!byGroup.has(b.group_id)) byGroup.set(b.group_id, { cap: Math.max(1, b.capacity || 1), iv: [] });
+    byGroup.get(b.group_id).iv.push({ s, e, id: b.id });
+  }
+  for (const [gid, { cap, iv }] of byGroup) for (const a of iv) {
+    const at = iv.filter((x) => x.s <= a.s && x.e > a.s);
+    if (at.length > cap) fail("double-booked: more bookings at once than the listing can serve", { gid, cap, at: at.map((x) => x.id) });
+  }
   if (db.get("SELECT 1 AS x FROM reviews GROUP BY booking_id HAVING COUNT(*) > 1")) fail("duplicate review", {});
   if (fake) { // every cent we recorded as refunded was actually refunded by Stripe exactly once, on the payment it belongs to
     const byPi = new Map();

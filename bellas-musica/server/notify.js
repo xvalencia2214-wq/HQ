@@ -54,7 +54,7 @@ export function createNotifier(ctx) {
   // The fields most booking messages need, already formatted.
   function bookingVars(b, g) {
     return {
-      group: g.name, customer: b.name, event: b.event_type, date: b.date, time: b.time, hours: b.hours, guests: b.guests, address: b.address,
+      group: g.name, customer: b.name, event: b.event_type, date: b.date, time: b.time, hours: b.hours, minutes: b.duration_min > 0 ? b.duration_min : b.hours * 60, guests: b.guests, address: b.address,
       total: usd(b.total_cents), deposit: usd(b.deposit_cents), balance: usd(b.total_cents - b.deposit_cents),
       payout: usd(Math.max(0, b.deposit_cents - b.platform_fee_cents)), policyKey: b.policy,
       ...arrival(b.id),

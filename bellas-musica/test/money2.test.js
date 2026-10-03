@@ -167,7 +167,9 @@ test("one checkout for the whole party, and vendor bundles (simulated)", async (
 
     // no discount when the bundle isn't complete (only the tent) or on different days
     const h3 = (await cust.post("/api/bookings", bookingBody(tent, d2, { packageId: pkg, time: "12:00 PM" }))).json.booking;
-    const h4 = (await cust.post("/api/bookings", bookingBody(mus, d, { hours: 2, time: "4:00 PM" }))).json.booking;
+    // (the mariachi already plays 2-5 PM that day, so 4:00 PM is taken; noon to 2 still fits)
+    assert.equal((await cust.post("/api/bookings", bookingBody(mus, d, { hours: 2, time: "4:00 PM" }))).status, 409);
+    const h4 = (await cust.post("/api/bookings", bookingBody(mus, d, { hours: 2, time: "12:00 PM" }))).json.booking;
     const c34 = await cust.post("/api/cart", { bookingIds: [h3.id, h4.id] });
     assert.equal(c34.json.amount_cents, row(S, h3.id).deposit_cents + row(S, h4.id).deposit_cents);
     assert.deepEqual((await cust.get(`/api/carts/${c34.json.cart_id}`)).json.cart.items.map((x) => x.discount_cents), [0, 0]);

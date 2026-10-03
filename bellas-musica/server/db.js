@@ -248,9 +248,6 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 CREATE INDEX IF NOT EXISTS idx_bookings_group ON bookings(group_id, date);
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
--- One live booking per group/date/time. Expired or cancelled bookings free the slot.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_slot ON bookings(group_id, date, time)
-  WHERE status IN ('pending_payment','requested','confirmed');
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY,
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -463,6 +460,14 @@ export function openDb(config) {
   ensureColumn("bookings", "resched_count", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "reminder7_sent", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "reminder1_sent", "INTEGER NOT NULL DEFAULT 0");
+  // Any start time, short sets, several crews: who can take a booking when is checked in server/schedule.js (which lets
+  // a listing with 2 trucks take 2 bookings at the same time, so the old one-booking-per-time index goes).
+  ensureColumn("groups", "capacity", "INTEGER NOT NULL DEFAULT 1");     // bookings it can serve at once
+  ensureColumn("groups", "buffer_min", "INTEGER NOT NULL DEFAULT 0");   // travel/setup time kept free after each booking
+  ensureColumn("packages", "minutes", "INTEGER NOT NULL DEFAULT 0");    // a short set (20-minute serenata); 0 = `hours`
+  ensureColumn("bookings", "duration_min", "INTEGER NOT NULL DEFAULT 0"); // 0 = hours * 60 (older bookings)
+  ensureColumn("bookings", "hold_until", "INTEGER NOT NULL DEFAULT 0");   // unpaid hold deadline for payment links (0 = 30 minutes)
+  db.exec("DROP INDEX IF EXISTS uq_slot");
   ensureColumn("users", "email_verified", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("users", "email_notify", "INTEGER NOT NULL DEFAULT 1");
   const q = {

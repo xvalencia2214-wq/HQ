@@ -1,5 +1,5 @@
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { CATEGORIES, EVENT_TYPES, categoryOf } from "../pricing.js";
+import { CATEGORIES, EVENT_TYPES, categoryOf, isTime } from "../pricing.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { maskContact } from "./messages.js";
 import { LIVE_SQL, activeOffers, isBookable, openSlots, ratingMap, ratingOf, responseTime } from "../shared.js";
@@ -14,7 +14,6 @@ const BUDGET_SLACK = 1.5;   // a group up to 50% over the stated maximum can sti
 const SIZES = { "solo-duo": [1, 2], trio: [3, 3], small: [4, 6], large: [7, 99] };
 const SIZE_TEXT = { "solo-duo": "a solo or duo", trio: "a trio", small: "4 to 6 musicians", large: "7 or more musicians" };
 const STAGES = { "just-looking": "just looking", comparing: "comparing options", ready: "ready to book" };
-const SLOTS_LIST = ["12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM", "8:00 PM"];
 const EVENT_FIT_ANY = (events, event) => !events.length || events.includes(event);
 
 // Groups that really can do this event, best first: live, claimed, free that day, play that kind of event, fit the guest count,
@@ -108,7 +107,8 @@ export default function requestRoutes(ctx, add) {
     if (!isZip(zip) || !lookupZip(zip)) throw new HttpError(400, "Enter the event's 5-digit ZIP code");
     const note = maskContact(str(body.note, "Note", { max: 300 })).text;
     // Optional extras. An empty value means "not sure yet".
-    const time = body.time ? oneOf(body.time, "Start time", SLOTS_LIST) : "";
+    if (body.time && !isTime(body.time)) throw new HttpError(400, "Pick a start time");
+    const time = body.time || "";
     const size = body.size ? oneOf(body.size, "Group size", Object.keys(SIZES)) : "";
     const stage = body.stage ? oneOf(body.stage, "Planning stage", Object.keys(STAGES)) : "";
     const budgetMin = body.budgetMin === undefined || body.budgetMin === "" || body.budgetMin === null ? 0 : int(body.budgetMin, "Minimum budget", { min: 0, max: 100000 });

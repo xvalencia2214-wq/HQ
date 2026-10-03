@@ -75,8 +75,10 @@ test("calendar sync: a vendor's own calendar blocks times; its bookings come out
     assert.equal((await o.put(`/api/groups/${g}/calendar-sync/import`, { url: base + "/bad" })).status, 400);
     const imp = await o.put(`/api/groups/${g}/calendar-sync/import`, { url: base + "/cal.ics" });
     assert.equal(imp.status, 200); assert.equal(imp.json.sync.busy_days, 2);
-    // 1:30-3:30 PM busy: blocks 12:00 (12-2 overlaps), 2:00; leaves 4:00. All-day: the whole day.
-    assert.deepEqual(await open(d), ["4:00 PM"]);
+    // 1:30-3:30 PM busy: blocks a 2:00 start (the shortest booking is an hour); 12:00-1:00 and 4:00 still fit. All-day: the whole day.
+    assert.deepEqual(await open(d), ["12:00 PM", "4:00 PM"]);
+    // a 2-hour booking can't start at 12:00 any more (it would run into the busy time)
+    assert.deepEqual((await anon.get(`/api/groups/${g}/availability?month=${d.slice(0, 7)}&minutes=120`)).json.days[d], ["4:00 PM"]);
     assert.deepEqual(await open(d2), []);
     assert.equal((await cust.post("/api/bookings", bookingBody(g, d, { time: "2:00 PM" }))).status, 409);
     // the calendar changes and is read again

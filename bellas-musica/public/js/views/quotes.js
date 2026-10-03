@@ -6,7 +6,8 @@ import { esc, money, fmtDate, sel, tomorrowKey, toast } from "../ui.js";
 
 // "Get quotes": one question per screen with a progress ring. The account comes last, after the person has invested a minute,
 // and their answers survive a refresh. The request goes only to the few groups that can really do the job.
-const SLOTS = ["12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM", "8:00 PM"];
+// start times every half hour, 5:00 AM (mañanitas) to 11:30 PM (serenatas)
+const SLOTS = Array.from({ length: 38 }, (_, i) => { const m = 300 + i * 30, h = Math.floor(m / 60); return `${h % 12 || 12}:${String(m % 60).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; });
 const KEY = "bm_rq";
 const HINTS = new Set(["time", "zip", "budget", "stage"]); // steps that have a line of help under the question
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY) || "{}"); } catch { return {}; } };

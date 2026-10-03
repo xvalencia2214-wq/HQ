@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel } from "../ui.js";
+import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
@@ -52,7 +52,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   ${offers.length ? `<div class="panel offer"><h2 class="sec">${esc(t("off.title"))}</h2><div class="pkgs">${offers.map((o) => `<div class="pkg"><div><span class="tag trust">${esc(t("off.tag"))}</span> <strong>${esc(o.name)}</strong><br><span class="dim">${o.description ? esc(o.description) + " · " : ""}${esc(t("g.hours", { n: o.hours }))} · ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div><div class="pkg-r"><strong>${money(o.price_cents)}</strong><br><button type="button" class="btn small" data-pkg="${o.id}">${esc(t("off.book"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${deals.map((d) => `<div class="panel deal"><h2 class="sec">🤝 ${esc(t("bun.title", { pct: d.discount_pct }))}</h2><p><strong>${esc(d.name)}</strong></p><ul class="plist">${d.members.map((m) => `<li><span>${m.id === g.id ? `<strong>${esc(m.name)}</strong>` : `<a href="#/group/${esc(m.id)}">${esc(m.name)}</a>`} <span class="dim small">· ${esc(t("type." + m.type))}</span></span></li>`).join("")}</ul><p class="dim small">${esc(t("bun.how", { pct: d.discount_pct }))}</p></div>`).join("")}
   ${g.addons.length ? `<div class="panel"><h2 class="sec">${esc(t("ao.title"))}</h2><div class="pkgs">${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong></div></div>`).join("")}</div></div>` : ""}
-  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photos && r.photos.length ? `<div class="rphotos">${r.photos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(t("rv.photo", { name: r.name }))}" loading="lazy"></a>`).join("")}</div>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
     <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
@@ -87,7 +87,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     });
     const sb = document.getElementById("slotbox");
     const slots = st.date ? (st.days[st.date.slice(0, 7)] || {})[st.date] || [] : [];
-    sb.innerHTML = st.date ? `<div class="slots">${slots.map((s) => `<button type="button" class="slot${st.time === s ? " sel" : ""}" data-t="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : "";
+    sb.innerHTML = st.date ? slotButtons(slots, st.time) : "";
     sb.querySelectorAll(".slot").forEach((b) => { b.onclick = () => { st.time = b.dataset.t; drawCal(); drawBook(); document.getElementById("bookpanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }; });
   }
 
@@ -106,7 +106,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     const hourChoices = Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i);
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
-      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(t("g.hours", { n: p.hours }))} · ${money(p.price_cents)}</option>`).join("")}</select>
+      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(lenLabel(minutesOf(p)))} · ${money(p.price_cents)}</option>`).join("")}</select>
       <div id="hrs-wrap"><label for="b-hrs">${esc(t(music ? "g.hoursLabel" : "g.hoursAny"))}</label><select id="b-hrs" name="hours">${hourChoices.map((h) => `<option value="${h}"${h === Number(prev.hours || Math.max(2, g.min_hours)) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
       ${g.addons.length ? `<fieldset class="addons"><legend>${esc(t("ao.pick"))}</legend>${g.addons.map((a) => `<label class="chk addon"><input type="checkbox" name="addon" value="${a.id}"${prevAddons.includes(String(a.id)) ? " checked" : ""}> <span>${esc(a.name)}</span><span class="addon-p">${a.price_cents ? "+" + money(a.price_cents) : esc(t("ao.included"))}</span></label>`).join("")}</fieldset>` : ""}
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
@@ -133,7 +133,9 @@ export async function group(app, id, params = new URLSearchParams()) {
         const r = await api.post("/api/quote", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip });
         const qt = r.quote;
         if (!form.isConnected) return;
-        q.innerHTML = `<div class="sum"><span>${esc(t("q.subtotal"))}</span><span>${money(qt.subtotal_cents)}</span></div>` +
+        // this length doesn't fit at the chosen time (another booking, or the vendor's travel time): say so before paying
+        q.innerHTML = (r.fits === false ? `<div class="note warn" id="nofit">${esc(t("g.noFit", { len: lenLabel(qt.duration_min), time: st.time }))}</div>` : "") +
+          `<div class="sum"><span>${esc(t("q.subtotal"))}</span><span>${money(qt.subtotal_cents)}</span></div>` +
           (qt.travel_fee_cents ? `<div class="sum"><span>${esc(t("q.travel"))}</span><span>${money(qt.travel_fee_cents)}</span></div>` : "") +
           qt.addons.map((a) => `<div class="sum"><span>${esc(a.name)}</span><span>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</span></div>`).join("") +
           `<div class="sum"><span>${esc(t("q.total"))}</span><span>${money(qt.total_cents)}</span></div>

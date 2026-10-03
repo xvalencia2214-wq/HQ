@@ -1,5 +1,6 @@
 import { HttpError, now, safeJson, todayStr, addDays, rid, withLock } from "./util.js";
-import { SLOTS, categoryOf, balancePaidInApp } from "./pricing.js";
+import { categoryOf, balancePaidInApp } from "./pricing.js";
+import { RESCHED_TTL, checkStart, durationOf, openTimes } from "./schedule.js";
 export { balancePaidInApp };
 import { lookupZip } from "./geo.js";
 import { embedUrl } from "./media.js";
@@ -7,25 +8,19 @@ import { usd } from "./emails.js";
 
 const ACTIVE = "('pending_payment','requested','confirmed')";
 export const HOLD_SECONDS = 1800; // an unpaid booking holds its slot for 30 minutes
-export const RESCHED_TTL = 72 * 3600; // a reschedule request the group ignores lapses after 3 days, releasing the slot it held
+export { RESCHED_TTL };
 
 export function expirePending(db) {
-  db.run("UPDATE bookings SET status = 'expired', updated_at = ? WHERE status = 'pending_payment' AND created_at < ?", now(), now() - HOLD_SECONDS);
+  // a payment link a vendor sent its own client holds the time until its own deadline
+  db.run("UPDATE bookings SET status = 'expired', updated_at = ? WHERE status = 'pending_payment' AND ((hold_until = 0 AND created_at < ?) OR (hold_until > 0 AND hold_until < ?))", now(), now() - HOLD_SECONDS, now());
 }
 
-export function openSlots(db, groupId, date, { expire = true } = {}) {
+// The start times still open on a date (for the shortest booking the listing sells, unless `minutes` is given).
+export function openSlots(db, groupId, date, { expire = true, minutes } = {}) {
   if (expire) expirePending(db);
-  const row = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", groupId, date);
-  if (!row) return [];
-  const taken = new Set(db.all(`SELECT time FROM bookings WHERE group_id = ? AND date = ? AND status IN ${ACTIVE}`, groupId, date).map((r) => r.time));
-  // A customer's pending request to move to this slot holds it until the group answers.
-  for (const r of db.all("SELECT resched_time FROM bookings WHERE group_id = ? AND resched_date = ? AND resched_status = 'pending' AND resched_at > ? AND status IN ('requested','confirmed')", groupId, date, now() - RESCHED_TTL)) taken.add(r.resched_time);
-  // Times the vendor marked busy in its own calendar: a slot is blocked if the busy time overlaps its first two hours.
-  const busy = db.all("SELECT start_min, end_min FROM ext_busy WHERE group_id = ? AND date = ?", groupId, date);
-  const blocked = (s) => { const st = slotMinutes(s); return busy.some((b) => b.start_min < st + 120 && b.end_min > st); };
-  return safeJson(row.slots, []).filter((s) => SLOTS.includes(s) && !taken.has(s) && !blocked(s));
+  const g = db.get("SELECT id, hourly, min_hours, capacity, buffer_min FROM groups WHERE id = ?", groupId);
+  return g ? openTimes(db, g, date, { minutes }) : [];
 }
-const slotMinutes = (s) => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(s); return m ? ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]) : 0; };
 
 export function hasOpenDate(db, groupId, date) {
   return openSlots(db, groupId, date).length > 0;
@@ -112,7 +107,7 @@ export function groupDetail(ctx, g) {
     fields: {
       next_open: firstOpenDate(db, g.id),
       photos: db.all("SELECT id, file FROM photos WHERE group_id = ? ORDER BY position, created_at", g.id).map((p) => ({ id: p.id, url: "/uploads/" + p.file })),
-      packages: db.all("SELECT id, name, description, hours, price_cents FROM packages WHERE group_id = ? AND private_customer_id IS NULL ORDER BY price_cents", g.id),
+      packages: db.all("SELECT id, name, description, hours, minutes, price_cents FROM packages WHERE group_id = ? AND private_customer_id IS NULL ORDER BY price_cents", g.id),
       addons: db.all("SELECT id, name, description, price_cents FROM addons WHERE group_id = ? ORDER BY id", g.id),
       recent_reviews: db.all(
         `SELECT r.id, r.rating, r.text, r.created_at, r.reply, r.reply_at, u.name FROM reviews r JOIN users u ON u.id = r.customer_id
@@ -296,9 +291,10 @@ async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
   } else if (b.status === "expired") {
     // Paid after the hold lapsed: keep the booking only if the slot is still free, otherwise give the money back.
     db.run("UPDATE bookings SET payment_status = 'paid', stripe_payment_intent = ?, updated_at = ? WHERE id = ?", paymentIntent, now(), b.id);
-    try {
+    const g = db.get("SELECT * FROM groups WHERE id = ?", b.group_id);
+    if (g && checkStart(db, g, b.date, b.time, durationOf(b), { exceptId: b.id, ignoreCalendar: true }).fits) {
       db.run("UPDATE bookings SET status = 'requested', updated_at = ? WHERE id = ?", now(), b.id);
-    } catch {
+    } else {
       await refundBooking(ctx, db.get("SELECT * FROM bookings WHERE id = ?", b.id), b.deposit_cents);
       return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
     }

@@ -133,7 +133,8 @@ test("groups: create, edit, permissions, packages, photos, video, privacy", asyn
   assert.equal(fs.existsSync(path.join(S.dir, "uploads", path.basename(url))), false);
   // calendar
   const d1 = inDays(12), d2 = inDays(13);
-  assert.equal((await owner.put(`/api/groups/${id}/availability`, { dates: { [d1]: ["12:00 PM", "8:00 PM"], [d2]: ["9:00 AM"] } })).status, 400);
+  assert.equal((await owner.put(`/api/groups/${id}/availability`, { dates: { [d1]: ["12:00 PM", "8:00 PM"], [d2]: ["9:07 AM"] } })).status, 400); // not on a 15-minute step
+  for (const bad of [["25:00 PM"], ["8:00 PM-6:00 PM"], ["noon"], "2:00 PM"]) assert.equal((await owner.put(`/api/groups/${id}/availability`, { dates: { [d1]: bad } })).status, 400, JSON.stringify(bad));
   assert.equal((await owner.put(`/api/groups/${id}/availability`, { dates: { "2020-01-01": ["12:00 PM"] } })).status, 400);
   assert.equal((await owner.put(`/api/groups/${id}/availability`, { dates: { [d1]: ["12:00 PM", "8:00 PM"] } })).status, 200);
   assert.deepEqual((await anon.get(`/api/groups/${id}/availability?month=${d1.slice(0, 7)}`)).json.days[d1], ["12:00 PM", "8:00 PM"]);

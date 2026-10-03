@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_HOURS, POLICIES, SLOTS, categoryOf } from "../pricing.js";
+import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, MAX_HOURS, POLICIES, SHORT_MINUTES, SLOTS, categoryOf } from "../pricing.js";
+import { cleanEntries, durationOf, peakLoad } from "../schedule.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
@@ -75,7 +76,7 @@ export default function groupRoutes(ctx, add) {
       ...detail,
       checklist: checklist(g, detail),
       status: statusOf(g), publish_missing: g.published_at === 0 && !g.demo ? publishMissing(g, detail) : [], outside_market: !inMarket(g.zip),
-      contact_phone: g.contact_phone, promoted_until: g.promoted_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
+      contact_phone: g.contact_phone, capacity: g.capacity || 1, buffer_min: g.buffer_min || 0, promoted_until: g.promoted_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
       stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
@@ -148,6 +149,13 @@ export default function groupRoutes(ctx, add) {
     }
     if (body.weather_policy !== undefined) set.weather_policy = maskContact(str(body.weather_policy, "Weather policy", { max: 300 })).text;
     if (body.min_hours !== undefined) set.min_hours = int(body.min_hours, "Minimum hours", { min: 1, max: MAX_HOURS });
+    // several trucks, crews or lineups can work at the same time; travel/setup time is kept free after each booking
+    if (body.capacity !== undefined) {
+      set.capacity = int(body.capacity, "Bookings at the same time", { min: 1, max: MAX_CAPACITY });
+      const peak = peakLoad(db, g, todayStr());
+      if (set.capacity < peak) throw new HttpError(400, `You already have ${peak} bookings at the same time on one day. Keep at least ${peak} until those are done.`);
+    }
+    if (body.buffer_min !== undefined) set.buffer_min = Number(oneOf(Number(body.buffer_min), "Time between bookings", [0, 15, 30, 45, 60, 90, 120]));
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
     if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
     if (body.events !== undefined) set.events = JSON.stringify(stringList(body.events, "Events", { maxItems: 10, maxLen: 40 }).filter((e) => EVENT_TYPES.includes(e)));
@@ -180,7 +188,10 @@ export default function groupRoutes(ctx, add) {
     return {
       name: str(body.name, "Package name", { min: 2, max: 60 }),
       description: str(body.description, "Description", { max: 200 }),
-      hours: int(body.hours, "Hours", { min: 1, max: 12 }),
+      // a short set: 15 to 45 minutes (a serenata, mañanitas); otherwise whole hours
+      ...(body.minutes !== undefined && body.minutes !== null && body.minutes !== "" && Number(body.minutes) !== 0
+        ? { hours: 1, minutes: Number(oneOf(Number(body.minutes), "Length", SHORT_MINUTES)) }
+        : { hours: int(body.hours, "Hours", { min: 1, max: 12 }), minutes: 0 }),
       price_cents: dollarsToCents(body.price, "Price", { min: 20, max: 50000 })
     };
   }
@@ -188,7 +199,7 @@ export default function groupRoutes(ctx, add) {
     const g = requireOwner(db, user, params.id);
     if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ? AND private_customer_id IS NULL", g.id).c >= 12) throw new HttpError(400, "At most 12 packages");
     const f = packageFields(body);
-    db.run("INSERT INTO packages (group_id, name, description, hours, price_cents) VALUES (?, ?, ?, ?, ?)", g.id, f.name, f.description, f.hours, f.price_cents);
+    db.run("INSERT INTO packages (group_id, name, description, hours, minutes, price_cents) VALUES (?, ?, ?, ?, ?, ?)", g.id, f.name, f.description, f.hours, f.minutes, f.price_cents);
     return manageView(getGroup(db, g.id));
   }, { auth: true });
   const ownedPackage = (user, id) => {
@@ -200,7 +211,7 @@ export default function groupRoutes(ctx, add) {
   add("PATCH", "/api/packages/:pid", ({ params, body, user }) => {
     const p = ownedPackage(user, params.pid);
     const f = packageFields({ name: body.name ?? p.name, description: body.description ?? p.description, hours: body.hours ?? p.hours, price: body.price ?? p.price_cents / 100 });
-    db.run("UPDATE packages SET name = ?, description = ?, hours = ?, price_cents = ? WHERE id = ?", f.name, f.description, f.hours, f.price_cents, p.id);
+    db.run("UPDATE packages SET name = ?, description = ?, hours = ?, minutes = ?, price_cents = ? WHERE id = ?", f.name, f.description, f.hours, f.minutes, f.price_cents, p.id);
     return manageView(getGroup(db, p.group_id));
   }, { auth: true });
   add("DELETE", "/api/packages/:pid", ({ params, user }) => {
@@ -288,7 +299,9 @@ export default function groupRoutes(ctx, add) {
     getVisibleGroup(db, params.id, user);
     expirePending(db);
     const today = todayStr(), days = {};
-    for (const d of monthDays(query.month)) if (d > today) { const s = openSlots(db, params.id, d, { expire: false }); if (s.length) days[d] = s; }
+    // the open start times for the length the customer picked (or the shortest thing the listing sells)
+    const minutes = query.minutes ? int(query.minutes, "Length", { min: 15, max: MAX_HOURS * 60 }) : undefined;
+    for (const d of monthDays(query.month)) if (d > today) { const s = openSlots(db, params.id, d, { expire: false, minutes }); if (s.length) days[d] = s; }
     return { days };
   });
 
@@ -296,15 +309,18 @@ export default function groupRoutes(ctx, add) {
   add("GET", "/api/groups/:id/calendar", ({ params, query, user }) => {
     requireOwner(db, user, params.id);
     expirePending(db);
-    const days = {}, booked = {};
+    const days = {}, booked = {}, lengths = {};
     for (const d of monthDays(query.month)) {
       const row = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", params.id, d);
       if (row) days[d] = safeJson(row.slots, []);
-      const taken = db.all("SELECT time FROM bookings WHERE group_id = ? AND date = ? AND status IN ('pending_payment','requested','confirmed')", params.id, d);
-      const held = db.all("SELECT resched_time t FROM bookings WHERE group_id = ? AND resched_date = ? AND resched_status = 'pending' AND resched_at > ? AND status IN ('requested','confirmed')", params.id, d, now() - 72 * 3600).map((r) => r.t);
-      if (taken.length || held.length) booked[d] = [...taken.map((t) => t.time), ...held];
+      const taken = db.all("SELECT time, hours, duration_min FROM bookings WHERE group_id = ? AND date = ? AND status IN ('pending_payment','requested','confirmed')", params.id, d);
+      const held = db.all("SELECT resched_time t, hours, duration_min FROM bookings WHERE group_id = ? AND resched_date = ? AND resched_status = 'pending' AND resched_at > ? AND status IN ('requested','confirmed')", params.id, d, now() - 72 * 3600);
+      if (taken.length || held.length) {
+        booked[d] = [...taken.map((t) => t.time), ...held.map((r) => r.t)];
+        lengths[d] = [...taken.map((t) => ({ time: t.time, minutes: durationOf(t) })), ...held.map((r) => ({ time: r.t, minutes: durationOf(r) }))];
+      }
     }
-    return { days, booked };
+    return { days, booked, lengths };
   }, { auth: true });
 
   add("PUT", "/api/groups/:id/availability", ({ params, body, user }) => {
@@ -317,8 +333,7 @@ export default function groupRoutes(ctx, add) {
     db.tx(() => {
       for (const [d, slots] of entries) {
         if (!isDate(d) || d <= today || d > addDays(today, 730)) throw new HttpError(400, `Bad date: ${d}`);
-        if (!Array.isArray(slots) || slots.some((s) => !SLOTS.includes(s))) throw new HttpError(400, "Bad time slot");
-        const clean = SLOTS.filter((s) => slots.includes(s));
+        const clean = cleanEntries(slots); // single start times ("2:00 PM") or windows ("5:00 AM-11:00 PM")
         if (clean.length) db.run("INSERT INTO availability (group_id, date, slots) VALUES (?, ?, ?) ON CONFLICT(group_id, date) DO UPDATE SET slots = excluded.slots", params.id, d, JSON.stringify(clean));
         else db.run("DELETE FROM availability WHERE group_id = ? AND date = ?", params.id, d);
       }

@@ -5,6 +5,20 @@ export function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 export const money = (cents) => new Intl.NumberFormat(lang() === "es" ? "es-US" : "en-US", { style: "currency", currency: "USD", maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+// A length: "3 hr" or, for a short set, "20 min".
+export const lenLabel = (min) => (min % 60 === 0 ? t("g.hours", { n: min / 60 }) : t("g.minutes", { n: min }));
+// A package's or booking's length in minutes (older ones only have hours).
+export const minutesOf = (x) => (x.duration_min > 0 ? x.duration_min : x.minutes > 0 ? x.minutes : x.hours * 60);
+// "2:00 PM" -> minutes after midnight
+export const timeMin = (s) => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(s || ""); return m ? ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]) : -1; };
+// Start-time buttons. A few are shown in one row; many (a vendor open all day) are grouped: early morning (mañanitas),
+// daytime, evening and night (serenatas).
+const PERIODS = [["t.early", 0, 540], ["t.day", 540, 1020], ["t.evening", 1020, 1260], ["t.night", 1260, 1440]];
+export function slotButtons(times, selected) {
+  const btn = (s) => `<button type="button" class="slot${selected === s ? " sel" : ""}" data-t="${esc(s)}">${esc(s)}</button>`;
+  if (times.length <= 6) return `<div class="slots">${times.map(btn).join("")}</div>`;
+  return PERIODS.map(([key, a, b]) => { const part = times.filter((s) => timeMin(s) >= a && timeMin(s) < b); return part.length ? `<div class="slot-period"><div class="dim small">${esc(t(key))}</div><div class="slots">${part.map(btn).join("")}</div></div>` : ""; }).join("");
+}
 export const pad = (n) => (n < 10 ? "0" + n : "" + n);
 export const dkey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const parseKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };

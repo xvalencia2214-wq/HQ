@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey, lenLabel, minutesOf, slotButtons } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { shrink } from "./dashboard.js";
 
@@ -14,7 +14,7 @@ function card(b) {
   const cancelNote = b.can_cancel && b.status !== "pending_payment" ? `<div class="dim small">${esc(t(b.balance_paid_cents > 0 ? "bk.cancelNotePaid" : "bk.cancelNote", { amount: money(b.refund_if_cancel_cents), pct: b.refund_percent_now }))}</div>` : "";
   const balanceLine = balanceInfo(b) + guaranteeInfo(b) + (b.reschedule ? `<div class="note small">${esc(t("rs.pending", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</div>` : "");
   return `<div class="req" data-id="${esc(b.id)}"><div><strong><a href="#/group/${esc(b.group_id)}">${esc(b.group_name)}</a></strong> ${statusBadge(b.status)} ${payBadge(b)}<br>
-    ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}${b.addons && b.addons.length ? `<br><span class="dim small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</span>` : ""}<br>
+    ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}${b.addons && b.addons.length ? `<br><span class="dim small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</span>` : ""}<br>
     <span class="dim">${esc(b.address)}</span>${cancelNote}${balanceLine}</div>
     <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("bk.deposit"))} ${money(b.deposit_cents)}${b.refund_cents ? ` · ${esc(t("bk.refunded", { amount: money(b.refund_cents) }))}` : ""}</span><br>
       ${b.status === "pending_payment" ? `<a class="btn small" href="#/booking/${esc(b.id)}">${esc(t("bk.payNow"))}</a> ` : ""}
@@ -22,7 +22,7 @@ function card(b) {
       ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}">${esc(t("agr.link"))}</a> ` : ""}
       ${b.can_pay_balance ? `<button class="btn small" data-balance="${esc(b.id)}">${esc(t("bal.payNow", { amount: money(b.balance_cents) }))}</button> ` : ""}
       ${b.can_pay_part ? `<button class="btn ghost small" data-part="${esc(b.id)}" data-left="${b.balance_left_cents}">${esc(t("plan.payPart"))}</button> ` : ""}
-      ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}
+      ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-min="${minutesOf(b)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}
       ${b.can_cancel ? `<button class="btn ghost small" data-cancel="${esc(b.id)}" data-refund="${b.refund_if_cancel_cents}">${esc(t("bk.cancel"))}</button>` : ""}
       ${b.can_confirm_arrival ? `<button class="btn ghost small" data-arrived="${esc(b.id)}">${esc(t("show.arrived"))}</button> ` : ""}
       ${b.can_report_noshow ? `<button class="btn ghost small" data-noshow="${esc(b.id)}">${esc(t("show.report"))}</button> ` : ""}
@@ -66,7 +66,7 @@ function reschedulePanel(holder, b, groupId, reload) {
   const calBox = holder.querySelector(".rs-cal"), slotBox = holder.querySelector(".rs-slots"), err = holder.querySelector(".err");
   async function draw() {
     const k = monthKey(st.month);
-    if (!st.days[k]) { try { st.days[k] = (await api.get(`/api/groups/${encodeURIComponent(groupId)}/availability?month=${k}`)).days; } catch { st.days[k] = {}; } }
+    if (!st.days[k]) { try { st.days[k] = (await api.get(`/api/groups/${encodeURIComponent(groupId)}/availability?month=${k}&minutes=${minutesOf(b)}`)).days; } catch { st.days[k] = {}; } }
     const days = st.days[k];
     calendar(calBox, st, {
       dayState: (d) => { const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const ok = Boolean(days[key]); return { enabled: ok, open: ok }; },
@@ -74,7 +74,7 @@ function reschedulePanel(holder, b, groupId, reload) {
       onMonth: draw
     });
     const slots = st.date ? (st.days[st.date.slice(0, 7)] || {})[st.date] || [] : [];
-    slotBox.innerHTML = st.date ? `<div class="slots">${slots.map((x) => `<button type="button" class="slot${st.time === x ? " sel" : ""}" data-t="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : "";
+    slotBox.innerHTML = st.date ? slotButtons(slots, st.time) : "";
     slotBox.querySelectorAll(".slot").forEach((btn) => { btn.onclick = () => { st.time = btn.dataset.t; draw(); }; });
   }
   holder.querySelector("[data-close]").onclick = () => { holder.hidden = true; holder.innerHTML = ""; };
@@ -145,7 +145,7 @@ function wire(root, reload) {
   });
   root.querySelectorAll("[data-resched]").forEach((b) => {
     b.onclick = () => {
-      reschedulePanel(b.closest(".req").querySelector(".resched-form"), { id: b.closest(".req").dataset.id, date: b.dataset.date }, b.dataset.group, reload);
+      reschedulePanel(b.closest(".req").querySelector(".resched-form"), { id: b.closest(".req").dataset.id, date: b.dataset.date, duration_min: Number(b.dataset.min) || 60 }, b.dataset.group, reload);
     };
   });
   root.querySelectorAll("[data-unresched]").forEach((b) => {

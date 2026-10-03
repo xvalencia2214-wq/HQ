@@ -84,7 +84,7 @@ test("get quotes: start time, group size, budget and planning stage are validate
     const mk = async (i, name, rate, members, dates = [d]) => { const o = client(S.base); await o.signup(`rx${i}@example.com`, `Owner ${i}`); return { o, id: await makeGroup(o, { name, dates, rate, extra: { events: ["Quinceañera"], max_guests: 400, members } }) }; };
     const cheap = await mk(1, "Cheap Trio", 150, 3), mid = await mk(2, "Mid Mariachi", 300, 8), pricey = await mk(3, "Pricey Banda", 1500, 14);
     const base = { event: "Quinceañera", date: d, guests: 100, hours: 3, zip: "60608" };
-    for (const bad of [{ time: "9:00 AM" }, { size: "huge" }, { stage: "maybe" }, { budgetMax: -5 }, { budgetMin: 900, budgetMax: 400 }, { budgetMax: "abc" }]) assert.equal((await cust.post("/api/requests", { ...base, ...bad })).status, 400, JSON.stringify(bad));
+    for (const bad of [{ time: "9:10 AM" }, { time: "13:00 PM" }, { size: "huge" }, { stage: "maybe" }, { budgetMax: -5 }, { budgetMin: 900, budgetMax: 400 }, { budgetMax: "abc" }]) assert.equal((await cust.post("/api/requests", { ...base, ...bad })).status, 400, JSON.stringify(bad));
     // a budget of $1000 for 3 hours: Pricey Banda ($4,500) is far out of range and is not asked; the other two are
     const r = await cust.post("/api/requests", { ...base, time: "2:00 PM", size: "small", budgetMin: 500, budgetMax: 1000, stage: "ready", note: "Patio" });
     assert.equal(r.status, 200);

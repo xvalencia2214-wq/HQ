@@ -21,7 +21,8 @@ test("reschedule: request, hold, accept moves the booking and frees the old slot
     // validation
     const req = (body) => a.post(`/api/bookings/${bk.id}/reschedule`, body);
     assert.equal((await req({ date: ds[1], time: "8:00 PM" })).status, 409); // a real slot the group does not offer that day
-    assert.equal((await req({ date: ds[1], time: "9:00 AM" })).status, 400); // not a slot at all
+    assert.equal((await req({ date: ds[1], time: "9:00 AM" })).status, 409); // a real time, not offered that day
+    assert.equal((await req({ date: ds[1], time: "9:07 AM" })).status, 400); // not a time at all
     assert.equal((await req({ date: "2020-01-01", time: "2:00 PM" })).status, 400);
     assert.equal((await req({ date: ds[0], time: "2:00 PM" })).status, 400); // same time
     assert.equal((await req({ date: inDays(200), time: "2:00 PM" })).status, 409); // the group is not open then

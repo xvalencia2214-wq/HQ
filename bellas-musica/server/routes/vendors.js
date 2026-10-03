@@ -79,7 +79,7 @@ export default function vendorRoutes(ctx, add) {
     const token = String(params.file).replace(/\.ics$/, "");
     const g = /^[\w-]{20,40}$/.test(token) ? db.get("SELECT * FROM groups WHERE ical_token = ?", token) : null;
     if (!g) throw new HttpError(404, "Not found");
-    const rows = db.all("SELECT id, date, time, hours, event_type, name, guests, address, status FROM bookings WHERE group_id = ? AND status IN ('requested','confirmed') AND date >= ? ORDER BY date", g.id, todayStr().slice(0, 8) + "01");
+    const rows = db.all("SELECT id, date, time, hours, duration_min, event_type, name, guests, address, status FROM bookings WHERE group_id = ? AND status IN ('requested','confirmed') AND date >= ? ORDER BY date", g.id, todayStr().slice(0, 8) + "01");
     res.writeHead(200, { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "no-store" });
     res.end(bookingsFeed(g.name, rows));
   });

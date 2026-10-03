@@ -1,6 +1,21 @@
 import { daysBetween } from "./util.js";
 
+// The classic afternoon/evening start times (the "weekends" quick fill and older calendars use them).
 export const SLOTS = ["12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM", "8:00 PM"];
+// Any start time of the day in 15-minute steps: mañanitas at 5:00 AM, a serenata at 11:30 PM. "12:00 AM" is the very start of
+// the date (the night between the day before and this one).
+export const TIME_STEP = 15;
+export const timeLabel = (min) => { const h = Math.floor(min / 60) % 24, m = min % 60; return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+export const timeMin = (s) => {
+  const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(String(s || ""));
+  if (!m || Number(m[1]) < 1 || Number(m[1]) > 12 || Number(m[2]) > 59) return -1;
+  return ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]);
+};
+export const TIMES = Array.from({ length: 1440 / TIME_STEP }, (_, i) => timeLabel(i * TIME_STEP));
+export const isTime = (s) => { const m = timeMin(s); return m >= 0 && m % TIME_STEP === 0 && timeLabel(m) === s; };
+// Short sets (a serenata, mañanitas) can be shorter than an hour.
+export const SHORT_MINUTES = [15, 20, 30, 45];
+export const MAX_CAPACITY = 20;     // how many bookings a listing can serve at the same time (trucks, crews, lineups)
 export const EVENT_TYPES = ["Wedding", "Quinceañera", "Birthday", "Anniversary", "Serenata", "Corporate / Restaurant", "Other"];
 // Everything a party needs, in one place. Music came first; the other categories use the same listings, calendar, deposits,
 // reviews and chat. A listing's category follows from its type ("Other" stays music, as it always was).

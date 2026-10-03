@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balanceLeft, balancePaidInApp, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balanceLeft, balancePaidInApp, refundPercent, isTime } from "../pricing.js";
+import { assertStart, checkStart, durationOf, packageMinutes } from "../schedule.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -17,7 +18,8 @@ export default function bookingRoutes(ctx, add) {
     const group = getVisibleGroup(db, str(body.groupId, "Group", { required: true, max: 80 }), user);
     const date = body.date;
     if (!isDate(date) || date <= todayStr() || date > addDays(todayStr(), 730)) throw new HttpError(400, "Pick a future date");
-    const time = oneOf(body.time, "Time", SLOTS);
+    const time = body.time;
+    if (!isTime(time)) throw new HttpError(400, "Pick a start time");
     const event = oneOf(body.event, "Event", EVENT_TYPES);
     const guests = int(body.guests, "Guests", { min: 1, max: 5000 });
     if (guests > group.max_guests) throw new HttpError(400, `${group.name} plays best for up to ${group.max_guests} guests`);
@@ -44,9 +46,10 @@ export default function bookingRoutes(ctx, add) {
       addons = ids.map((id) => db.get("SELECT id, name, price_cents FROM addons WHERE id = ? AND group_id = ?", id, group.id));
       if (addons.some((a) => !a)) throw new HttpError(400, "One of those add-ons isn't offered by this group");
     }
-    if (requireSlot && !openSlots(db, group.id, date).includes(time)) throw new HttpError(409, "That time isn't available");
+    const minutes = pkg ? packageMinutes(pkg) : hours * 60;
+    if (requireSlot) { expirePending(db); assertStart(db, group, date, time, minutes); }
     const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: feePctFor(group, config), addons });
-    return { group, pkg, date, time, event, guests, eventZip, quote };
+    return { group, pkg, date, time, event, guests, eventZip, quote, minutes };
   }
 
   const policyInfo = (key) => ({ key, text: POLICIES[key].text, rows: POLICIES[key].rows.map(([days, pct]) => ({ days, pct })) });
@@ -54,7 +57,9 @@ export default function bookingRoutes(ctx, add) {
   add("POST", "/api/quote", ({ body, user }) => {
     const r = priceRequest(body, { requireSlot: false }, user);
     const { platform_fee_cents, ...quote } = r.quote; // customers don't need the fee breakdown
-    return { quote, policy: policyInfo(r.quote.policy), bookable: isBookable(ctx, r.group), payments: stripe.mode };
+    expirePending(db);
+    const at = checkStart(db, r.group, r.date, r.time, r.minutes); // so the form can warn before paying that this length doesn't fit
+    return { quote: { ...quote, duration_min: r.minutes }, fits: at.listed && at.fits, policy: policyInfo(r.quote.policy), bookable: isBookable(ctx, r.group), payments: stripe.mode };
   });
 
   // ---- views ----
@@ -84,7 +89,7 @@ export default function bookingRoutes(ctx, add) {
     const status = displayStatus(b);
     const today = todayStr();
     const out = {
-      id: b.id, group_id: b.group_id, group_name: b.group_name, group_type: b.group_type, category: categoryOf(b.group_type), date: b.date, time: b.time, hours: b.hours, package_name: b.package_name,
+      id: b.id, group_id: b.group_id, group_name: b.group_name, group_type: b.group_type, category: categoryOf(b.group_type), date: b.date, time: b.time, hours: b.hours, duration_min: durationOf(b), package_name: b.package_name,
       event_type: b.event_type, guests: b.guests, event_zip: b.event_zip, address: b.address, message: b.message,
       subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, addons: addonsOf(b), addons_cents: b.addons_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
       balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
@@ -162,10 +167,12 @@ export default function bookingRoutes(ctx, add) {
     if (reschedPending(b)) throw new HttpError(400, "You already have a request waiting for the group's answer.");
     if (b.resched_count >= RESCHED_MAX) throw new HttpError(400, `A booking can be moved at most ${RESCHED_MAX} times. Message the group instead.`);
     if (daysBetween(today, b.date) < RESCHED_MIN_DAYS) throw new HttpError(400, "It's too close to the event to request a new date. Message the group directly.");
-    const date = body.date, time = oneOf(body.time, "Time", SLOTS);
+    const date = body.date, time = body.time;
+    if (!isTime(time)) throw new HttpError(400, "Pick a start time");
     if (!isDate(date) || date <= today || date > addDays(today, 730)) throw new HttpError(400, "Pick a future date");
     if (date === b.date && time === b.time) throw new HttpError(400, "That's the time you already have.");
-    if (!openSlots(db, b.group_id, date).includes(time)) throw new HttpError(409, "That time isn't available.");
+    expirePending(db);
+    assertStart(db, getGroup(db, b.group_id), date, time, durationOf(b), { exceptId: b.id });
     db.run("UPDATE bookings SET resched_status = 'pending', resched_date = ?, resched_time = ?, resched_note = ?, resched_at = ?, updated_at = ? WHERE id = ?", date, time, str(body.note, "Note", { max: 200 }), now(), now(), b.id);
     const g = getGroup(db, b.group_id), fresh = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
     if (g.owner_id) notify.to(g.owner_id, "resched.requested.group", { ...notify.bookingVars(fresh, g), newDate: date, newTime: time, note: fresh.resched_note, url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
@@ -188,15 +195,12 @@ export default function bookingRoutes(ctx, add) {
     if (body.accept === true && (b.date < todayStr() || b.noshow_status)) throw new HttpError(400, "This event date has already passed, so it can't be moved.");
     const v = { ...notify.bookingVars(b, g), newDate: b.resched_date, newTime: b.resched_time, url: `${config.baseUrl}/#/booking/${b.id}` };
     if (body.accept === true) {
-      const slotOk = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", g.id, b.resched_date);
-      if (!slotOk || !JSON.parse(slotOk.slots).includes(b.resched_time)) throw new HttpError(409, "That time is no longer on your calendar. Open it again, or decline.");
-      try {
-        db.tx(() => db.run(`UPDATE bookings SET date = ?, time = ?, resched_count = resched_count + 1, reminder7_sent = 0, reminder1_sent = 0,
-          resched_status = '', resched_date = '', resched_time = '', resched_note = '', updated_at = ? WHERE id = ?`, b.resched_date, b.resched_time, now(), b.id));
-      } catch (e) {
-        if (/UNIQUE/i.test(String(e.message))) throw new HttpError(409, "That time was just taken by another booking.");
-        throw e;
-      }
+      expirePending(db);
+      const at = checkStart(db, g, b.resched_date, b.resched_time, durationOf(b), { exceptId: b.id });
+      if (!at.listed) throw new HttpError(409, "That time is no longer on your calendar. Open it again, or decline.");
+      if (!at.fits) throw new HttpError(409, "That time was just taken by another booking.");
+      db.run(`UPDATE bookings SET date = ?, time = ?, resched_count = resched_count + 1, reminder7_sent = 0, reminder1_sent = 0,
+        resched_status = '', resched_date = '', resched_time = '', resched_note = '', updated_at = ? WHERE id = ?`, b.resched_date, b.resched_time, now(), b.id);
       notify.to(b.customer_id, "resched.accepted.customer", v);
     } else {
       clearResched(b.id);
@@ -322,7 +326,7 @@ export default function bookingRoutes(ctx, add) {
       ? `${b.event_type} with ${b.group_name}.${addonText(b)} Deposit paid: ${money(b.deposit_cents)}. Balance due to the group at the event: ${money(b.total_cents - b.deposit_cents)}. ${b.status === "requested" ? "Waiting for the group to confirm." : "Confirmed."} Booking ${b.id}`
       : `${b.event_type} for ${b.name}, ${b.guests} guests.${addonText(b)} Deposit ${money(b.deposit_cents)}, balance due at the event ${money(b.total_cents - b.deposit_cents)}.${b.status === "confirmed" ? " Phone: " + b.phone : ""}${b.message ? " Request: " + b.message : ""}`;
     const body = bookingToIcs({
-      id: b.id, date: b.date, time: b.time, hours: b.hours, status: b.status, location: b.address, description,
+      id: b.id, date: b.date, time: b.time, hours: durationOf(b) / 60, status: b.status, location: b.address, description,
       summary: isCustomer ? `${b.group_name}: ${b.event_type}` : `${b.event_type} for ${b.name} (${b.group_name})`
     });
     res.writeHead(200, { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-musica-${b.date}.ics"`, "Cache-Control": "no-store" });
@@ -359,10 +363,10 @@ export default function bookingRoutes(ctx, add) {
     const id = newId("b"), q = r.quote, t = now();
     try {
       db.run(
-        `INSERT INTO bookings (id, group_id, customer_id, date, time, hours, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
+        `INSERT INTO bookings (id, group_id, customer_id, date, time, hours, duration_min, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
            subtotal_cents, travel_fee_cents, addons_json, addons_cents, total_cents, deposit_cents, platform_fee_cents, policy, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
-        id, r.group.id, user.id, r.date, r.time, q.hours, r.pkg?.id ?? null, r.pkg?.name ?? "", r.event, r.guests, r.eventZip,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
+        id, r.group.id, user.id, r.date, r.time, q.hours, r.minutes, r.pkg?.id ?? null, r.pkg?.name ?? "", r.event, r.guests, r.eventZip,
         str(body.name, "Name", { required: true, max: 80 }), phone, str(body.address, "Event location", { required: true, max: 160 }), str(body.message, "Message", { max: 500 }),
         q.subtotal_cents, q.travel_fee_cents, JSON.stringify(q.addons.map((a) => ({ name: a.name, price_cents: a.price_cents }))), q.addons_cents, q.total_cents, q.deposit_cents, q.platform_fee_cents, q.policy, t, t);
     } catch (e) {

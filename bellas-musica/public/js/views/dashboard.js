@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars, lenLabel, minutesOf } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { CAT_ORDER, catLabel } from "../cats.js";
@@ -117,7 +117,7 @@ async function requests({ g, body, refresh }) {
     else if (b.noshow) out += `<div class="dim small">${esc(t(b.noshow.status === "refunded" ? "show.stRefunded" : "show.stRejected"))}</div>`;
     return out + `<div class="ci-slot"></div>`;
   };
-  const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
+  const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
       ${(b.parts || []).filter((p) => p.status !== "stray").length ? `<br><span class="small">💵 ${(b.parts || []).filter((p) => p.status !== "stray").map((p) => esc(t("plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) }))).join(" · ")}</span>` : ""}${b.discount_cents ? `<br><span class="small">🤝 ${esc(t("bun.discounted", { amount: money(b.discount_cents) }))}</span>` : ""}${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
@@ -192,15 +192,29 @@ async function drawSync(g) {
   const cp = document.getElementById("cal-copy"); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(s.feed_url); toast(t("share.copied")); } catch { document.getElementById("cal-feed").select(); } };
 }
 
-async function calTab({ g, body }) {
+async function calTab({ g, body, refresh }) {
   const first = g.next_open ? new Date(Number(g.next_open.slice(0, 4)), Number(g.next_open.slice(5, 7)) - 1, 1) : null;
   const st = { month: first || new Date(today().getFullYear(), today().getMonth(), 1), date: null };
+  const times = state.meta.times || state.meta.slots;
+  const opts = (v) => times.map((x) => `<option value="${esc(x)}"${x === v ? " selected" : ""}>${esc(x)}</option>`).join("");
   body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.calendar"))}</h2><div id="calbox"></div><div id="daybox"></div>
     <div class="quick"><button class="btn ghost small" id="fill">${esc(t("dash.fill"))}</button><button class="btn ghost small" id="clear">${esc(t("dash.clear"))}</button></div>
-    <div class="legend">${esc(t("dash.calHint"))}</div></div><div class="panel" id="calsync"></div>`;
+    <div class="legend">${esc(t("dash.calHint"))}</div></div>
+    <div class="panel" id="crewpanel"><h2 class="sec">🚚 ${esc(t("cap.title"))}</h2><p class="dim small">${esc(t("cap.hint"))}</p>
+      <form id="capform" novalidate><div class="row"><div><label for="cap-n">${esc(t("cap.label"))}</label><select id="cap-n" name="capacity">${Array.from({ length: 20 }, (_, i) => i + 1).map((n) => `<option value="${n}"${n === (g.capacity || 1) ? " selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div><label for="cap-b">${esc(t("cap.buffer"))}</label><select id="cap-b" name="buffer_min">${[0, 15, 30, 45, 60, 90, 120].map((m) => `<option value="${m}"${m === (g.buffer_min || 0) ? " selected" : ""}>${esc(m ? lenLabel(m) : t("cap.none"))}</option>`).join("")}</select></div></div>
+      <div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div>
+    <div class="panel" id="calsync"></div>`;
   drawSync(g);
-  let data = { days: {}, booked: {} };
+  document.getElementById("capform").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, err = f.querySelector(".err"); err.textContent = "";
+    try { const r = await api.patch(`/api/groups/${encodeURIComponent(g.id)}`, { capacity: Number(f.capacity.value), buffer_min: Number(f.buffer_min.value) }); g.capacity = r.capacity; g.buffer_min = r.buffer_min; toast(t("common.saved")); }
+    catch (ex) { err.textContent = ex.message; }
+  };
+  let data = { days: {}, booked: {}, lengths: {} };
   async function load() { data = await api.get(`/api/groups/${encodeURIComponent(g.id)}/calendar?month=${monthKey(st.month)}`); draw(); }
+  const save = async (dates) => { try { await api.put(`/api/groups/${encodeURIComponent(g.id)}/availability`, { dates }); await load(); } catch (e) { toast(e.message, "error"); } };
   function draw() {
     const t0 = today();
     calendar(document.getElementById("calbox"), st, {
@@ -211,15 +225,34 @@ async function calTab({ g, body }) {
     const db = document.getElementById("daybox");
     if (!st.date) { db.innerHTML = ""; return; }
     const open = data.days[st.date] || [], booked = data.booked[st.date] || [];
-    db.innerHTML = `<div class="dim" style="margin-top:10px">${esc(t("dash.slotsFor", { date: fmtDate(st.date) }))}</div><div class="slots">${state.meta.slots.map((s) => `<button type="button" class="slot${open.includes(s) ? " sel" : ""}" data-t="${esc(s)}"${booked.includes(s) ? " disabled" : ""}>${esc(s)}${booked.includes(s) ? ` (${esc(t("dash.booked"))})` : ""}</button>`).join("")}</div>`;
+    const windows = open.filter((x) => x.includes("-")), extra = open.filter((x) => !x.includes("-") && !state.meta.slots.includes(x));
+    const dayName = parseKeyLocal(st.date).toLocaleDateString(lang() === "es" ? "es-US" : "en-US", { weekday: "long" });
+    db.innerHTML = `<div class="dim" style="margin-top:10px">${esc(t("dash.slotsFor", { date: fmtDate(st.date) }))}</div><div class="slots">${state.meta.slots.map((s) => `<button type="button" class="slot${open.includes(s) ? " sel" : ""}" data-t="${esc(s)}"${booked.includes(s) ? " disabled" : ""}>${esc(s)}${booked.includes(s) ? ` (${esc(t("dash.booked"))})` : ""}</button>`).join("")}</div>
+      ${extra.length ? `<div class="slots">${extra.map((s) => `<button type="button" class="slot sel" data-t="${esc(s)}" title="${esc(t("cal.remove"))}">${esc(s)} ✕</button>`).join("")}</div>` : ""}
+      ${windows.map((w) => `<div class="win-row"><span>🕒 ${esc(t("cal.window", { from: w.split("-")[0], to: w.split("-")[1] }))}</span> <button type="button" class="linkbtn" data-delwin="${esc(w)}">${esc(t("cal.remove"))}</button></div>`).join("")}
+      <details class="cal-more"${windows.length || extra.length ? " open" : ""}><summary>${esc(t("cal.more"))}</summary>
+        <p class="dim small">${esc(t("cal.moreHint"))}</p>
+        <div class="row"><div><label for="cal-one">${esc(t("cal.oneTime"))}</label><select id="cal-one">${opts("5:00 AM")}</select></div><div class="row-btn"><button type="button" class="btn ghost small" id="cal-add1">${esc(t("cal.add"))}</button></div></div>
+        <div class="row"><div><label for="cal-from">${esc(t("cal.from"))}</label><select id="cal-from">${opts("10:00 AM")}</select></div><div><label for="cal-to">${esc(t("cal.to"))}</label><select id="cal-to">${opts("11:00 PM")}</select></div><div class="row-btn"><button type="button" class="btn ghost small" id="cal-addw">${esc(t("cal.addWindow"))}</button></div></div>
+        ${open.length ? `<button type="button" class="btn ghost small" id="cal-copy">${esc(t("cal.copy", { day: dayName }))}</button>` : ""}
+      </details>
+      ${(data.lengths[st.date] || []).length ? `<div class="dim small" style="margin-top:8px">${esc(t("cal.bookedList"))} ${(data.lengths[st.date] || []).map((x) => esc(`${x.time} · ${lenLabel(x.minutes)}`)).join(", ")}</div>` : ""}`;
     db.querySelectorAll(".slot:not([disabled])").forEach((b) => {
-      b.onclick = async () => {
-        const s = b.dataset.t, cur = data.days[st.date] || [];
-        const next = cur.includes(s) ? cur.filter((x) => x !== s) : state.meta.slots.filter((x) => cur.includes(x) || x === s);
-        try { await api.put(`/api/groups/${encodeURIComponent(g.id)}/availability`, { dates: { [st.date]: next } }); if (next.length) data.days[st.date] = next; else delete data.days[st.date]; draw(); }
-        catch (e) { toast(e.message, "error"); }
-      };
+      b.onclick = () => { const s = b.dataset.t, cur = data.days[st.date] || []; save({ [st.date]: cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s] }); };
     });
+    db.querySelectorAll("[data-delwin]").forEach((b) => { b.onclick = () => save({ [st.date]: (data.days[st.date] || []).filter((x) => x !== b.dataset.delwin) }); });
+    document.getElementById("cal-add1").onclick = () => { const v = document.getElementById("cal-one").value, cur = data.days[st.date] || []; if (!cur.includes(v)) save({ [st.date]: [...cur, v] }); };
+    document.getElementById("cal-addw").onclick = () => {
+      const a = document.getElementById("cal-from").value, b = document.getElementById("cal-to").value;
+      if (times.indexOf(b) <= times.indexOf(a)) { toast(t("cal.badWindow"), "error"); return; }
+      save({ [st.date]: [...(data.days[st.date] || []), `${a}-${b}`] });
+    };
+    const cp = document.getElementById("cal-copy");
+    if (cp) cp.onclick = async () => {
+      const base = parseKeyLocal(st.date), dates = {};
+      for (let i = 1; i <= 8; i++) { const d = new Date(base); d.setDate(d.getDate() + 7 * i); dates[dkey(d)] = data.days[st.date]; }
+      await save(dates); toast(t("cal.copied"));
+    };
   }
   document.getElementById("fill").onclick = async () => {
     try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/availability/weekends`, { weeks: 8 }); toast(t("common.saved")); st.month = nextWeekendMonth(); await load(); } catch (e) { toast(e.message, "error"); }
@@ -230,6 +263,7 @@ async function calTab({ g, body }) {
   };
   await load();
 }
+const parseKeyLocal = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 function nextWeekendMonth() {
   const d = today(); d.setDate(d.getDate() + 1);
   while (![0, 5, 6].includes(d.getDay())) d.setDate(d.getDate() + 1);
@@ -286,10 +320,10 @@ function extras({ g, body, refresh }) {
   const have = new Set(g.addons.map((a) => a.name.toLowerCase()));
   const presets = (state.meta.addon_presets[g.type] || state.meta.addon_presets._ || []).filter((p) => !have.has(p.en.toLowerCase()) && !have.has(p.es.toLowerCase()));
   body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2>
-    ${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button class="btn ghost small" data-del="${p.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("dash.noPkg"))}</div>`}
+    ${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button class="btn ghost small" data-del="${p.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("dash.noPkg"))}</div>`}
     <form id="pkform"><h3>${esc(t("dash.addPkg"))}</h3><label for="k-name">${esc(t("dash.pkgName"))}</label><input id="k-name" name="name" required maxlength="60" placeholder="${esc(t("dash.pkgEx"))}">
     <label for="k-desc">${esc(t("dash.pkgDesc"))}</label><input id="k-desc" name="description" maxlength="200">
-    <div class="row"><div><label for="k-h">${esc(t("g.hoursLabel"))}</label><input id="k-h" name="hours" type="number" min="1" max="12" value="2" required></div><div><label for="k-p">${esc(t("dash.price"))}</label><input id="k-p" name="price" type="number" min="20" max="50000" required></div></div>
+    <div class="row"><div><label for="k-h">${esc(t("g.hoursLabel"))}</label><input id="k-h" name="hours" type="number" min="1" max="12" value="2" required></div><div><label for="k-short">${esc(t("pk.short"))}</label><select id="k-short" name="minutes"><option value="">${esc(t("pk.noShort"))}</option>${(state.meta.short_minutes || [15, 20, 30, 45]).map((m) => `<option value="${m}">${esc(t("g.minutes", { n: m }))}</option>`).join("")}</select></div><div><label for="k-p">${esc(t("dash.price"))}</label><input id="k-p" name="price" type="number" min="20" max="50000" required></div></div>
     <div id="kerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("dash.addPkg"))}</button></form></div>
     <div class="panel"${g.category === "music" ? "" : " hidden"}><h2 class="sec">♪ ${esc(t("g.songs"))}</h2><p class="dim small">${esc(t("dash.songsHint"))}</p><form id="sform2"><textarea id="songs" rows="12" maxlength="6000" aria-label="${esc(t("g.songs"))}">${esc(g.songs.join("\n"))}</textarea><div id="serr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("common.save"))}</button></form></div></div>
     <div class="panel" id="addons-panel"><h2 class="sec">${esc(t("ao.manage"))}</h2><p class="dim small">${esc(t("ao.hint"))}${g.type === "DJ" ? " " + esc(t("ao.djTip")) : ""}</p>
@@ -329,7 +363,7 @@ function extras({ g, body, refresh }) {
   body.querySelectorAll("[data-del]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del("/api/packages/" + b.dataset.del); refresh(); } catch (e) { toast(e.message, "error"); } }; });
   document.getElementById("pkform").onsubmit = async (e) => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
-    try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/packages`, { name: f.name, description: f.description, hours: Number(f.hours), price: Number(f.price) }); refresh(); }
+    try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/packages`, { name: f.name, description: f.description, hours: Number(f.hours), ...(f.minutes ? { minutes: Number(f.minutes) } : {}), price: Number(f.price) }); refresh(); }
     catch (ex) { document.getElementById("kerr").textContent = ex.message; }
   };
   document.getElementById("sform2").onsubmit = async (e) => {

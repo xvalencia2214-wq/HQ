@@ -97,7 +97,7 @@ export function bookingsFeed(groupName, bookings) {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bella's Musica//Vendor feed//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc("Bella's Música: " + groupName)}`];
   for (const b of bookings) {
     const [h, m] = parseTime(b.time), [y, mo, d] = b.date.split("-").map(Number);
-    const start = new Date(Date.UTC(y, mo - 1, d, h, m)), end = new Date(start.getTime() + b.hours * 3600_000);
+    const start = new Date(Date.UTC(y, mo - 1, d, h, m)), end = new Date(start.getTime() + (b.duration_min > 0 ? b.duration_min : b.hours * 60) * 60_000);
     lines.push("BEGIN:VEVENT", `UID:${b.id}@bellasmusica`, `DTSTAMP:${local(now)}Z`, `DTSTART:${local(start)}`, `DTEND:${local(end)}`,
       `SUMMARY:${esc(`${b.event_type} for ${b.name}`)}`, `LOCATION:${esc(b.status === "confirmed" ? b.address : "")}`,
       `DESCRIPTION:${esc(`${b.guests} guests. ${b.status === "confirmed" ? "Confirmed." : "Waiting for your answer in the app."}`)}`, `STATUS:${b.status === "confirmed" ? "CONFIRMED" : "TENTATIVE"}`, "END:VEVENT");
