@@ -70,7 +70,7 @@ export function createStripe(config) {
         success_url: successUrl,
         cancel_url: cancelUrl,
         client_reference_id: feature.id,
-        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: feature.amount_cents, product_data: { name: `Featured placement (30 days): ${group.name}` } } }],
+        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: feature.amount_cents, product_data: { name: feature.name || `Featured placement (30 days): ${group.name}` } } }],
         payment_intent_data: { metadata: { kind: "feature", feature_id: feature.id } },
         metadata: { kind: "feature", feature_id: feature.id }
       }, `checkout-feature-${feature.id}`);

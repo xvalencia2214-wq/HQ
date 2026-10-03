@@ -1,5 +1,5 @@
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES, categoryOf } from "../pricing.js";
+import { CATEGORIES, EVENT_TYPES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { maskContact } from "./messages.js";
 import { LIVE_SQL, activeOffers, isBookable, openSlots, ratingMap, ratingOf, responseTime } from "../shared.js";
@@ -19,7 +19,7 @@ const EVENT_FIT_ANY = (events, event) => !events.length || events.includes(event
 
 // Groups that really can do this event, best first: live, claimed, free that day, play that kind of event, fit the guest count,
 // in range and (if a budget was given) not far above it. `skip` is a set of group ids already asked.
-function matches(ctx, { event, date, guests, zip, customerId, time, size, budgetMax, hours }, { limit = MAX_GROUPS, skip = new Set() } = {}) {
+function matches(ctx, { event, date, guests, zip, customerId, time, size, budgetMax, hours, category = "music" }, { limit = MAX_GROUPS, skip = new Set() } = {}) {
   const { db } = ctx;
   const origin = lookupZip(zip);
   const nearby = zipsWithin(origin, RADIUS);
@@ -32,7 +32,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     if (g.owner_id === customerId) continue;
     if (!g.demo && !g.owner_id) continue;              // an unclaimed invitation has nobody to answer
     if (!isBookable(ctx, g)) continue;
-    if (categoryOf(g.type) !== "music") continue; // Get quotes asks for music; other vendors are found in Plan a party
+    if (categoryOf(g.type) !== category) continue; // music by default; tents, food, decorations... when asked
     if (g.max_guests < guests) continue;
     if (!EVENT_FIT_ANY(safeJson(g.events, []), event)) continue;
     if (!openSlots(db, g.id, date).length) continue;   // free that day
@@ -43,7 +43,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, (g.hourly !== 0 ? g.rate_cents * Math.max(hours, g.min_hours || 1) : Infinity)); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
     const r = ratingOf(g, ratings);
     // Prefer proven, close groups; a bonus for being free at the asked start time and for the right group size.
-    const sizeFit = !size || (SIZES[size] && g.members >= SIZES[size][0] && g.members <= SIZES[size][1]);
+    const sizeFit = !size || category !== "music" || (SIZES[size] && g.members >= SIZES[size][0] && g.members <= SIZES[size][1]);
     const timeFit = time && openSlots(db, g.id, date).includes(time);
     out.push({ g, d, score: (r.rating || 4.2) * 10 - d * 0.15 + (g.verified ? 3 : 0) + (timeFit ? 5 : 0) + (size && sizeFit ? 3 : 0) });
   }
@@ -83,7 +83,7 @@ export function expandSilentRequests(ctx) {
     const asked = db.all("SELECT group_id FROM event_request_groups WHERE request_id = ?", r.id).map((x) => x.group_id);
     const anyReply = db.get(`SELECT 1 AS x FROM messages WHERE customer_id = ? AND sender = 'group' AND created_at >= ? AND group_id IN (${asked.map(() => "?").join(",") || "''"})`, r.customer_id, r.created_at, ...asked);
     if (anyReply) continue;                                    // someone answered: nothing to fix
-    const picked = matches(ctx, { event: r.event, date: r.date, guests: r.guests, zip: r.zip, customerId: r.customer_id, time: r.start_time, size: r.size, budgetMax: r.budget_max, hours: r.hours }, { limit: EXTRA_GROUPS, skip: new Set(asked) });
+    const picked = matches(ctx, { event: r.event, date: r.date, guests: r.guests, zip: r.zip, customerId: r.customer_id, time: r.start_time, size: r.size, budgetMax: r.budget_max, hours: r.hours, category: r.category || "music" }, { limit: EXTRA_GROUPS, skip: new Set(asked) });
     if (!picked.length) continue;
     deliver(ctx, r, picked, 2);
     added += picked.length;
@@ -98,6 +98,7 @@ export default function requestRoutes(ctx, add) {
 
   add("POST", "/api/requests", ({ body, user }) => {
     if (!limiters.booking.check(`req|${user.id}`)) throw new HttpError(429, "Too many requests. Try again later.");
+    const category = body.category ? oneOf(body.category, "What you need", Object.keys(CATEGORIES)) : "music";
     const event = oneOf(body.event, "Event type", EVENT_TYPES);
     const date = body.date;
     if (!isDate(date) || date <= todayStr() || date > addDays(todayStr(), 730)) throw new HttpError(400, "Pick a future date");
@@ -116,10 +117,10 @@ export default function requestRoutes(ctx, add) {
     const since = now() - 86400;
     if (db.get("SELECT COUNT(*) c FROM event_requests WHERE customer_id = ? AND created_at > ?", user.id, since).c >= MAX_PER_DAY) throw new HttpError(429, `You can send ${MAX_PER_DAY} event requests a day. Check your quotes page for replies.`);
 
-    const picked = matches(ctx, { event, date, guests, zip, customerId: user.id, time, size, budgetMax, hours });
+    const picked = matches(ctx, { event, date, guests, zip, customerId: user.id, time, size: category === "music" ? size : "", budgetMax, hours, category });
     if (!picked.length) return { id: null, sent: 0, groups: [] }; // nothing sent, nothing stored: the page offers a wider search instead
     const id = rid(9);
-    db.run("INSERT INTO event_requests (id, customer_id, event, date, guests, hours, zip, note, created_at, start_time, budget_min, budget_max, stage, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", id, user.id, event, date, guests, hours, zip, note, now(), time, budgetMin, budgetMax, stage, size);
+    db.run("INSERT INTO event_requests (id, customer_id, event, date, guests, hours, zip, note, created_at, start_time, budget_min, budget_max, stage, size, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", id, user.id, event, date, guests, hours, zip, note, now(), time, budgetMin, budgetMax, stage, category === "music" ? size : "", category);
     deliver(ctx, db.get("SELECT * FROM event_requests WHERE id = ?", id), picked, 1);
     ctx.stats.count("event_request", zip);
     return { id, sent: picked.length, groups: picked.map(({ g }) => ({ id: g.id, name: g.name })) };
@@ -130,7 +131,7 @@ export default function requestRoutes(ctx, add) {
     const reqs = db.all("SELECT * FROM event_requests WHERE customer_id = ? ORDER BY created_at DESC LIMIT 20", user.id);
     return {
       requests: reqs.map((r) => ({
-        id: r.id, event: r.event, date: r.date, guests: r.guests, hours: r.hours, zip: r.zip, created_at: r.created_at, past: r.date <= todayStr(),
+        id: r.id, category: r.category || "music", event: r.event, date: r.date, guests: r.guests, hours: r.hours, zip: r.zip, created_at: r.created_at, past: r.date <= todayStr(),
         groups: db.all("SELECT g.*, x.round, x.asked_at FROM event_request_groups x JOIN groups g ON g.id = x.group_id WHERE x.request_id = ? ORDER BY x.round, x.rowid", r.id).map((g) => {
           const asked = g.asked_at || r.created_at;
           const reply = db.get("SELECT MIN(created_at) t FROM messages WHERE group_id = ? AND customer_id = ? AND sender = 'group' AND created_at >= ?", g.id, user.id, asked).t;

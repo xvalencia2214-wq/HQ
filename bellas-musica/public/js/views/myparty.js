@@ -78,6 +78,7 @@ export async function myParty(app, id) {
         ${g ? `<p>${esc(t("pp.calcFor", { n: P.guests }))}</p><ul class="calc"><li>🪑 ${esc(t("pp.calcTables", { n: g.roundTables, chairs: g.chairs }))}</li><li>⛺ ${esc(t("pp.calcTent", { size: g.tent }))}</li><li>🌮 ${esc(t("pp.calcTacos", { n: g.tacos, servings: g.servings }))}</li><li>🥤 ${esc(t("pp.calcAguas", { n: g.aguasGallons }))}</li><li>🎂 ${esc(t("pp.calcCake", { n: g.cakeServings }))}</li>${g.security ? `<li>🛡️ ${esc(t("pp.calcSecurity", { n: g.security }))}</li>` : ""}</ul><p class="dim small">${esc(t("pp.calcNote"))}</p>` : `<p class="dim">${esc(t("pp.calcNeedGuests"))}</p>`}
       </div>
     </div>
+    ${state.meta.insurance_url ? `<div class="note"><strong>☂️ ${esc(t("ins.title"))}</strong> ${esc(t("ins.text"))} <a href="${esc(state.meta.insurance_url)}" target="_blank" rel="noopener">${esc(t("ins.link"))} →</a></div>` : ""}
     <h2 class="sec">${esc(t("pp.find"))}</h2><div id="pp-find"></div>`;
     wire();
     const missing = P.needs.filter((c) => !P.booked_categories.includes(c));

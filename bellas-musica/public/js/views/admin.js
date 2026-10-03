@@ -65,9 +65,31 @@ export async function admin(app) {
     ${s.recent_bookings.map((r) => `<tr><td>${when(r.created_at)}</td><td>${esc(r.group_name)}</td><td>${esc(r.date)}</td><td><span class="badge ${esc(r.status)}">${esc(r.status.replace("_", " "))}</span></td><td>${esc(r.payment_status.replace("_", " "))}</td><td class="num">${cents(r.total_cents)}</td></tr>`).join("") || '<tr><td colspan="6" class="dim">None yet.</td></tr>'}
     </tbody></table></div>
 
+    <div class="two"><div class="panel" id="docs"><h2 class="sec">Licenses and insurance to check (${s.pending_documents})</h2><div class="dim">Loading…</div></div>
+    <div class="panel"><h2 class="sec">Partner links</h2><p class="dim small">Give each church, dress shop or school its own link to count the families it sends you.</p>
+      <form id="srcform" class="chat-form"><input id="src-name" placeholder="iglesia-san-pio" aria-label="Partner name"><button class="btn dark" type="submit">Make link</button></form><div id="srclink"></div>
+      ${s.signup_sources.length ? `<table class="tbl"><thead><tr><th>Source</th><th class="num">Sign-ups (90 days)</th></tr></thead><tbody>${s.signup_sources.map((x) => `<tr><td>${esc(x.source)}</td><td class="num">${x.n}</td></tr>`).join("")}</tbody></table>` : '<div class="dim small">No sign-ups from partner links yet.</div>'}</div></div>
+
     <h2 class="sec">Audit log</h2><div class="panel">${s.log.map((l) => `<div class="req"><div><strong>${esc(l.action)}</strong> <span class="dim">${esc(l.target)} ${esc(l.details)}</span></div><div class="dim small">${esc(l.admin_email)} · ${when(l.created_at)}</div></div>`).join("") || '<div class="dim">Nothing yet. Every hide, feature and password reset is recorded here.</div>'}</div>`;
 
   const reload = () => admin(app);
+  // documents waiting for review: open the file, then approve (optionally with an expiry date) or reject with a reason
+  const drawDocs = async () => {
+    const box = document.getElementById("docs"); if (!box) return;
+    const { documents } = await api.get("/api/admin/documents");
+    box.innerHTML = `<h2 class="sec">Licenses and insurance to check (${documents.length})</h2>` + (documents.map((d) => `<div class="req"><div><strong>${esc(d.group_name)}</strong> · ${esc(d.kind.replace(/_/g, " "))}<br><span class="dim small">${esc(d.type)} · ${when(d.created_at)}</span><br><a href="/api/admin/documents/${esc(d.id)}/file" target="_blank" rel="noopener">Open the file</a></div>
+      <div class="req-r"><label class="small">Expires <input type="date" data-exp="${esc(d.id)}"></label><br><button class="btn small" data-docok="${esc(d.id)}">Approve</button> <button class="btn ghost small" data-docno="${esc(d.id)}">Reject</button></div></div>`).join("") || '<div class="dim">Nothing waiting.</div>');
+    box.querySelectorAll("[data-docok]").forEach((b) => { b.onclick = async () => { try { await api.post(`/api/admin/documents/${b.dataset.docok}`, { approve: true, expires: box.querySelector(`[data-exp="${b.dataset.docok}"]`).value }); toast("Approved"); drawDocs(); } catch (e) { toast(e.message, "error"); } }; });
+    box.querySelectorAll("[data-docno]").forEach((b) => { b.onclick = async () => { const note = prompt("Why? (the vendor sees this)", "The document is unreadable or expired"); if (note === null) return; try { await api.post(`/api/admin/documents/${b.dataset.docno}`, { approve: false, note }); toast("Rejected"); drawDocs(); } catch (e) { toast(e.message, "error"); } }; });
+  };
+  drawDocs().catch(() => {});
+  document.getElementById("srcform").onsubmit = (e) => {
+    e.preventDefault();
+    const name = document.getElementById("src-name").value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+    if (!name) return;
+    const link = `${location.origin}/?src=${name}`;
+    document.getElementById("srclink").innerHTML = `<div class="note ok small"><code>${esc(link)}</code></div>`;
+  };
   app.querySelectorAll("[data-hide]").forEach((btn) => { btn.onclick = async () => {
     const hide = btn.dataset.to === "1";
     if (hide && !confirm("Hide this group from search, its page, and new bookings? Existing bookings are unaffected.")) return;

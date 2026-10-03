@@ -20,8 +20,12 @@ export function openSlots(db, groupId, date, { expire = true } = {}) {
   const taken = new Set(db.all(`SELECT time FROM bookings WHERE group_id = ? AND date = ? AND status IN ${ACTIVE}`, groupId, date).map((r) => r.time));
   // A customer's pending request to move to this slot holds it until the group answers.
   for (const r of db.all("SELECT resched_time FROM bookings WHERE group_id = ? AND resched_date = ? AND resched_status = 'pending' AND resched_at > ? AND status IN ('requested','confirmed')", groupId, date, now() - RESCHED_TTL)) taken.add(r.resched_time);
-  return safeJson(row.slots, []).filter((s) => SLOTS.includes(s) && !taken.has(s));
+  // Times the vendor marked busy in its own calendar: a slot is blocked if the busy time overlaps its first two hours.
+  const busy = db.all("SELECT start_min, end_min FROM ext_busy WHERE group_id = ? AND date = ?", groupId, date);
+  const blocked = (s) => { const st = slotMinutes(s); return busy.some((b) => b.start_min < st + 120 && b.end_min > st); };
+  return safeJson(row.slots, []).filter((s) => SLOTS.includes(s) && !taken.has(s) && !blocked(s));
 }
+const slotMinutes = (s) => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(s); return m ? ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]) : 0; };
 
 export function hasOpenDate(db, groupId, date) {
   return openSlots(db, groupId, date).length > 0;
@@ -63,6 +67,14 @@ export function doneCount(db, groupId) {
 }
 
 export const isPromoted = (g) => g.promoted_until > now();
+export const isPro = (g) => g.pro_until > now();
+// The platform fee for a listing: lower for Bella's Pro, half for 30 days after a referral.
+export function feePctFor(g, config) {
+  let pct = config.platformFeePct;
+  if (isPro(g)) pct = Math.min(pct, config.proFeePct);
+  if (g.fee_discount_until > now()) pct = Math.min(pct, Math.floor(config.platformFeePct / 2));
+  return pct;
+}
 
 // The "from" price on cards: the cheapest package, else the hourly price (for listings that can be booked by the hour).
 export const fromCents = (g, minPrice) => minPrice.get(g.id) ?? (g.hourly !== 0 ? g.rate_cents : 0);
@@ -85,7 +97,7 @@ export function publicGroup(ctx, g, extras = {}) {
   return {
     id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), hourly: g.hourly !== 0, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
     rate_cents: g.rate_cents, min_hours: g.min_hours || 1, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
-    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
+    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
     events: safeJson(g.events, []), songs: safeJson(g.songs, []),
@@ -105,7 +117,8 @@ export function groupDetail(ctx, g) {
       recent_reviews: db.all(
         `SELECT r.id, r.rating, r.text, r.created_at, r.reply, r.reply_at, u.name FROM reviews r JOIN users u ON u.id = r.customer_id
          WHERE r.group_id = ? ORDER BY r.id DESC LIMIT 20`, g.id
-      ).map((r) => ({ id: r.id, rating: r.rating, text: r.text, created_at: r.created_at, name: firstName(r.name), reply: r.reply ? { text: r.reply, at: r.reply_at } : null })),
+      ).map((r) => ({ id: r.id, rating: r.rating, text: r.text, created_at: r.created_at, name: firstName(r.name), reply: r.reply ? { text: r.reply, at: r.reply_at } : null,
+        photos: db.all("SELECT file FROM review_photos WHERE review_id = ? ORDER BY id", r.id).map((p) => "/uploads/" + p.file) })),
       response: responseTime(db, g)
     }
   });
@@ -406,9 +419,9 @@ export function markFeaturePaid(ctx, featureId) {
   if (!f || f.status === "paid") return f;
   db.tx(() => {
     db.run("UPDATE payments_feature SET status = 'paid' WHERE id = ?", f.id);
-    const g = db.get("SELECT promoted_until FROM groups WHERE id = ?", f.group_id);
-    const start = Math.max(now(), g.promoted_until);
-    db.run("UPDATE groups SET promoted_until = ? WHERE id = ?", start + 30 * 86400, f.group_id);
+    const col = f.kind === "pro" ? "pro_until" : "promoted_until"; // Bella's Pro or Featured: both 30 days, added to any time left
+    const g = db.get(`SELECT ${col} AS until FROM groups WHERE id = ?`, f.group_id);
+    db.run(`UPDATE groups SET ${col} = ? WHERE id = ?`, Math.max(now(), g.until) + 30 * 86400, f.group_id);
   });
   return db.get("SELECT * FROM payments_feature WHERE id = ?", f.id);
 }

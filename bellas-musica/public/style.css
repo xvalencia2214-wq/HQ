@@ -534,3 +534,14 @@ main .linkbtn:hover, main .linkbtn:focus-visible { color: var(--ink); }
 .padform, .part-form { flex-basis: 100%; margin-top: 6px; }
 .plist li { flex-wrap: wrap; }
 .panel.deal { border-color: var(--gold); }
+/* vendor tools */
+.tag.pro { background: #1a2645; color: #ffd76a; font-weight: 600; }
+.rphotos { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.rphotos img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.tablewrap { overflow-x: auto; }
+table.earn { width: 100%; border-collapse: collapse; font-size: .93rem; }
+table.earn th, table.earn td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+table.earn th[scope="row"], table.earn thead th:first-child { text-align: left; }
+table.earn tfoot { font-weight: 700; }
+fieldset.chan { border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; margin: 12px 0; }
+.narrow-cats { max-width: 640px; margin: 0 auto 6px; }

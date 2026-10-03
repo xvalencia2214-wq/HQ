@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { catChips } from "../cats.js";
 import { state, setUser, refreshAttention } from "../state.js";
 import { t, lang } from "../i18n.js";
 import { esc, money, fmtDate, sel, tomorrowKey, toast } from "../ui.js";
@@ -17,6 +18,7 @@ export async function quotes(app, params) {
   const saved = load();
   const zip0 = p.zip || (() => { try { return localStorage.getItem("bm_zip"); } catch { return null; } })() || meta.market.center_zip;
   const a = { event: p.event || saved.event || "Quinceañera", date: p.date || saved.date || "", time: saved.time || "", hours: saved.hours || "3", zip: p.zip || saved.zip || zip0, guests: p.guests || saved.guests || "",
+    category: meta.categories[p.category] ? p.category : saved.category && meta.categories[saved.category] ? saved.category : "music",
     size: saved.size || "", budgetMin: saved.budgetMin || "", budgetMax: saved.budgetMax || "", stage: saved.stage || "", note: saved.note || "" };
   let requests = [];
   if (state.user) { try { requests = (await api.get("/api/my/requests")).requests; } catch { /* the form still works */ } }
@@ -39,10 +41,18 @@ export async function quotes(app, params) {
   let i = Math.min(Number(saved._i || 0), steps.length - 1), mode = "signup";
 
   app.innerHTML = `<div class="titlebar"><h1>${esc(t("rq.title"))}</h1></div><p class="dim">${esc(t("rq.sub"))}</p>
-    <div class="panel narrow wizpanel" id="wizbox"></div><div id="rqresult"></div>
+    <div class="narrow-cats" id="rqcats"></div><div class="panel narrow wizpanel" id="wizbox"></div><div id="rqresult"></div>
     ${requests.length ? `<h2 class="sec">${esc(t("rq.yours"))}</h2>${requests.map(card).join("")}` : ""}`;
 
+  // What they need quotes for (music by default): tents, food, decorations... use the same steps, minus the group-size question.
+  const drawCats = () => {
+    const box = document.getElementById("rqcats"); if (!box) return;
+    box.innerHTML = catChips(a.category, { label: t("rq.forWhat") });
+    box.querySelectorAll("[data-cat]").forEach((b) => { b.onclick = () => { a.category = b.dataset.cat; save({ ...a, _i: i }); drawCats(); if (skipStep(steps[i])) i = Math.max(0, i - 1); draw(); }; });
+  };
+  const skipStep = (st) => st && st.key === "size" && a.category !== "music";
   function draw() {
+    drawCats();
     const st = steps[i], pct = Math.round((i / steps.length) * 100), last = i === steps.length - 1;
     const stepText = t("rq.step", { i: i + 1, n: steps.length });
     const acct = st.account ? `<p class="dim small">${esc(t("rq.privacy"))}</p>${mode === "signup"
@@ -51,12 +61,12 @@ export async function quotes(app, params) {
       <label for="f-pw">${esc(t("auth.password"))}</label><input id="f-pw" name="password" type="password" required minlength="8" maxlength="200" autocomplete="${mode === "signup" ? "new-password" : "current-password"}">
       ${mode === "signup" ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>` : ""}<p><button type="button" class="linkbtn-dark" id="swap">${esc(t(mode === "signup" ? "rq.hasAcct" : "rq.newAcct"))}</button></p>` : "";
     document.getElementById("wizbox").innerHTML = `<form id="wiz" novalidate><div class="wiz-top"><div class="ring" style="--p:${pct}" aria-hidden="true"><span>${pct}%</span></div><div class="wiz-step" role="status">${esc(stepText)}</div></div>
-      <h2 id="wiz-h" class="wiz-h">${esc(t("rq.q." + st.key))}</h2>${HINTS.has(st.key) ? `<p class="dim small">${esc(t("rq.h." + st.key))}</p>` : ""}
+      <h2 id="wiz-h" class="wiz-h">${esc(t(st.key === "hours" && a.category !== "music" ? "rq.q.hoursAny" : "rq.q." + st.key))}</h2>${HINTS.has(st.key) ? `<p class="dim small">${esc(t("rq.h." + st.key))}</p>` : ""}
       ${st.account ? acct : st.html()}
       <div id="rqerr" class="err" role="alert"></div>
       <div class="wiz-nav">${i > 0 ? `<button type="button" class="btn ghost" id="wback">${esc(t("rq.back"))}</button>` : "<span></span>"}<button class="btn" type="submit" id="wnext">${esc(last ? t(st.account ? "rq.sendAcct" : "rq.send") : t("rq.next"))}</button></div></form>`;
     const first = document.querySelector("#wiz input:not([type=hidden]), #wiz select, #wiz textarea"); if (first) first.focus({ preventScroll: true });
-    const back = document.getElementById("wback"); if (back) back.onclick = () => { readCurrent(true); i--; save({ ...a, _i: i }); draw(); };
+    const back = document.getElementById("wback"); if (back) back.onclick = () => { readCurrent(true); i--; if (skipStep(steps[i])) i--; save({ ...a, _i: i }); draw(); };
     const swap = document.getElementById("swap"); if (swap) swap.onclick = () => { mode = mode === "signup" ? "login" : "signup"; draw(); };
     document.getElementById("wiz").onsubmit = onSubmit;
   }
@@ -68,7 +78,7 @@ export async function quotes(app, params) {
     const err = document.getElementById("rqerr"), btn = document.getElementById("wnext"), st = steps[i];
     err.textContent = "";
     if (!st.account) { const bad = readCurrent(false); if (bad) { err.textContent = t(bad); return; } }
-    if (i < steps.length - 1) { i++; save({ ...a, _i: i }); draw(); return; } // saved only when the person moves on, so sending leaves nothing behind
+    if (i < steps.length - 1) { i++; if (skipStep(steps[i])) i++; save({ ...a, _i: i }); draw(); return; } // saved only when the person moves on, so sending leaves nothing behind
     btn.disabled = true;
     try {
       if (st.account) {
@@ -76,7 +86,7 @@ export async function quotes(app, params) {
         const r = await api.post(mode === "signup" ? "/api/auth/register" : "/api/auth/login", mode === "signup" ? { email: f.email, password: f.password, name: f.name, lang: lang() } : { email: f.email, password: f.password });
         setUser(r.user); refreshAttention();
       }
-      const r = await api.post("/api/requests", { event: a.event, date: a.date, time: a.time, hours: Number(a.hours), zip: a.zip, guests: Number(a.guests), size: a.size, budgetMin: a.budgetMin, budgetMax: a.budgetMax, stage: a.stage, note: a.note });
+      const r = await api.post("/api/requests", { category: a.category, event: a.event, date: a.date, time: a.time, hours: Number(a.hours), zip: a.zip, guests: Number(a.guests), size: a.size, budgetMin: a.budgetMin, budgetMax: a.budgetMax, stage: a.stage, note: a.note });
       if (!r.sent) { document.getElementById("rqresult").innerHTML = `<div class="note warn" role="status">${esc(t("rq.none"))} <a href="#/?zip=${esc(a.zip)}&date=${esc(a.date)}">${esc(t("rq.wider"))}</a></div>`; btn.disabled = false; return; }
       try { sessionStorage.removeItem(KEY); } catch { /* ok */ }
       toast(t("rq.sent", { n: r.sent })); location.hash = "#/quotes?sent=" + r.id; // the route change redraws the page with the new request on top
@@ -87,7 +97,7 @@ export async function quotes(app, params) {
 
 function card(r) {
   const answered = r.groups.filter((g) => g.replied || g.offers.length).length;
-  return `<div class="panel rq-card${r.past ? " past" : ""}"><div class="titlebar"><h3>${esc(t("event." + r.event))} · ${esc(fmtDate(r.date))}</h3><span class="dim small">${esc(t("rq.summary", { guests: r.guests, n: r.groups.length, a: answered }))}</span></div>
+  return `<div class="panel rq-card${r.past ? " past" : ""}"><div class="titlebar"><h3>${r.category && r.category !== "music" ? esc(t("cat." + r.category)) + " · " : ""}${esc(t("event." + r.event))} · ${esc(fmtDate(r.date))}</h3><span class="dim small">${esc(t("rq.summary", { guests: r.guests, n: r.groups.length, a: answered }))}</span></div>
     ${r.groups.map((g) => `<div class="req"><div><strong><a href="#/group/${esc(g.id)}?event=${encodeURIComponent(r.event)}&date=${esc(r.date)}&guests=${r.guests}&zip=${esc(r.zip)}">${esc(g.name)}</a></strong> <span class="tag">${esc(t("type." + g.type))}</span>
       <div class="dim small">${!g.live ? esc(t("rq.gone")) : g.offers.length ? "" : g.replied ? esc(t("rq.replied", { n: g.reply_minutes })) : esc(t("rq.waiting")) + (g.usually ? " · " + esc(t("resp." + g.usually)) : "")}${g.later ? ` · <span class="tag">${esc(t("rq.later"))}</span>` : ""}</div>
       ${g.offers.map((o) => `<div class="note ok small"><strong>${esc(o.name)}</strong> · ${esc(t("g.hours", { n: o.hours }))} · <strong>${money(o.price_cents)}</strong> <span class="dim">· ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div>`).join("")}</div>

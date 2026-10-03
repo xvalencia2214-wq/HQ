@@ -5,7 +5,7 @@ import { normalizePhone } from "../sms.js";
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
 
-export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), email_notify: Boolean(u.email_notify), email_verified: Boolean(u.email_verified), lang: u.lang, is_admin: admins.includes(String(u.email).toLowerCase()) };
+export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), email_notify: Boolean(u.email_notify), email_verified: Boolean(u.email_verified), lang: u.lang, notify_channel: u.notify_channel || "sms", is_admin: admins.includes(String(u.email).toLowerCase()) };
 
 function phoneField(v) {
   const raw = str(v, "Phone", { max: 30 });
@@ -32,7 +32,10 @@ export default function authRoutes(ctx, add) {
     const sms = body.sms_opt_in === true && phone ? 1 : 0;
     const lang = body.lang === "es" ? "es" : "en"; // the language they signed up in decides the language of every email and text, starting with the confirmation email
     if (db.get("SELECT 1 AS x FROM users WHERE email = ?", email)) throw new HttpError(409, "That email already has an account. Try logging in.");
-    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, lang, pass_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", email, name, phone, sms, lang, await hashPassword(password), now());
+    // who invited them (a vendor's referral code) and where they came from (a partner link, e.g. ?src=iglesia-san-pio)
+    const ref = typeof body.ref === "string" && /^[A-Z0-9x]{4,12}$/i.test(body.ref) ? db.get("SELECT id FROM users WHERE ref_code = ?", body.ref.toUpperCase()) : null;
+    const source = typeof body.source === "string" ? body.source.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40) : "";
+    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, lang, pass_hash, created_at, referred_by, signup_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", email, name, phone, sms, lang, await hashPassword(password), now(), ref ? ref.id : 0, source);
     startSession(res, req, Number(info.lastInsertRowid));
     ctx.stats.count("signup");
     sendVerification(Number(info.lastInsertRowid));
@@ -98,7 +101,8 @@ export default function authRoutes(ctx, add) {
     const sms = body.sms_opt_in !== undefined ? (body.sms_opt_in === true && phone ? 1 : 0) : (phone ? user.sms_opt_in : 0);
     const lang = body.lang === "es" || body.lang === "en" ? body.lang : user.lang;
     const emailNotify = body.email_notify !== undefined ? (body.email_notify === true ? 1 : 0) : undefined;
-    db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ?, email_notify = COALESCE(?, email_notify) WHERE id = ?", name, phone, sms, lang, emailNotify ?? null, user.id);
+    const channel = body.notify_channel === "whatsapp" || body.notify_channel === "sms" ? body.notify_channel : user.notify_channel || "sms";
+    db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ?, email_notify = COALESCE(?, email_notify), notify_channel = ? WHERE id = ?", name, phone, sms, lang, emailNotify ?? null, channel, user.id);
     return { user: pub(db.get("SELECT * FROM users WHERE id = ?", user.id)) };
   }, { auth: true });
 

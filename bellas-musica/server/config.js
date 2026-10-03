@@ -43,6 +43,10 @@ export function loadConfig(env = process.env) {
     // Money
     platformFeePct: int(env.PLATFORM_FEE_PCT, 10), // % of the booking total, taken from the deposit
     featurePriceCents: int(env.FEATURE_PRICE_CENTS, 4900), // 30 days of featured placement
+    proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
+    proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
+    partyInsuranceUrl: env.PARTY_INSURANCE_URL || "",        // a partner's event-insurance page, shown on party pages when set
+    icsAllowHttp: env.ICS_ALLOW_HTTP === "1",                 // tests only: calendar imports must be https
     // Stripe (leave unset to run in simulated-payments mode)
     stripeKey: env.STRIPE_SECRET_KEY || "",
     stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET || "",
@@ -67,6 +71,7 @@ export function loadConfig(env = process.env) {
     twilioSid: env.TWILIO_ACCOUNT_SID || "",
     twilioToken: env.TWILIO_AUTH_TOKEN || "",
     twilioFrom: env.TWILIO_FROM || "",
+    twilioWhatsappFrom: env.TWILIO_WHATSAPP_FROM || "", // a WhatsApp-enabled Twilio number (+1...), optional
     twilioApi: env.TWILIO_API_BASE || "https://api.twilio.com"
   };
 }

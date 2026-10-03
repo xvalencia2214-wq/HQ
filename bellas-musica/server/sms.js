@@ -13,9 +13,12 @@ export function normalizePhone(raw) {
 export function createSms(config, db, alert = () => {}) {
   const live = Boolean(config.twilioSid && config.twilioToken && config.twilioFrom);
 
-  async function send(phone, body) {
-    const to = normalizePhone(phone);
-    if (!to) return false;
+  // channel "whatsapp" goes through Twilio's WhatsApp sender when one is set up; otherwise it falls back to a normal text.
+  async function send(phone, body, channel = "sms") {
+    const to0 = normalizePhone(phone);
+    if (!to0) return false;
+    const wa = channel === "whatsapp" && config.twilioWhatsappFrom;
+    const to = wa ? "whatsapp:" + to0 : to0;
     const text = String(body).slice(0, 300);
     const row = db.run("INSERT INTO sms_log (to_phone, body, created_at) VALUES (?, ?, ?)", to, text, now());
     if (!live) return true;
@@ -26,7 +29,7 @@ export function createSms(config, db, alert = () => {}) {
           Authorization: "Basic " + Buffer.from(`${config.twilioSid}:${config.twilioToken}`).toString("base64"),
           "Content-Type": "application/x-www-form-urlencoded"
         },
-        body: new URLSearchParams({ To: to, From: config.twilioFrom, Body: text })
+        body: new URLSearchParams({ To: to, From: wa ? "whatsapp:" + config.twilioWhatsappFrom : config.twilioFrom, Body: text })
       });
       if (!res.ok) throw new Error(`Twilio ${res.status}`);
       db.run("UPDATE sms_log SET sent = 1 WHERE id = ?", row.lastInsertRowid);
@@ -41,11 +44,11 @@ export function createSms(config, db, alert = () => {}) {
   // Only text people who opted in, and never let a failed text break the request that triggered it.
   function notify(user, body) {
     if (!user || !user.sms_opt_in || !user.phone) return;
-    send(user.phone, body).catch(() => {});
+    send(user.phone, body, user.notify_channel).catch(() => {});
   }
-  function notifyPhone(phone, optedIn, body) {
+  function notifyPhone(phone, optedIn, body, channel = "sms") {
     if (!optedIn || !phone) return;
-    send(phone, body).catch(() => {});
+    send(phone, body, channel).catch(() => {});
   }
 
   return { live, mode: live ? "twilio" : "simulated", send, notify, notifyPhone };

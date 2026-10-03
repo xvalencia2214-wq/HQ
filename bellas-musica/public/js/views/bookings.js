@@ -3,6 +3,7 @@ import { state } from "../state.js";
 import { t } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
+import { shrink } from "./dashboard.js";
 
 function payBadge(b) {
   const k = b.payment_status;
@@ -170,11 +171,15 @@ function wire(root, reload) {
       const holder = b.closest(".req").querySelector(".review-form");
       holder.hidden = false;
       holder.innerHTML = `<form><label>${esc(t("bk.rating"))}</label><select name="rating">${[5, 4, 3, 2, 1].map((n) => `<option value="${n}">${"★".repeat(n)} (${n})</option>`).join("")}</select>
-        <label>${esc(t("bk.comment"))}</label><textarea name="text" maxlength="800"></textarea><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("bk.submitReview"))}</button></form>`;
+        <label>${esc(t("bk.comment"))}</label><textarea name="text" maxlength="800"></textarea>
+        <label for="rp-${esc(b.dataset.review)}">${esc(t("rv.addPhotos"))}</label><input id="rp-${esc(b.dataset.review)}" name="photos" type="file" accept="image/*" multiple>
+        <div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("bk.submitReview"))}</button></form>`;
       holder.querySelector("form").onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(e.target));
-        try { await api.post(`/api/bookings/${b.dataset.review}/review`, { rating: Number(f.rating), text: f.text }); toast(t("bk.thanks")); reload(); }
+        const files = [...e.target.photos.files];
+        if (files.length > 3) { holder.querySelector(".err").textContent = t("rv.max3"); return; }
+        try { const photos = await Promise.all(files.map((x) => shrink(x, 1400))); await api.post(`/api/bookings/${b.dataset.review}/review`, { rating: Number(f.rating), text: f.text, photos }); toast(t("bk.thanks")); reload(); }
         catch (ex) { holder.querySelector(".err").textContent = ex.message; }
       };
     };
@@ -218,6 +223,7 @@ export async function simulatedPay(app, kind, id) {
     let c; try { c = (await api.get(`/api/carts/${encodeURIComponent(id)}`)).cart; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
     title = t("cart.payTitle"); amount = c.amount_cents;
     summary = c.items.map((x) => `${esc(x.group_name)} · ${esc(fmtDate(x.date))} · ${money(x.deposit_cents)}${x.discount_cents ? ` <span class="tag trust">${esc(t("bun.saved", { amount: money(x.discount_cents) }))}</span>` : ""}`).join("<br>");
+  } else if (kind === "pro") { title = t("pro.title"); amount = state.meta.pro_price_cents; summary = esc(t("pro.text", { fee: state.meta.pro_fee_pct, base: state.meta.fee_pct }));
   } else { title = t("pay.featureTitle"); amount = state.meta.feature_price_cents; summary = esc(t("pay.featureText")); }
   app.innerHTML = `<div class="panel narrow"><h1>${esc(title)}</h1><p>${summary}</p><div class="sum strong"><span>${esc(t(kind === "balance" ? "bal.amount" : "pay.amount"))}</span><span>${money(amount)}</span></div>
     <div class="note">${esc(t("pay.testMode"))}</div><div id="payerr" class="err" role="alert"></div><button class="btn wide" id="paybtn">${esc(t("pay.button", { amount: money(amount) }))}</button></div>`;
@@ -228,7 +234,7 @@ export async function simulatedPay(app, kind, id) {
       else if (kind === "balance") { await api.post(`/api/bookings/${encodeURIComponent(id)}/simulate-pay-balance`); location.hash = `#/booking/${id}?balance=1`; }
       else if (kind === "part") { const r = await api.post(`/api/parts/${encodeURIComponent(id)}/simulate-pay`); toast(t("plan.thanks")); location.hash = r.part.mine ? `#/booking/${r.part.booking_id}` : "#/bookings"; }
       else if (kind === "cart") { await api.post(`/api/carts/${encodeURIComponent(id)}/simulate-pay`); toast(t("cart.thanks")); location.hash = "#/bookings"; }
-      else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t("dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
+      else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t(kind === "pro" ? "pro.done" : "dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
     } catch (e) { document.getElementById("payerr").textContent = e.message; document.getElementById("paybtn").disabled = false; }
   };
 }

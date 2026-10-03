@@ -20,7 +20,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   if (user && !g.is_owner) { try { offers = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/offers`)).offers; } catch { /* no offers */ } }
   let deals = [];
   try { deals = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/bundle-deals`)).bundles; } catch { /* none */ }
-  const badges = (g.verified ? `<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>` : "") + (g.insured ? `<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>` : "");
+  const badges = (g.pro ? `<span class="tag pro" title="${esc(t("badge.proTip"))}">★ Pro</span>` : "") + (g.licensed ? `<span class="tag trust" title="${esc(t("badge.licensedTip"))}">📄 ${esc(t("badge.licensed"))}</span>` : "") + (g.verified ? `<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>` : "") + (g.insured ? `<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>` : "");
   const replies = g.response ? `<span class="dim">${esc(t("resp." + g.response.bucket))}</span>` : "";
   const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {} };
   // What the customer already told us on the search page.
@@ -44,7 +44,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       ${fact("g.travel", esc(g.travel_fee_cents ? t("g.travelFee", { miles: g.travel_miles, fee: money(g.travel_fee_cents) }) : t("g.travelFree", { miles: g.travel_miles })))}
       ${fact("g.deposit", `${g.deposit_pct}%`)}${fact("g.policy", esc(t("policy." + g.cancel_policy)))}
     </div>
-    <p class="dim">${esc(policy[lang()] || "")}</p>
+    <p class="dim">${esc(policy[lang()] || "")}</p>${g.weather_policy ? `<p class="small"><strong>🌦 ${esc(t("wp.label"))}:</strong> ${esc(g.weather_policy)}</p>` : ""}
     <h2 class="sec">${esc(t("g.story"))}</h2><p>${esc(g.story || t("g.noStory"))}</p>
     ${g.events.length ? `<div class="chips">${g.events.map((e) => `<span class="tag">${esc(t("event." + e))}</span>`).join("")}</div>` : ""}
   </div>
@@ -53,7 +53,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   ${deals.map((d) => `<div class="panel deal"><h2 class="sec">🤝 ${esc(t("bun.title", { pct: d.discount_pct }))}</h2><p><strong>${esc(d.name)}</strong></p><ul class="plist">${d.members.map((m) => `<li><span>${m.id === g.id ? `<strong>${esc(m.name)}</strong>` : `<a href="#/group/${esc(m.id)}">${esc(m.name)}</a>`} <span class="dim small">· ${esc(t("type." + m.type))}</span></span></li>`).join("")}</ul><p class="dim small">${esc(t("bun.how", { pct: d.discount_pct }))}</p></div>`).join("")}
   ${g.addons.length ? `<div class="panel"><h2 class="sec">${esc(t("ao.title"))}</h2><div class="pkgs">${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong></div></div>`).join("")}</div></div>` : ""}
   ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(t("g.hours", { n: p.hours }))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
-  ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
+  ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photos && r.photos.length ? `<div class="rphotos">${r.photos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(t("rv.photo", { name: r.name }))}" loading="lazy"></a>`).join("")}</div>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
     <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
     <div class="panel" id="bookpanel"><h2>${esc(t(music ? "g.request" : "g.requestAny"))}</h2><div id="bookbox"></div></div>

@@ -68,7 +68,7 @@ function retryCartTransfers(ctx) {
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); retryCartTransfers(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); retryCartTransfers(ctx); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }

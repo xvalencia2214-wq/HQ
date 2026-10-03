@@ -16,7 +16,7 @@ export function createNotifier(ctx) {
 
   // opts.phone overrides the text destination (a group's own alert number); opts.noEmail / opts.noSms silence a channel.
   function to(userId, kind, vars = {}, opts = {}) {
-    const u = db.get("SELECT id, email, name, phone, sms_opt_in, lang, email_notify FROM users WHERE id = ?", userId);
+    const u = db.get("SELECT id, email, name, phone, sms_opt_in, lang, email_notify, notify_channel FROM users WHERE id = ?", userId);
     if (!u) return;
     const tpl = TEMPLATES[kind];
     if (!tpl) throw new Error("unknown notification: " + kind);
@@ -33,7 +33,7 @@ export function createNotifier(ctx) {
         headers: nonTx ? { "List-Unsubscribe": `<${unsubUrl(u.id)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined
       }).catch(() => {});
     }
-    if (!opts.noSms && msg.sms) sms.notifyPhone(opts.phone || u.phone, u.sms_opt_in, msg.sms);
+    if (!opts.noSms && msg.sms) sms.notifyPhone(opts.phone || u.phone, u.sms_opt_in, msg.sms, u.notify_channel);
   }
 
   // For people without an account (the waitlist). Transactional only: they asked for exactly this.

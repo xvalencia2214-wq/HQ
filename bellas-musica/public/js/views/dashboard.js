@@ -170,12 +170,35 @@ async function requests({ g, body, refresh }) {
 }
 
 // ---- calendar ----
+// Two-way calendar: block times from the vendor's own calendar, and a private feed of bookings to add to it.
+async function drawSync(g) {
+  const box = document.getElementById("calsync"); if (!box) return;
+  const gid = encodeURIComponent(g.id);
+  let s;
+  try { s = (await api.get(`/api/groups/${gid}/calendar-sync`)).sync; } catch { return; }
+  const when = s.synced_at ? new Date(s.synced_at * 1000).toLocaleString(lang() === "es" ? "es-US" : "en-US") : "";
+  box.innerHTML = `<h2 class="sec">🔄 ${esc(t("cal.syncTitle"))}</h2>
+    <h3 class="small-h">${esc(t("cal.importTitle"))}</h3><p class="dim small">${esc(t("cal.importHint"))}</p>
+    ${s.import_url ? `<div class="note ${s.error ? "warn" : "ok"} small">${s.error ? esc(t("cal.importError", { error: s.error })) : esc(t("cal.importOk", { n: s.busy_days, when }))}</div>` : ""}
+    <form id="calimp" class="cform"><input id="cal-url" type="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" aria-label="${esc(t("cal.importTitle"))}" value="${esc(s.import_url)}"><button class="btn small" type="submit">${esc(t(s.import_url ? "cal.importAgain" : "cal.import"))}</button>${s.import_url ? `<button type="button" class="linkbtn small" id="cal-stop">${esc(t("cal.stop"))}</button>` : ""}<div class="err" role="alert" id="cal-err" style="flex-basis:100%"></div></form>
+    <h3 class="small-h">${esc(t("cal.feedTitle"))}</h3><p class="dim small">${esc(t("cal.feedHint"))}</p>
+    ${s.feed_url ? `<div class="copyrow"><input readonly id="cal-feed" value="${esc(s.feed_url)}" aria-label="${esc(t("cal.feedTitle"))}"><button type="button" class="btn small" id="cal-copy">${esc(t("pp.copy"))}</button><button type="button" class="linkbtn small" id="cal-new">${esc(t("pp.newLink"))}</button></div>` : `<button type="button" class="btn small" id="cal-new">${esc(t("cal.feedMake"))}</button>`}`;
+  document.getElementById("calimp").onsubmit = async (e) => {
+    e.preventDefault(); const err = document.getElementById("cal-err"); err.textContent = t("cal.reading");
+    try { await api.put(`/api/groups/${gid}/calendar-sync/import`, { url: document.getElementById("cal-url").value.trim() }); toast(t("common.saved")); location.reload(); } catch (ex) { err.textContent = ex.message; }
+  };
+  const stop = document.getElementById("cal-stop"); if (stop) stop.onclick = async () => { await api.del(`/api/groups/${gid}/calendar-sync/import`); location.reload(); };
+  document.getElementById("cal-new").onclick = async () => { await api.post(`/api/groups/${gid}/calendar-sync/feed`); drawSync(g); };
+  const cp = document.getElementById("cal-copy"); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(s.feed_url); toast(t("share.copied")); } catch { document.getElementById("cal-feed").select(); } };
+}
+
 async function calTab({ g, body }) {
   const first = g.next_open ? new Date(Number(g.next_open.slice(0, 4)), Number(g.next_open.slice(5, 7)) - 1, 1) : null;
   const st = { month: first || new Date(today().getFullYear(), today().getMonth(), 1), date: null };
   body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.calendar"))}</h2><div id="calbox"></div><div id="daybox"></div>
     <div class="quick"><button class="btn ghost small" id="fill">${esc(t("dash.fill"))}</button><button class="btn ghost small" id="clear">${esc(t("dash.clear"))}</button></div>
-    <div class="legend">${esc(t("dash.calHint"))}</div></div>`;
+    <div class="legend">${esc(t("dash.calHint"))}</div></div><div class="panel" id="calsync"></div>`;
+  drawSync(g);
   let data = { days: {}, booked: {} };
   async function load() { data = await api.get(`/api/groups/${encodeURIComponent(g.id)}/calendar?month=${monthKey(st.month)}`); draw(); }
   function draw() {
@@ -233,6 +256,7 @@ function listing({ g, body, refresh }) {
     <div><label for="l-set">${esc(t("dash.setMin"))}</label><input id="l-set" name="set_minutes" type="number" min="10" max="240" value="${g.set_minutes}"></div></div></div>
     <div class="row"><div><label for="l-tm">${esc(t("dash.travelMiles"))}</label><input id="l-tm" name="travel_miles" type="number" min="0" max="500" value="${g.travel_miles}"></div>
     <div><label for="l-tf">${esc(t("dash.travelFee"))}</label><input id="l-tf" name="travel_fee" type="number" min="0" max="2000" value="${g.travel_fee_cents / 100}"></div></div>
+    <label for="l-wp">${esc(t("wp.label"))}</label><textarea id="l-wp" name="weather_policy" maxlength="300" placeholder="${esc(t("wp.ph"))}">${esc(g.weather_policy || "")}</textarea><div class="dim small">${esc(t("wp.hint"))}</div>
     <h2 class="sec">${esc(t("dash.terms"))}</h2>
     <div class="row"><div><label for="l-dep">${esc(t("dash.depositPct"))}</label><input id="l-dep" name="deposit_pct" type="number" min="20" max="50" value="${g.deposit_pct}"></div>
     <div><label for="l-pol">${esc(t("g.policy"))}</label><select id="l-pol" name="cancel_policy">${["flexible", "moderate", "strict"].map((k) => `<option value="${k}"${sel(k, g.cancel_policy)}>${esc(t("policy." + k))}</option>`).join("")}</select></div></div>
@@ -250,7 +274,7 @@ function listing({ g, body, refresh }) {
       await api.patch(`/api/groups/${encodeURIComponent(g.id)}`, {
         name: f.name, type: f.type, zip: f.zip, members: Number(f.members), hourly: hb.checked, ...(hb.checked ? { rate: Number(f.rate), min_hours: Number(f.min_hours) } : {}), max_guests: Number(f.max_guests), story: f.story,
         events: fd.getAll("ev"), sound_system: f.sound === "on", dress_code: f.dress_code, set_minutes: Number(f.set_minutes),
-        travel_miles: Number(f.travel_miles), travel_fee: Number(f.travel_fee), deposit_pct: Number(f.deposit_pct), cancel_policy: f.cancel_policy, contact_phone: f.contact_phone
+        travel_miles: Number(f.travel_miles), travel_fee: Number(f.travel_fee), deposit_pct: Number(f.deposit_pct), cancel_policy: f.cancel_policy, contact_phone: f.contact_phone, weather_policy: f.weather_policy
       });
       toast(t("common.saved")); refresh();
     } catch (ex) { err.textContent = ex.message; }
@@ -316,7 +340,7 @@ function extras({ g, body, refresh }) {
 }
 
 // ---- photos + video ----
-async function shrink(file, maxSide = 1600) {
+export async function shrink(file, maxSide = 1600) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas"); c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
@@ -387,6 +411,49 @@ async function payments({ g, body, refresh }) {
   const ob = document.getElementById("onboard");
   if (ob) ob.onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/stripe/onboard`); if (r.url) goto(r.url); else refresh(); } catch (e) { toast(e.message, "error"); } };
   document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
+  await growPanels({ g: cur, body, refresh });
+}
+
+// Pro, referrals, the free website page, earnings and licenses: everything that helps a vendor grow, under Payments.
+async function growPanels({ g, body, refresh }) {
+  const gid = encodeURIComponent(g.id), meta = state.meta, loc = lang() === "es" ? "es-US" : "en-US";
+  const [ref, docs, earn] = await Promise.all([api.get("/api/my/referral").catch(() => null), api.get(`/api/groups/${gid}/documents`).catch(() => ({ documents: [], needed: [] })), api.get(`/api/groups/${gid}/earnings`).catch(() => null)]);
+  const proUntil = g.pro_until * 1000, discountUntil = g.fee_discount_until * 1000;
+  const site = `${location.origin}/v/${g.id}`;
+  const e = earn && earn.earnings;
+  body.insertAdjacentHTML("beforeend", `<div class="two">
+    <div class="panel"><h2 class="sec">★ ${esc(t("pro.title"))}</h2><p>${esc(t("pro.text", { fee: meta.pro_fee_pct, base: meta.fee_pct }))}</p>
+      <p class="small">${esc(t("pro.feeNow", { pct: g.fee_pct }))}${discountUntil > Date.now() ? ` · ${esc(t("ref.activeUntil", { date: new Date(discountUntil).toLocaleDateString(loc) }))}` : ""}</p>
+      ${proUntil > Date.now() ? `<div class="note ok">${esc(t("pro.until", { date: new Date(proUntil).toLocaleDateString(loc) }))}</div>` : ""}
+      <button class="btn" id="buypro">${esc(t("pro.buy", { price: money(meta.pro_price_cents) }))}</button></div>
+    <div class="panel"><h2 class="sec">🤝 ${esc(t("ref.title"))}</h2><p>${esc(t("ref.text", { days: ref ? ref.days : 30 }))}</p>
+      ${ref ? `<div class="copyrow"><input readonly value="${esc(ref.url)}" aria-label="${esc(t("ref.title"))}" id="reflink"><button type="button" class="btn small" data-copy="reflink">${esc(t("pp.copy"))}</button><a class="btn ghost small" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(t("ref.wa") + " " + ref.url)}">WhatsApp</a></div>
+      <p class="dim small">${esc(t("ref.stats", { invited: ref.invited, live: ref.live }))}</p>` : ""}</div>
+  </div>
+  <div class="two">
+    <div class="panel"><h2 class="sec">🌐 ${esc(t("site.title"))}</h2><p>${esc(t("site.text"))}</p>
+      <div class="copyrow"><input readonly value="${esc(site)}" aria-label="${esc(t("site.title"))}" id="sitelink"><button type="button" class="btn small" data-copy="sitelink">${esc(t("pp.copy"))}</button><a class="btn ghost small" href="/v/${esc(g.id)}" target="_blank" rel="noopener">${esc(t("site.open"))}</a></div>
+      <p class="dim small">${esc(t("site.hint"))}</p></div>
+    <div class="panel"><h2 class="sec">📄 ${esc(t("doc.title"))}</h2><p class="small">${esc(t("doc.text"))}</p>
+      ${docs.needed.length ? `<p class="small"><strong>${esc(t("doc.needed"))}</strong> ${docs.needed.map((k) => esc(t("doc." + k))).join(", ")}</p>` : ""}
+      ${docs.documents.length ? `<ul class="plist">${docs.documents.map((d) => `<li><span>${esc(t("doc." + d.kind))}${d.expires ? ` · ${esc(t("doc.expires", { date: d.expires }))}` : ""}${d.note ? `<br><span class="dim small">${esc(d.note)}</span>` : ""}</span><span class="badge ${d.status === "approved" ? "confirmed" : d.status === "pending" ? "requested" : "cancelled"}">${esc(t("doc.st." + d.status))}</span></li>`).join("")}</ul>` : ""}
+      <form id="docform" class="cform"><label class="sr-only" for="doc-kind">${esc(t("doc.kind"))}</label><select id="doc-kind">${["insurance", "health_permit", "business_license", "security_license", "other"].map((k) => `<option value="${k}">${esc(t("doc." + k))}</option>`).join("")}</select>
+        <label class="btn ghost small" for="doc-file">${esc(t("doc.upload"))}</label><input type="file" id="doc-file" accept="application/pdf,image/*" hidden><div class="err" id="doc-err" role="alert" style="flex-basis:100%"></div></form></div>
+  </div>
+  ${e ? `<div class="panel"><div class="titlebar"><h2 class="sec">💵 ${esc(t("earn.title", { year: e.year }))}</h2><a class="btn ghost small" href="/api/groups/${esc(g.id)}/earnings.csv?year=${e.year}" download>${esc(t("earn.csv"))}</a></div>
+    <div class="tablewrap"><table class="earn"><thead><tr><th scope="col">${esc(t("earn.month"))}</th><th scope="col">${esc(t("earn.events"))}</th><th scope="col">${esc(t("earn.deposits"))}</th><th scope="col">${esc(t("earn.balances"))}</th><th scope="col">${esc(t("earn.offline"))}</th><th scope="col">${esc(t("earn.fees"))}</th></tr></thead>
+    <tbody>${e.months.filter((m) => m.events || m.deposits_cents || m.balances_cents || m.offline_cents).map((m) => `<tr><th scope="row">${esc(new Date(m.month + "-15").toLocaleDateString(loc, { month: "long" }))}</th><td>${m.events}</td><td>${money(m.deposits_cents)}</td><td>${money(m.balances_cents)}</td><td>${money(m.offline_cents)}</td><td>${money(m.fees_cents)}</td></tr>`).join("") || `<tr><td colspan="6" class="dim">${esc(t("earn.none"))}</td></tr>`}</tbody>
+    <tfoot><tr><th scope="row">${esc(t("earn.total"))}</th><td>${e.total.events}</td><td>${money(e.total.deposits_cents)}</td><td>${money(e.total.balances_cents)}</td><td>${money(e.total.offline_cents)}</td><td>${money(e.total.fees_cents)}</td></tr></tfoot></table></div>
+    <p class="dim small">${esc(t("earn.note"))}</p></div>` : ""}`);
+  body.querySelectorAll("[data-copy]").forEach((b) => { b.onclick = async () => { const i = document.getElementById(b.dataset.copy); try { await navigator.clipboard.writeText(i.value); toast(t("share.copied")); } catch { i.select(); } }; });
+  document.getElementById("buypro").onclick = async () => { try { goto((await api.post(`/api/groups/${gid}/pro`)).url); } catch (ex) { toast(ex.message, "error"); } };
+  document.getElementById("doc-file").onchange = async (ev) => {
+    const f = ev.target.files[0]; if (!f) return;
+    const err = document.getElementById("doc-err"); err.textContent = "";
+    if (f.size > 5 * 1024 * 1024) { err.textContent = t("doc.tooBig"); return; }
+    const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(f); });
+    try { await api.post(`/api/groups/${gid}/documents`, { kind: document.getElementById("doc-kind").value, data }); toast(t("doc.sent")); refresh(); } catch (ex) { err.textContent = ex.message; }
+  };
 }
 
 // ---- messages (and custom offers) ----

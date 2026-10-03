@@ -6,7 +6,7 @@ import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
-import { RESCHED_TTL, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
+import { RESCHED_TTL, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -45,7 +45,7 @@ export default function bookingRoutes(ctx, add) {
       if (addons.some((a) => !a)) throw new HttpError(400, "One of those add-ons isn't offered by this group");
     }
     if (requireSlot && !openSlots(db, group.id, date).includes(time)) throw new HttpError(409, "That time isn't available");
-    const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: config.platformFeePct, addons });
+    const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: feePctFor(group, config), addons });
     return { group, pkg, date, time, event, guests, eventZip, quote };
   }
 

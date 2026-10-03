@@ -6,7 +6,7 @@ import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
-import { activeOffers, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { activeOffers, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -54,6 +54,18 @@ export default function groupRoutes(ctx, add) {
     if (stripe.live && !g.stripe_ready) missing.push("payouts");
     return missing;
   }
+  // A business invited by another one publishes its first listing: both get half the platform fee for 30 days (once per new business).
+  function rewardReferral(g) {
+    const owner = db.get("SELECT id, referred_by, ref_rewarded FROM users WHERE id = ?", g.owner_id);
+    if (!owner || !owner.referred_by || owner.ref_rewarded) return;
+    const until = now() + 30 * 86400;
+    db.tx(() => {
+      db.run("UPDATE users SET ref_rewarded = 1 WHERE id = ?", owner.id);
+      db.run("UPDATE groups SET fee_discount_until = MAX(fee_discount_until, ?) WHERE id = ?", until, g.id);
+      db.run("UPDATE groups SET fee_discount_until = MAX(fee_discount_until, ?) WHERE owner_id = ?", until, owner.referred_by);
+    });
+    ctx.notify.to(owner.referred_by, "referral.reward", { group: g.name, url: `${config.baseUrl}/#/dashboard` });
+  }
   const statusOf = (g) => (g.hidden ? "hidden" : g.published_at === 0 && !g.demo ? "draft" : g.paused ? "paused" : "live");
 
   // Everything the owner may see about their own group (adds private fields).
@@ -63,7 +75,7 @@ export default function groupRoutes(ctx, add) {
       ...detail,
       checklist: checklist(g, detail),
       status: statusOf(g), publish_missing: g.published_at === 0 && !g.demo ? publishMissing(g, detail) : [], outside_market: !inMarket(g.zip),
-      contact_phone: g.contact_phone, promoted_until: g.promoted_until,
+      contact_phone: g.contact_phone, promoted_until: g.promoted_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
       stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
@@ -100,7 +112,9 @@ export default function groupRoutes(ctx, add) {
     if (g.hidden) throw new HttpError(403, "This listing was hidden by the site owner. Contact support.");
     const missing = publishMissing(g, groupDetail(ctx, g));
     if (missing.length) throw new HttpError(400, "Finish these steps before you publish", { missing });
+    const first = g.published_at === 0;
     db.run("UPDATE groups SET published_at = CASE WHEN published_at = 0 THEN ? ELSE published_at END, paused = 0 WHERE id = ?", now(), g.id);
+    if (first) rewardReferral(g);
     return manageView(getGroup(db, g.id));
   }, { auth: true });
 
@@ -132,6 +146,7 @@ export default function groupRoutes(ctx, add) {
       set.hourly = body.hourly ? 1 : 0;
       if (body.hourly && (set.rate_cents ?? g.rate_cents) < 5000) throw new HttpError(400, "Set a price per hour (at least $50) to take bookings by the hour");
     }
+    if (body.weather_policy !== undefined) set.weather_policy = maskContact(str(body.weather_policy, "Weather policy", { max: 300 })).text;
     if (body.min_hours !== undefined) set.min_hours = int(body.min_hours, "Minimum hours", { min: 1, max: MAX_HOURS });
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
     if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
@@ -338,7 +353,8 @@ export default function groupRoutes(ctx, add) {
   add("POST", "/api/groups/:id/photos", ({ params, body, user, ip }) => {
     const g = requireOwner(db, user, params.id);
     if (!limiters.upload.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many uploads. Try again later.");
-    if (db.get("SELECT COUNT(*) c FROM photos WHERE group_id = ?", g.id).c >= MAX_PHOTOS) throw new HttpError(400, `At most ${MAX_PHOTOS} photos`);
+    const maxPhotos = g.pro_until > now() ? MAX_PHOTOS * 2 : MAX_PHOTOS; // Bella's Pro: twice the photos
+    if (db.get("SELECT COUNT(*) c FROM photos WHERE group_id = ?", g.id).c >= maxPhotos) throw new HttpError(400, `At most ${maxPhotos} photos`);
     const b64 = typeof body.data === "string" ? body.data.replace(/^data:image\/[a-z+]+;base64,/i, "") : "";
     if (!b64 || b64.length > MAX_PHOTO_BYTES * 1.4) throw new HttpError(413, "Photo is too large (max 4 MB)");
     const buf = Buffer.from(b64, "base64");

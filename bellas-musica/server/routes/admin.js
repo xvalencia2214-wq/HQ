@@ -65,6 +65,9 @@ export default function adminRoutes(ctx, add) {
          FROM groups g LEFT JOIN users u ON u.id = g.owner_id ORDER BY g.demo, g.created_at DESC LIMIT 200`).map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "", demo: Boolean(g.demo), hidden: Boolean(g.hidden), verified: Boolean(g.verified), insured: Boolean(g.insured), status: g.hidden ? "hidden" : g.demo ? "live" : g.published_at === 0 ? "draft" : g.paused ? "paused" : "live", stripe_ready: Boolean(g.stripe_ready) })),
       recent_bookings: db.all(`SELECT b.id, g.name AS group_name, b.status, b.payment_status, b.date, b.total_cents, b.deposit_cents, b.created_at FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status != 'expired' ORDER BY b.created_at DESC LIMIT 15`),
       recent_signups: db.all("SELECT id, name, email, created_at FROM users ORDER BY id DESC LIMIT 10"),
+      // partner links (?src=...): sign-ups in the last 90 days by where they came from
+      signup_sources: db.all("SELECT signup_source AS source, COUNT(*) AS n FROM users WHERE signup_source != '' AND created_at > ? GROUP BY signup_source ORDER BY n DESC LIMIT 30", now() - 90 * 86400),
+      pending_documents: db.get("SELECT COUNT(*) c FROM documents WHERE status = 'pending'").c,
       log: db.all("SELECT admin_email, action, target, details, created_at FROM admin_log ORDER BY id DESC LIMIT 25")
     };
   });

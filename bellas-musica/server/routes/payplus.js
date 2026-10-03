@@ -1,6 +1,6 @@
 import { HttpError, int, now, safeJson, str, todayStr, withLock } from "../util.js";
 import { balanceCents } from "../pricing.js";
-import { LIVE_SQL, expirePending, getGroup, isBookable, isLive, markCartPaid, markPartPaid, newId, requireOwner } from "../shared.js";
+import { LIVE_SQL, feePctFor, expirePending, getGroup, isBookable, isLive, markCartPaid, markPartPaid, newId, requireOwner } from "../shared.js";
 import { maskContact } from "./messages.js";
 
 const MIN_PART = 2000;                // $20: the smallest installment or padrino payment (unless less is left)
@@ -133,7 +133,7 @@ export default function payPlusRoutes(ctx, add) {
         const discount = Math.round(((b.total_cents - b.travel_fee_cents) * bun.discount_pct) / 100);
         const total = b.total_cents - discount;
         const deposit = Math.ceil((total * g.deposit_pct) / 100);
-        const fee = Math.min(Math.round((total * config.platformFeePct) / 100), deposit);
+        const fee = Math.min(Math.round((total * feePctFor(g, config)) / 100), deposit);
         db.run("UPDATE bookings SET total_cents = ?, deposit_cents = ?, platform_fee_cents = ?, discount_cents = ?, bundle_id = ?, updated_at = ? WHERE id = ? AND payment_status = 'unpaid'", total, deposit, fee, discount, bun.id, now(), b.id);
       }
     }

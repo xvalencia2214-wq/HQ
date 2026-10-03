@@ -30,6 +30,8 @@ import requestRoutes from "./routes/requests.js";
 import telemetryRoutes from "./routes/telemetry.js";
 import partyRoutes from "./routes/parties.js";
 import payPlusRoutes from "./routes/payplus.js";
+import vendorRoutes from "./routes/vendors.js";
+import { renderVendorSite } from "./site.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -86,7 +88,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -149,6 +151,8 @@ export function createApp(config) {
     if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
     const land = /^\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(pathname);
     if (land) { const page = renderLandingPage(ctx, land[1], land[2] || ""); if (page) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, "l", land[1], page)); }
+    const site = /^\/v\/([\w-]+)\/?$/.exec(pathname); // a vendor's free website page
+    if (site) { const page = renderVendorSite(ctx, site[1]); if (page) return sendText(res, "text/html; charset=utf-8", page); }
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
     let root = config.publicDir, rel = pathname, cache = "no-cache";

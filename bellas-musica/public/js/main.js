@@ -35,6 +35,12 @@ if (hoodLanding) {
 }
 
 
+// A partner link (?src=iglesia-san-pio or utm_source=...) is remembered so the sign-up can say where the family came from.
+try {
+  const q = new URLSearchParams(location.search), src = q.get("src") || q.get("utm_source");
+  if (src && !localStorage.getItem("bm_src")) localStorage.setItem("bm_src", src.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40));
+} catch { /* private mode */ }
+
 // Tell the server when the page itself crashes (at most 3 reports per page load). Our own code only: browser extensions and
 // ordinary user-facing API errors (wrong password, a full slot) are not crashes and are skipped.
 let reported = 0;

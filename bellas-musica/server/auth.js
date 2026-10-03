@@ -32,7 +32,7 @@ export function userFromRequest(db, req) {
   const token = parseCookies(req.headers.cookie)[COOKIE];
   if (!token) return null;
   const row = db.get(
-    `SELECT u.id, u.email, u.name, u.phone, u.sms_opt_in, u.email_notify, u.email_verified, u.lang FROM sessions s JOIN users u ON u.id = s.user_id
+    `SELECT u.id, u.email, u.name, u.phone, u.sms_opt_in, u.email_notify, u.email_verified, u.lang, u.notify_channel FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`, hashToken(token), now());
   return row || null;
 }

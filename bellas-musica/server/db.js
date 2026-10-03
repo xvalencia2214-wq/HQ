@@ -162,6 +162,32 @@ CREATE TABLE IF NOT EXISTS bundle_members (
   accepted INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (bundle_id, group_id)
 );
+-- Times blocked by a vendor's own calendar (imported from Google/Apple/Outlook through its private iCal link).
+CREATE TABLE IF NOT EXISTS ext_busy (
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  start_min INTEGER NOT NULL,
+  end_min INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_busy ON ext_busy(group_id, date);
+-- Licenses, permits and insurance a vendor uploads for the site owner to check (kept out of the public uploads folder).
+CREATE TABLE IF NOT EXISTS documents (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  file TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  expires TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  reviewed_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS review_photos (
+  id INTEGER PRIMARY KEY,
+  review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+  file TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS addons (
   id INTEGER PRIMARY KEY,
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -369,6 +395,21 @@ export function openDb(config) {
     return true;
   };
   ensureColumn("groups", "min_hours", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("users", "ref_code", "TEXT NOT NULL DEFAULT ''");          // a vendor's referral code
+  ensureColumn("users", "referred_by", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("users", "ref_rewarded", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("users", "signup_source", "TEXT NOT NULL DEFAULT ''");     // ?src= partner link (church, dress shop...)
+  ensureColumn("users", "notify_channel", "TEXT NOT NULL DEFAULT 'sms'"); // sms | whatsapp
+  ensureColumn("groups", "fee_discount_until", "INTEGER NOT NULL DEFAULT 0"); // referral reward: half fee until then
+  ensureColumn("groups", "pro_until", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "licensed", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "weather_policy", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("groups", "ical_token", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("groups", "ical_import_url", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("groups", "ical_synced_at", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("groups", "ical_error", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("payments_feature", "kind", "TEXT NOT NULL DEFAULT 'feature'"); // feature | pro
+  ensureColumn("event_requests", "category", "TEXT NOT NULL DEFAULT 'music'");
   ensureColumn("bookings", "balance_parts_cents", "INTEGER NOT NULL DEFAULT 0"); // balance paid in parts (plan or padrinos), gross
   ensureColumn("bookings", "cart_id", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("bookings", "stripe_transfer_id", "TEXT NOT NULL DEFAULT ''");   // cart bookings: our transfer to the vendor
