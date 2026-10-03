@@ -1,0 +1,27 @@
+# Render.com blueprint for Bella's Música (the app lives in the bellas-musica folder).
+# On render.com: New > Blueprint > pick this repository and branch > fill in the blanks > Apply.
+# Step-by-step in plain words: bellas-musica/docs/publish.md
+services:
+  - type: web
+    name: bellas-musica
+    runtime: docker
+    dockerfilePath: ./bellas-musica/Dockerfile
+    dockerContext: ./bellas-musica
+    region: ohio             # closest to Chicago
+    plan: starter            # a persistent disk (the database and photos) needs a paid plan
+    healthCheckPath: /api/health
+    buildFilter:
+      paths: ["bellas-musica/**", "render.yaml"]
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 2
+    envVars:
+      - { key: ADMIN_EMAILS, sync: false }       # your email: sign up with it and the Admin page appears
+      - { key: PREVIEW_PASSWORD, sync: false }   # a password that keeps the site private until launch day (delete it to open the site)
+      - { key: SESSION_SECRET, generateValue: true }
+      - { key: PLATFORM_FEE_PCT, value: "10" }
+      - { key: DEMO_SEED, value: "1" }           # sample groups so search isn't empty; set to 0 once 10+ real groups are listed
+    # Added later in the Environment tab, one service at a time (docs/publish.md):
+    #   BASE_URL (your own domain), STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET, RESEND_API_KEY + EMAIL_FROM,
+    #   BUSINESS_ADDRESS, SUPPORT_EMAIL, ALERT_WEBHOOK_URL, TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM

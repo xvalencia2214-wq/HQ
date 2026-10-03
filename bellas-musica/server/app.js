@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -198,8 +199,21 @@ export function createApp(config) {
     if (!res.writableEnded) sendJson(res, 200, out ?? { ok: true });
   }
 
+  // Private preview: with PREVIEW_PASSWORD set, the browser asks for it before showing anything (any name, that password).
+  // Stripe's webhook and the health check stay open so payments and the host keep working.
+  const previewHash = config.previewPassword ? crypto.createHash("sha256").update(config.previewPassword).digest() : null;
+  const previewOk = (req) => {
+    const m = /^Basic\s+(\S+)$/i.exec(req.headers.authorization || "");
+    const pass = m ? Buffer.from(m[1], "base64").toString("utf8").replace(/^[^:]*:/, "") : "";
+    return crypto.timingSafeEqual(crypto.createHash("sha256").update(pass).digest(), previewHash);
+  };
   const server = http.createServer(async (req, res) => {
     securityHeaders(res, req);
+    if (previewHash && !/^\/api\/(health|stripe\/webhook)$/.test(String(req.url).split("?")[0]) && !previewOk(req)) {
+      res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Bella\'s Musica preview", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+      res.end("Bella's Música is in private preview. Ask the owner for the password.");
+      return;
+    }
     try {
       const url = new URL(req.url, "http://x");
       if (url.pathname.startsWith("/api/")) { await handleApi(req, res, url); return; }

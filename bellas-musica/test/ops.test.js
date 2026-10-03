@@ -43,3 +43,23 @@ test("health endpoint and legal pages are served", async () => {
     for (const p of ["/terms.html", "/privacy.html"]) { const r = await fetch(S.base + p); assert.equal(r.status, 200); assert.match(await r.text(), /Template/); }
   } finally { await S.close(); }
 });
+
+test("private preview: everything asks for the password except the health check and Stripe's webhook", async () => {
+  const S = await startApp({ DEMO_SEED: "0", PREVIEW_PASSWORD: "mariachi 2026" });
+  try {
+    const auth = (p) => ({ Authorization: "Basic " + Buffer.from("anyone:" + p).toString("base64") });
+    for (const u of ["/", "/api/meta", "/g/x", "/robots.txt"]) {
+      const r = await fetch(S.base + u);
+      assert.equal(r.status, 401, u); assert.match(r.headers.get("www-authenticate"), /Basic/);
+    }
+    assert.equal((await fetch(S.base + "/", { headers: auth("wrong") })).status, 401);
+    assert.equal((await fetch(S.base + "/", { headers: auth("mariachi 2026") })).status, 200);
+    assert.equal((await fetch(S.base + "/api/meta", { headers: auth("mariachi 2026") })).status, 200);
+    assert.equal((await fetch(S.base + "/api/health")).status, 200);
+    assert.notEqual((await fetch(S.base + "/api/stripe/webhook", { method: "POST", body: "{}" })).status, 401);
+  } finally { await S.close(); }
+  // Render gives the address itself
+  const { loadConfig } = await import("../server/config.js");
+  assert.equal(loadConfig({ DATA_DIR: S.dir, RENDER_EXTERNAL_URL: "https://bellas-musica.onrender.com/" }).baseUrl, "https://bellas-musica.onrender.com");
+  assert.equal(loadConfig({ DATA_DIR: S.dir, BASE_URL: "https://bellasmusica.com", RENDER_EXTERNAL_URL: "https://x.onrender.com" }).baseUrl, "https://bellasmusica.com");
+});

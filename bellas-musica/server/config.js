@@ -28,7 +28,9 @@ export function loadConfig(env = process.env) {
     uploadDir: path.join(dataDir, "uploads"),
     port: int(env.PORT, 3000),
     prod,
-    baseUrl: (env.BASE_URL || `http://localhost:${int(env.PORT, 3000)}`).replace(/\/$/, ""),
+    // RENDER_EXTERNAL_URL is set by Render itself, so a first deploy works before you have your own domain
+    baseUrl: (env.BASE_URL || env.RENDER_EXTERNAL_URL || `http://localhost:${int(env.PORT, 3000)}`).replace(/\/$/, ""),
+    previewPassword: env.PREVIEW_PASSWORD || "", // set it to keep the whole site private (the browser asks for it) until launch
     trustProxy: env.TRUST_PROXY === "1",
     secret,
     demoSeed: env.DEMO_SEED !== "0",
@@ -45,8 +47,8 @@ export function loadConfig(env = process.env) {
     featurePriceCents: int(env.FEATURE_PRICE_CENTS, 4900), // 30 days of featured placement
     proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
     proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
-    directFeePct: int(env.DIRECT_FEE_PCT, 3),
-    tipsCoverProcessing: env.TIPS_COVER_PROCESSING !== "0",  // tips: keep only the card processing cost (2.9% + 30¢), nothing else                // the fee on a vendor's own client paid through its payment link
+    directFeePct: int(env.DIRECT_FEE_PCT, 3),                // the fee on a vendor's own client paid through its payment link
+    tipsCoverProcessing: env.TIPS_COVER_PROCESSING !== "0",  // tips: keep only the card processing cost (2.9% + 30¢), nothing else
     partyInsuranceUrl: env.PARTY_INSURANCE_URL || "",        // a partner's event-insurance page, shown on party pages when set
     icsAllowHttp: env.ICS_ALLOW_HTTP === "1",                 // tests only: calendar imports must be https
     // Stripe (leave unset to run in simulated-payments mode)

@@ -8,14 +8,14 @@ The site runs end to end in **test mode** with no accounts: payments, texts and 
 
 ## 1. Host it (about 30 minutes)
 
-Any host that runs Docker, or Node 22.13+, with a **persistent disk** works. `Dockerfile` and `render.yaml` are included (Render: create a Web Service from the repo, add a 1 GB disk at `/data`).
+**Step by step, no commands: `docs/publish.md`** (Render, using the `render.yaml` blueprint at the top of the repository). Any host that runs Docker, or Node 22.13+, with a **persistent disk** works; the `Dockerfile` is included. Set `PREVIEW_PASSWORD` to keep the whole site private until launch day.
 
 Set these environment variables (see `.env.example` for the full list):
 
 | Variable | Value |
 | --- | --- |
 | `NODE_ENV` | `production` |
-| `BASE_URL` | your public **https** address, no trailing slash |
+| `BASE_URL` | your public **https** address, no trailing slash (on Render it defaults to the .onrender.com address) |
 | `SESSION_SECRET` | `openssl rand -hex 32` |
 | `DATA_DIR` | the persistent disk, e.g. `/data` |
 | `TRUST_PROXY` | `1` behind Render/Fly/Railway |

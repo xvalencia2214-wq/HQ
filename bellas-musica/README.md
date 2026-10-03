@@ -1,6 +1,6 @@
 # Bella's Música
 
-**Launch market: Chicago.** Start with `docs/go-live.md`, then `docs/chicago-launch.md`.
+**Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). Then `docs/go-live.md` and `docs/chicago-launch.md`.
 
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
@@ -12,7 +12,7 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
 npm run tryout     # test drive: practice accounts and a party in progress, to try every feature (docs/test-drive.md)
-npm test           # 131 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 132 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
 # events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
