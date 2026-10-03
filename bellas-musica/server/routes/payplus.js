@@ -113,7 +113,7 @@ export default function payPlusRoutes(ctx, add) {
     // The bundle prices live in the cart and reach the bookings only when the cart is paid, so a cart that is left
     // unpaid never lowers what a booking costs on its own.
     const prices = bundlePrices(rows, groups);
-    const items = rows.map((b) => prices.get(b.id) || { id: b.id, total_cents: b.total_cents, deposit_cents: b.deposit_cents, platform_fee_cents: b.platform_fee_cents, discount_cents: 0, bundle_id: "" });
+    const items = rows.map((b) => prices.get(b.id) || { id: b.id, total_cents: b.total_cents, deposit_cents: b.deposit_cents, platform_fee_cents: b.platform_fee_cents, discount_cents: b.discount_cents || 0, bundle_id: b.bundle_id || "" });
     const amount = items.reduce((n, x) => n + x.deposit_cents, 0);
     const cart = { id: newId("c"), amount_cents: amount };
     db.run("INSERT INTO carts (id, customer_id, booking_ids, amount_cents, items_json, created_at) VALUES (?, ?, ?, ?, ?, ?)", cart.id, user.id, JSON.stringify(ids), amount, JSON.stringify(items), now());

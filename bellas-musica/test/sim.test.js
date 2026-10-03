@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { startApp, client, fakeStripe, postWebhook } from "./helpers.js";
 import { checkInvariants } from "./invariants.js";
-import { sendReviewReminders, sendEventReminders, housekeeping } from "../server/jobs.js";
+import { sendReviewReminders, sendEventReminders, sendDailyTexts, housekeeping } from "../server/jobs.js";
 import { expandSilentRequests } from "../server/routes/requests.js";
 import { transferCart } from "../server/shared.js";
 
@@ -138,7 +138,7 @@ async function simulate({ mode, seed, steps }) {
       };
     };
     const jobs = async () => {
-      housekeeping(S.ctx); sendReviewReminders(S.ctx); sendEventReminders(S.ctx, { hour: 12 }); expandSilentRequests(S.ctx);
+      housekeeping(S.ctx); sendReviewReminders(S.ctx); sendEventReminders(S.ctx, { hour: 12 }); sendDailyTexts(S.ctx, { hour: 8 }); expandSilentRequests(S.ctx);
       S.ctx.expireDocuments(); await S.ctx.syncCalendars();
       if (fake) for (const c of q("SELECT DISTINCT cart_id FROM bookings WHERE cart_id != '' AND stripe_transfer_id = ''")) await transferCart(S.ctx, c.cart_id);
     };
@@ -159,6 +159,11 @@ async function simulate({ mode, seed, steps }) {
       // (checked the moment the discount first appears, i.e. when the cart is paid: a partner may agree to move later)
       for (const b of q("SELECT * FROM bookings WHERE discount_cents > 0").filter((x) => !seenDiscount.has(x.id))) {
         seenDiscount.add(b.id);
+        if (b.series_id && !b.bundle_id) { // a weekly discount: the vendor's own percentage, at most 30%, not on travel
+          const sr = one("SELECT discount_pct FROM series WHERE id = ?", b.series_id);
+          if (!sr || b.discount_cents !== Math.round(((b.total_cents + b.discount_cents - b.travel_fee_cents) * sr.discount_pct) / 100) || sr.discount_pct > 30) fail("weekly discount doesn't match the vendor's percentage", { b, sr });
+          continue;
+        }
         const members = q("SELECT group_id FROM bundle_members WHERE bundle_id = ?", b.bundle_id).map((x) => x.group_id);
         if (!b.cart_id) fail("bundle discount outside one checkout", b);
         const inCart = JSON.parse(one("SELECT booking_ids FROM carts WHERE id = ?", b.cart_id).booking_ids);
@@ -399,7 +404,33 @@ async function simulate({ mode, seed, steps }) {
         const g = pick(vendors);
         what = `capacity ${g.type}`;
         await g.v.patch(`/api/groups/${g.id}`, { capacity: int(1, 3), buffer_min: pick([0, 15, 30]) });
-      } else if (roll < 87) { // chat
+      } else if (roll < 86.5) { // a restaurant books a group every week, one checkout for all the deposits; the vendor accepts or declines them all
+        const g = pick(vendors), slot = await openSlot(g);
+        what = `weekly ${g.type} ${slot}`;
+        if (chance(0.5)) await g.v.patch(`/api/groups/${g.id}`, { weekly_discount_pct: pick([0, 5, 10]) });
+        if (slot) {
+          const r = await c.post("/api/series", { ...(await bookingBodyFor(g, ...slot)), weeks: int(2, 12) });
+          what += ` ${r.status}${r.status === 200 ? ` ${r.json.dates.length} dates` : ""}`;
+          if (r.status === 200 && chance(0.85)) {
+            if (fake) await webhook({ amount_total: r.json.cart.amount_cents, payment_intent: "pi_cart_" + r.json.cart.cart_id, metadata: { kind: "cart", cart_id: r.json.cart.cart_id } });
+            else await c.post(`/api/carts/${r.json.cart.cart_id}/simulate-pay`);
+            const action = chance(0.8) ? "accept" : "decline";
+            for (const b of q("SELECT id FROM bookings WHERE series_id = ? AND status = 'requested'", r.json.series_id)) await ownerOf(g.id).patch(`/api/bookings/${b.id}`, { action });
+          }
+        }
+      } else if (roll < 87.5) { // after the party: a tip (propina), sometimes paid twice
+        const b = one("SELECT * FROM bookings WHERE status = 'confirmed' AND payment_status != 'unpaid' AND noshow_status = '' AND date <= ? ORDER BY RANDOM() LIMIT 1", day(0));
+        what = `tip ${b ? b.date : "-"}`;
+        if (b) {
+          const cu = custById(b.customer_id);
+          const r = cu && await cu.post(`/api/bookings/${b.id}/tips`, { amount: pick([3, 20, 50, 100]), note: chance(0.3) ? "Gracias! 312-555-0100" : "" });
+          if (r && r.status === 200 && chance(0.85)) {
+            const tp = one("SELECT * FROM tips WHERE id = ?", r.json.tip_id);
+            if (fake) { const ev = { amount_total: tp.amount_cents, payment_intent: "pi_tip_" + tp.id, metadata: { kind: "tip", tip_id: tp.id } }; await webhook(ev); if (chance(0.2)) await webhook({ ...ev, payment_intent: ev.payment_intent + "_2" }); }
+            else await cu.post(`/api/tips/${tp.id}/simulate-pay`);
+          }
+        }
+      } else if (roll < 88.5) { // chat
         const g = pick(vendors);
         what = `chat ${g.type}`;
         await c.post(`/api/groups/${g.id}/messages`, { text: chance(0.3) ? "Llámame al 312-555-0100" : "¿Tienen disponible?" });
@@ -418,7 +449,7 @@ async function simulate({ mode, seed, steps }) {
         if (b.status === "confirmed" && b.balance_status === "unpaid" && b.deposit_cents + bv.balance_paid_cents + bv.balance_left_cents !== b.total_cents) fail("deposit + paid + left is not the total", { bv, b });
       }
     }
-    const stats = one(`SELECT (SELECT COUNT(*) FROM bookings) bookings, (SELECT COUNT(*) FROM bookings WHERE status = 'confirmed') confirmed, (SELECT COUNT(*) FROM parties) parties,
+    const stats = one(`SELECT (SELECT COUNT(*) FROM bookings) bookings, (SELECT COUNT(*) FROM bookings WHERE status = 'confirmed') confirmed, (SELECT COUNT(*) FROM parties) parties, (SELECT COUNT(*) FROM bookings WHERE series_id != '') weekly, (SELECT COUNT(*) FROM tips WHERE status = 'paid') tips,
       (SELECT COUNT(*) FROM balance_parts WHERE status IN ('paid','partial_refund','refunded')) parts, (SELECT COUNT(*) FROM carts WHERE status = 'paid') carts, (SELECT COUNT(*) FROM reviews) reviews,
       (SELECT COUNT(*) FROM bookings WHERE discount_cents > 0) bundled, (SELECT COUNT(*) FROM bookings WHERE checked_in_at > 0) checkins, (SELECT COUNT(*) FROM documents) docs, (SELECT COUNT(*) FROM ext_busy) busy,
       (SELECT COUNT(*) FROM email_log) emails, (SELECT COUNT(*) FROM bookings WHERE direct = 1 AND payment_status != 'unpaid') links_paid,

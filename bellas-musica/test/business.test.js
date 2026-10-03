@@ -345,7 +345,7 @@ test("propinas, weekly gigs and the morning text", async () => {
     assert.equal(rows[0].total_cents, 54000); assert.equal(rows[0].discount_cents, 6000); // $600 for 2 hours, 10% off
     assert.equal(sr.json.cart.amount_cents, rows.reduce((n, b) => n + b.deposit_cents, 0));
     await c.post(`/api/carts/${sr.json.cart.cart_id}/simulate-pay`);
-    assert.ok(S.db.all("SELECT status FROM bookings WHERE series_id = ?", sr.json.series_id).every((b) => b.status === "requested"));
+    assert.ok(S.db.all("SELECT status, discount_cents FROM bookings WHERE series_id = ?", sr.json.series_id).every((b) => b.status === "requested" && b.discount_cents === 6000));
     const mine = (await c.get("/api/my/bookings")).json.bookings.filter((b) => b.series_id === sr.json.series_id).sort((a, b) => (a.date < b.date ? -1 : 1));
     assert.deepEqual([mine[0].series.n, mine[0].series.of, mine[4].series.last], [1, 5, true]);
     // the vendor accepts them all (the dashboard does one call per date)

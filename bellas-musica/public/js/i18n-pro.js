@@ -3,7 +3,7 @@
 // and holiday serenatas. Merged into the main dictionaries by i18n.js.
 export const EN3 = {
   "acct.dailyText": "Vendors: a morning text with my day (gigs, new requests, money to collect)",
-  "wk.repeat": "Every week?", "wk.once": "Just this date", "wk.weeks": "Every week for {n} weeks", "wk.discount": "{pct}% off each date when you book every week", "wk.hint": "For restaurants and regular gigs: one booking for every week, all deposits in one payment. Dates the group isn't open are skipped.", "wk.skipped": "Skipped (not open): {list}", "wk.tag": "Weekly · {n} of {of}", "wk.more": "Book {n} more weeks", "wk.acceptAll": "Accept all {n} weekly dates", "wk.declineAll": "Decline all", "wk.discLabel": "Discount for weekly bookings",
+  "wk.repeat": "Every week?", "wk.once": "Just this date", "wk.weeks": "Every week for {n} weeks", "wk.discount": "{pct}% off each date when you book every week", "wk.hint": "For restaurants and regular gigs: one booking for every week, all deposits in one payment. Dates the group isn't open are skipped.", "wk.skipped": "Skipped (not open): {list}", "wk.tag": "Weekly · {n} of {of}", "wk.more": "Book {n} more weeks", "wk.acceptAll": "Accept all {n} weekly dates", "wk.declineAll": "Decline all", "wk.discLabel": "Discount for weekly bookings", "wk.discounted": "Weekly discount: {amount} off",
   "earn.tips": "Tips",
   "tip.got": "Tip: {amount}",
   "tip.gave": "You left a {amount} tip ✓",
@@ -183,7 +183,7 @@ export const EN3 = {
 };
 export const ES3 = {
   "acct.dailyText": "Proveedores: un mensaje en la mañana con mi día (eventos, solicitudes nuevas, dinero por cobrar)",
-  "wk.repeat": "¿Cada semana?", "wk.once": "Solo esta fecha", "wk.weeks": "Cada semana por {n} semanas", "wk.discount": "{pct}% menos en cada fecha si reservas cada semana", "wk.hint": "Para restaurantes y eventos fijos: una reserva para cada semana, todos los depósitos en un solo pago. Las fechas que el grupo no tiene libres se saltan.", "wk.skipped": "Se saltaron (no está libre): {list}", "wk.tag": "Cada semana · {n} de {of}", "wk.more": "Reservar {n} semanas más", "wk.acceptAll": "Aceptar las {n} fechas semanales", "wk.declineAll": "Rechazar todas", "wk.discLabel": "Descuento por reservas semanales",
+  "wk.repeat": "¿Cada semana?", "wk.once": "Solo esta fecha", "wk.weeks": "Cada semana por {n} semanas", "wk.discount": "{pct}% menos en cada fecha si reservas cada semana", "wk.hint": "Para restaurantes y eventos fijos: una reserva para cada semana, todos los depósitos en un solo pago. Las fechas que el grupo no tiene libres se saltan.", "wk.skipped": "Se saltaron (no está libre): {list}", "wk.tag": "Cada semana · {n} de {of}", "wk.more": "Reservar {n} semanas más", "wk.acceptAll": "Aceptar las {n} fechas semanales", "wk.declineAll": "Rechazar todas", "wk.discLabel": "Descuento por reservas semanales", "wk.discounted": "Descuento semanal: {amount} menos",
   "earn.tips": "Propinas",
   "tip.got": "Propina: {amount}",
   "tip.gave": "Dejaste una propina de {amount} ✓",

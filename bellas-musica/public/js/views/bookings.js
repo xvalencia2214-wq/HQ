@@ -199,8 +199,9 @@ export async function bookingPage(app, id, params) {
   let b;
   try { b = (await api.post(`/api/bookings/${encodeURIComponent(id)}/refresh`)).booking; }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
-  const msg = params.get("balance") && ["paid", "offline"].includes(b.balance_status) ? `<div class="note ok"><strong>${esc(t("bal.thanks"))}</strong></div>`
-    : b.payment_status !== "unpaid" ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t(b.status === "confirmed" ? "bk.paidConfirmed" : "bk.paidText"))}</div>`
+  const msg = params.get("tip") && (b.tips || []).length ? `<div class="note ok"><strong>${esc(t("tip.thanks"))}</strong></div>`
+    : params.get("balance") && ["paid", "offline"].includes(b.balance_status) ? `<div class="note ok"><strong>${esc(t("bal.thanks"))}</strong></div>`
+    : b.payment_status !== "unpaid" && (params.get("paid") || b.status === "requested") ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t(b.status === "confirmed" ? "bk.paidConfirmed" : "bk.paidText"))}</div>`
     : params.get("cancelled") ? `<div class="note">${esc(t("bk.payCancelled"))}</div>` : "";
   app.innerHTML = `<h1 class="sec">${esc(t("bk.detail"))}</h1>${msg}<div class="panel">${card(b)}
     ${b.status === "pending_payment" && b.pay_url ? `<a class="btn" href="${esc(b.pay_url)}">${esc(t("bk.payNow"))}</a>` : ""}

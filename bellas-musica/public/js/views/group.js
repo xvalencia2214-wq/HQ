@@ -127,6 +127,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     const form = document.getElementById("bookform");
     const syncHours = () => { const w = document.getElementById("hrs-wrap"); if (w) w.hidden = Boolean(form.packageId.value); const h = document.getElementById("wk-hint"); if (h) h.hidden = Number(form.weeks.value) < 2; };
     syncHours();
+    form.weeks.addEventListener("change", syncHours);
     const refresh = debounce(async () => {
       if (!form.isConnected) return; // the page changed while we were waiting
       pkgChoice = form.packageId.value; syncHours();

@@ -68,10 +68,11 @@ async function setUp() {
   const owner = await signup(OWNER, "Dueño de Bella's");
   const dj = await signup("dj@prueba.com", "Beto Ramírez", { sms_opt_in: true });
   const carpas = await signup("carpas@prueba.com", "Lupe Torres");
-  const mariachi = await signup("mariachi@prueba.com", "Chuy Hernández");
+  const mariachi = await signup("mariachi@prueba.com", "Chuy Hernández", { sms_opt_in: true });
   const familia = await signup("familia@prueba.com", "Rosa Martínez");
   const padrino = await signup("padrino@prueba.com", "Tío Juan Martínez");
   const ayudante = await signup("ayudante@prueba.com", "Memo Ramírez");
+  const restaurante = await signup("restaurante@prueba.com", "Restaurante El Sol");
 
   // ---- three vendors: a DJ with every setup add-on, a tent company and a mariachi ----
   const djId = await listing(dj, {
@@ -157,6 +158,19 @@ async function setUp() {
   await dj.patch(`/api/bookings/${today.id}`, { action: "accept" });
   db.run("UPDATE bookings SET date = ? WHERE id = ?", todayStr(), today.id);
 
+  // ---- a restaurant books the mariachi every Friday for 6 weeks (10% off each week); last Friday already happened ----
+  await mariachi.patch(`/api/groups/${mariachiId}`, { weekly_discount_pct: 10, events: ["Quinceañera", "Wedding", "Birthday", "Serenata", "Corporate / Restaurant"] });
+  const friday = (() => { let d = addDays(todayStr(), 1); while (new Date(d + "T12:00:00Z").getUTCDay() !== 5) d = addDays(d, 1); return d; })();
+  const weekly = await restaurante.post("/api/series", booking(mariachiId, friday, "7:00 PM", { hours: 2, event: "Corporate / Restaurant", guests: 120, eventZip: "60608", name: "Restaurante El Sol", phone: "(312) 555-0177", address: "Restaurante El Sol, 1800 W Cermak Rd, Chicago", weeks: 6 }));
+  await restaurante.post(`/api/carts/${weekly.cart.cart_id}/simulate-pay`);
+  for (const b of db.all("SELECT id, date FROM bookings WHERE series_id = ?", weekly.series_id)) {
+    await mariachi.patch(`/api/bookings/${b.id}`, { action: "accept" });
+    db.run("UPDATE bookings SET date = ? WHERE id = ?", addDays(b.date, -7), b.id); // shift back a week: the first Friday is past
+  }
+  const firstFriday = db.get("SELECT id FROM bookings WHERE series_id = ? ORDER BY date LIMIT 1", weekly.series_id);
+  const tip = await restaurante.post(`/api/bookings/${firstFriday.id}/tips`, { amount: 50, note: "¡Los clientes los aman! Gracias." });
+  await restaurante.post(`/api/tips/${tip.tip_id}/simulate-pay`);
+
   // ---- a new request waiting for the DJ to accept or decline ----
   const req = (await padrino.post("/api/bookings", booking(djId, addDays(todayStr(), 35), "8:00 PM", { hours: 4, event: "Anniversary", guests: 90, name: "Juan Martínez", address: "Casa de Juan, Berwyn" }))).booking;
   await padrino.post(`/api/bookings/${req.id}/simulate-pay`);
@@ -166,10 +180,17 @@ async function setUp() {
 if (!db.get("SELECT 1 AS x FROM users WHERE email = ?", OWNER)) {
   try { await setUp(); }
   catch (e) { console.error("Setting up the practice data failed:", e.message, "\nTry: npm run tryout -- --reset"); }
-} else if (!db.get("SELECT 1 AS x FROM users WHERE email = 'ayudante@prueba.com'")) {
+} else if (!db.get("SELECT 1 AS x FROM users WHERE email = 'restaurante@prueba.com'")) {
   console.log("\nThis practice data is from an earlier version. To see the newest tools, start over with:  npm run tryout -- --reset\n");
 }
 if (!payLinkUrl) { const l = db.get("SELECT 1 AS x FROM pay_links WHERE status = 'open'"); payLinkUrl = l ? "(open My business as dj@prueba.com to copy it)" : ""; }
+
+// the vendors' morning text (texts are pretend here, so show what it says)
+const { sendDailyTexts } = await import("./jobs.js");
+db.run("UPDATE users SET daily_text_on = '' WHERE email IN ('dj@prueba.com', 'mariachi@prueba.com')");
+const since = Math.floor(Date.now() / 1000) - 5;
+sendDailyTexts(app.ctx, { hour: 8 });
+const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
 const url = config.baseUrl;
 console.log(`Bella's Música TEST DRIVE is running: open ${url}
@@ -182,7 +203,8 @@ Every password: ${PASSWORD}
   dj@prueba.com         DJ Relámpago: fog, lights, visuals, audio/video add-ons, 3-hour minimum, Pro, two setups at once
   ayudante@prueba.com   Memo, the DJ's helper (team login)
   carpas@prueba.com     Carpas Lupe: tents, in a bundle with the mariachi
-  mariachi@prueba.com   Mariachi Sol de Jalisco: 2-hour minimum
+  mariachi@prueba.com   Mariachi Sol de Jalisco: 2-hour minimum, plays every Friday at a restaurant
+  restaurante@prueba.com  Restaurante El Sol: books the mariachi every Friday (weekly gigs, tips)
   ${OWNER.padEnd(21)} you, the owner (Admin page)
-${payLinkUrl ? `\nThe DJ's payment link for a client (open it as familia@ or padrino@ to pay it):\n  ${payLinkUrl.replace(/^https?:\/\/[^/]+/, url)}\n` : ""}`);
+${morning.length ? `\nThe morning text vendors get (pretend texts; turn it off in Account):\n${morning.join("\n")}\n` : ""}${payLinkUrl ? `\nThe DJ's payment link for a client (open it as familia@ or padrino@ to pay it):\n  ${payLinkUrl.replace(/^https?:\/\/[^/]+/, url)}\n` : ""}`);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => app.close().then(() => process.exit(0)));

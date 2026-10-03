@@ -44,7 +44,7 @@ export function sendDailyTexts(ctx, { hour = businessHour() } = {}) {
     const many = groups.length > 1;
     notify.to(id, "daily.vendor", {
       gigs: String(gigs.length), requests: String(requests), collect: collect ? usd(collect) : "",
-      list: gigs.slice(0, 3).map((b) => `${b.time} ${b.event_type}${many ? ` (${b.group_name})` : ""}`).join(", ") + (gigs.length > 3 ? "…" : ""),
+      list: gigs.slice(0, 3).map((b) => `${b.time} ${String(b.name).slice(0, 24)}${many ? ` (${b.group_name})` : ""}`).join(", ") + (gigs.length > 3 ? "…" : ""),
       url: `${config.baseUrl}/#/dashboard`
     }, { noEmail: true });
     sent++;

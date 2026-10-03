@@ -24,7 +24,8 @@ else. Or use a private (incognito) window for a second person at the same time.
 | dj@prueba.com | DJ Relámpago (fog, lights, visuals, audio/video add-ons, 3-hour minimum, Pro, two setups at once) |
 | ayudante@prueba.com | Memo, the DJ's helper (team login) |
 | carpas@prueba.com | Carpas Lupe (tents, in a bundle with the mariachi) |
-| mariachi@prueba.com | Mariachi Sol de Jalisco (2-hour minimum) |
+| mariachi@prueba.com | Mariachi Sol de Jalisco (2-hour minimum, plays every Friday at a restaurant) |
+| restaurante@prueba.com | Restaurante El Sol (books the mariachi every Friday) |
 | dueno@prueba.com | You, the owner (Admin page) |
 
 ## 1. Rosa, the mom (familia@prueba.com)
@@ -41,6 +42,8 @@ else. Or use a private (incognito) window for a second person at the same time.
     vendors are a bundle. Pay it with the practice card.
   - **Leave a review** with a photo for the DJ (the birthday party last week).
   - **Mateo's baptism is today:** press **➕ Ask for one more hour**. Then log in as the DJ to accept it, and pay it here.
+  - **💝 Leave a tip (propina)** on last week's birthday party with the DJ: pick $20, $50 or $100 and pay it with the
+    practice card. All of it goes to the vendor.
   - Each booking shows **what the vendor needs from you** (power, parking…), which you confirmed when booking.
 - **Book the mariachi at 5:00 AM** (mañanitas) or a **20-minute serenata** at night: many start times are grouped as
   early morning, daytime, evening and night.
@@ -84,6 +87,19 @@ else. Or use a private (incognito) window for a second person at the same time.
 
 - **For groups** opens DJ Relámpago's dashboard: he can answer requests and messages, run the calendar and lineups.
 - **Payments:** payouts, Pro and Featured say "Only the owner of this listing can do this".
+
+## 3c. Restaurante El Sol and the mariachi (restaurante@prueba.com, mariachi@prueba.com)
+
+- **Restaurante El Sol → My bookings:** the mariachi plays **every Friday for 6 weeks**, booked once with one payment
+  and 10% off each week ("Weekly · 1 of 6"). Last Friday already happened and they left a **$50 tip**. On the last
+  week, **🔁 Book 6 more weeks** starts the next round.
+- **Book weekly yourself:** open any group, pick a date and time, and under **Every week?** choose how many weeks. Dates
+  the group isn't open are skipped and you're told which.
+- **The mariachi → Requests:** the weekly gigs show "Weekly · N of 6"; a new weekly request has **Accept all** and
+  **Decline all**. **Calendar** → *Discount for weekly bookings* sets the weekly discount. **Payments → earnings**
+  shows the tip in its own column.
+- **Morning text:** every vendor gets a text in the morning in their language ("Today: 1 gig, 1 new request, $337.50
+  to collect"). Texts are pretend here, so the black window prints what it would say. Turn it off in **Account**.
 
 ## 4. Carpas Lupe (carpas@prueba.com)
 
