@@ -2,7 +2,7 @@ import { todayStr, addDays, now, getTimezone } from "./util.js";
 import { usd } from "./emails.js";
 import { backupIfNeeded } from "./backups.js";
 import { RESCHED_TTL } from "./shared.js";
-import { expirePending } from "./shared.js";
+import { expirePending, transferCart, settleCartTransfer } from "./shared.js";
 import { fillDemoAvailability } from "./seed.js";
 import { expandSilentRequests } from "./routes/requests.js";
 
@@ -45,7 +45,7 @@ export function sendEventReminders(ctx, { hour = businessHour() } = {}) {
   }
   return sent;
 }
-const balanceDue = (b) => (b.balance_status === "paid" || b.balance_status === "offline" ? "" : usd(b.total_cents - b.deposit_cents));
+const balanceDue = (b) => (b.balance_status === "paid" || b.balance_status === "offline" ? "" : usd(b.total_cents - b.deposit_cents - (b.balance_parts_cents || 0)));
 
 export function housekeeping(ctx) {
   const { db } = ctx;
@@ -56,10 +56,19 @@ export function housekeeping(ctx) {
   db.run("DELETE FROM payments_feature WHERE status = 'pending' AND created_at < ?", now() - 7 * 86400);
 }
 
+// One-checkout payments: a vendor transfer that failed when the payment came in is retried every hour.
+function retryCartTransfers(ctx) {
+  if (!ctx.stripe.live) return;
+  const carts = ctx.db.all("SELECT DISTINCT b.cart_id FROM bookings b WHERE b.cart_id != '' AND b.stripe_transfer_id = '' AND b.payment_status IN ('paid','partial_refund') AND b.updated_at > ?", Math.floor(Date.now() / 1000) - 30 * 86400);
+  for (const c of carts) transferCart(ctx, c.cart_id).catch((e) => ctx.alert("Cart transfer retry failed: " + e.message, "transfer-retry"));
+  // and a reversal that failed after a refund
+  for (const b of ctx.db.all("SELECT id FROM bookings WHERE stripe_transfer_id != '' AND refund_cents > 0")) settleCartTransfer(ctx, b.id).catch(() => {});
+}
+
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); retryCartTransfers(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }

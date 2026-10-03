@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balancePaidInApp, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
-import { RESCHED_TTL, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
+import { RESCHED_TTL, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -59,7 +59,8 @@ export default function bookingRoutes(ctx, add) {
 
   // ---- views ----
   // The balance can be paid in the app once the group has confirmed, until the event day, if it is still owed.
-  const canPayBalance = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && balanceCents(b) > 0 && b.date >= today;
+  const canPayBalance = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && balanceCents(b) > 0 && b.date >= today && !b.balance_parts_cents;
+  const canPayPart = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && b.date >= today && balanceCents(b) - (b.balance_parts_cents || 0) > 0;
 
   // ---- rescheduling ----
   const RESCHED_MIN_DAYS = 2, RESCHED_MAX = 2;
@@ -88,6 +89,9 @@ export default function bookingRoutes(ctx, add) {
       subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, addons: addonsOf(b), addons_cents: b.addons_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
       balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
       balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
+      balance_paid_cents: balancePaidInApp(b), balance_left_cents: ["paid", "partial_refund", "refunded", "offline"].includes(b.balance_status) ? 0 : Math.max(0, balanceCents(b) - (b.balance_parts_cents || 0)),
+      parts: db.all("SELECT id, payer_id, payer_name, note, amount_cents, status, paid_at FROM balance_parts WHERE booking_id = ? AND status != 'pending' ORDER BY paid_at", b.id).map((p) => ({ payer_name: p.payer_name, note: p.note, amount_cents: p.amount_cents, status: p.status, paid_at: p.paid_at, by_customer: p.payer_id === b.customer_id })),
+      discount_cents: b.discount_cents, bundle_id: b.bundle_id,
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
       reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
     };
@@ -98,6 +102,7 @@ export default function bookingRoutes(ctx, add) {
       out.can_review = b.status === "confirmed" && b.date < today && !["unpaid", "refunded"].includes(b.payment_status) && !b.reviewed;
       out.reviewed = Boolean(b.reviewed);
       out.can_pay_balance = canPayBalance(b, today);
+      out.can_pay_part = canPayPart(b, today);
       out.can_reschedule = canReschedule(b, today);
       out.checked_in = Boolean(b.checked_in_at);
       if (b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && (b.date === today || b.date === addDays(today, 1))) out.checkin_code = ensureCode(b);
@@ -179,6 +184,8 @@ export default function bookingRoutes(ctx, add) {
     const g = b && getGroup(db, b.group_id);
     if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
     if (b.status !== "confirmed" || !reschedPending(b)) throw new HttpError(400, "There is no pending request on this booking.");
+    // once the event day has passed (or a no-show was reported) the date can't move any more
+    if (body.accept === true && (b.date < todayStr() || b.noshow_status)) throw new HttpError(400, "This event date has already passed, so it can't be moved.");
     const v = { ...notify.bookingVars(b, g), newDate: b.resched_date, newTime: b.resched_time, url: `${config.baseUrl}/#/booking/${b.id}` };
     if (body.accept === true) {
       const slotOk = db.get("SELECT slots FROM availability WHERE group_id = ? AND date = ?", g.id, b.resched_date);
@@ -201,6 +208,7 @@ export default function bookingRoutes(ctx, add) {
   // ---- the balance ----
   add("POST", "/api/bookings/:id/balance", ({ params, user }) => withLock("booking:" + params.id, async () => {
     const b = mine(user, params.id);
+    if (b.balance_parts_cents) throw new HttpError(400, "Part of the balance is already paid. Use \"Pay part of the balance\" to pay the rest.");
     if (!canPayBalance(b, todayStr())) throw new HttpError(400, b.balance_status === "offline" ? "The group already marked the balance as received." : b.balance_status !== "unpaid" ? "The balance is already paid." : "The balance can be paid once the group confirms, until the day of the event.");
     const group = getGroup(db, b.group_id);
     if (!stripe.live) return { payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/balance/${b.id}` } };
@@ -282,7 +290,8 @@ export default function bookingRoutes(ctx, add) {
       throw new HttpError(400, why);
     }
     const note = str(body.note, "What happened", { min: 5, max: 400 });
-    db.run("UPDATE bookings SET noshow_status = 'reported', noshow_note = ?, noshow_at = ?, updated_at = ? WHERE id = ?", note, now(), now(), b.id);
+    // a no-show report also withdraws any request to move the date (it frees the slot it was holding)
+    db.run("UPDATE bookings SET noshow_status = 'reported', noshow_note = ?, noshow_at = ?, resched_status = '', resched_date = '', resched_time = '', resched_note = '', updated_at = ? WHERE id = ?", note, now(), now(), b.id);
     const g = getGroup(db, b.group_id);
     if (g.owner_id) notify.to(g.owner_id, "noshow.reported.group", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     ctx.alert(`NO-SHOW REPORTED: booking ${b.id} (${g.name}, ${b.date}). Review it on the Admin page.`, "noshow-" + b.id);
@@ -341,7 +350,7 @@ export default function bookingRoutes(ctx, add) {
       db.run("UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE id = ?", now(), old.id); // details changed: replace the hold
     }
     // Stop one person from squatting on many slots at once.
-    if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status = 'pending_payment'", user.id).c >= 3) {
+    if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status = 'pending_payment'", user.id).c >= 6) { // up to 6, so a whole party can be paid in one checkout
       throw new HttpError(429, "You have several unpaid holds. Pay for or cancel one before holding another.");
     }
     const r = priceRequest(body, { requireSlot: true }, user);
@@ -420,7 +429,7 @@ export default function bookingRoutes(ctx, add) {
       cur = await refundBalance(ctx, cur, Math.max(0, balanceTarget - cur.balance_refund_cents));
       return cur;
     };
-    const balancePaid = b.balance_status === "paid" || b.balance_status === "partial_refund";
+    const balancePaid = balancePaidInApp(b) > b.balance_refund_cents;
 
     if (action === "accept") {
       if (!isOwner) throw new HttpError(403, "Only the group can accept");
@@ -438,7 +447,7 @@ export default function bookingRoutes(ctx, add) {
       if (!["pending_payment", "requested", "confirmed"].includes(b.status)) throw new HttpError(400, "This booking can't be cancelled");
       if (b.date <= today) throw new HttpError(400, "This event has already started or passed");
       // The group cancelling always refunds everything paid in the app; a customer's refund follows the policy they accepted.
-      const parts = isOwner ? { deposit: b.deposit_cents, balance: balancePaid ? balanceCents(b) : 0 } : refundParts(b, today);
+      const parts = isOwner ? { deposit: b.deposit_cents, balance: balancePaid ? balancePaidInApp(b) : 0 } : refundParts(b, today);
       const after = await settle(parts.deposit, parts.balance);
       setStatus("cancelled");
       const refunded = after.refund_cents + after.balance_refund_cents;
@@ -465,6 +474,14 @@ export default function bookingRoutes(ctx, add) {
           const b = db.get("SELECT total_cents, deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
           if (b && obj.amount_total === b.total_cents - b.deposit_cents) await markBalancePaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));
           else console.error("webhook: amount mismatch or unknown booking (balance)", obj.metadata?.booking_id);
+        } else if (kind === "part") {
+          const p = db.get("SELECT amount_cents FROM balance_parts WHERE id = ?", String(obj.metadata.part_id));
+          if (p && obj.amount_total === p.amount_cents) await markPartPaid(ctx, String(obj.metadata.part_id), String(obj.payment_intent || ""));
+          else console.error("webhook: amount mismatch or unknown balance part", obj.metadata?.part_id);
+        } else if (kind === "cart") {
+          const c = db.get("SELECT amount_cents FROM carts WHERE id = ?", String(obj.metadata.cart_id));
+          if (c && obj.amount_total === c.amount_cents) await markCartPaid(ctx, String(obj.metadata.cart_id), String(obj.payment_intent || ""));
+          else console.error("webhook: amount mismatch or unknown cart", obj.metadata?.cart_id);
         } else if (kind === "feature") {
           const f = db.get("SELECT amount_cents FROM payments_feature WHERE id = ?", String(obj.metadata.feature_id));
           if (f && obj.amount_total === f.amount_cents) markFeaturePaid(ctx, String(obj.metadata.feature_id));

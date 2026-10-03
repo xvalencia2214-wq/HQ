@@ -86,13 +86,38 @@ export function createStripe(config) {
         metadata: { kind: "balance", booking_id: booking.id }
       }, `checkout-balance-${booking.id}-${Math.floor(Date.now() / 600000)}`); // retries within 10 minutes reuse the same session
     },
+    // Part of the balance (a payment plan installment or a padrino). Same as the balance: no platform fee, all to the group.
+    checkoutForPart({ part, booking, group, successUrl, cancelUrl }) {
+      return call("POST", "/v1/checkout/sessions", {
+        mode: "payment", success_url: successUrl, cancel_url: cancelUrl, client_reference_id: part.id,
+        expires_at: Math.floor(Date.now() / 1000) + 2400,
+        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: part.amount_cents, product_data: { name: `${group.name} on ${booking.date} (part of the balance)` } } }],
+        payment_intent_data: { transfer_data: { destination: group.stripe_account_id }, metadata: { kind: "part", part_id: part.id, booking_id: booking.id } },
+        metadata: { kind: "part", part_id: part.id, booking_id: booking.id }
+      }, `checkout-part-${part.id}`);
+    },
+    // Several deposits in one charge. The money stays with the platform until we transfer each vendor its share
+    // (separate charges and transfers), grouped by transfer_group so Stripe shows them together.
+    checkoutForCart({ cart, lines, successUrl, cancelUrl }) {
+      return call("POST", "/v1/checkout/sessions", {
+        mode: "payment", success_url: successUrl, cancel_url: cancelUrl, client_reference_id: cart.id,
+        expires_at: Math.floor(Date.now() / 1000) + 2400,
+        line_items: lines.map((l) => ({ quantity: 1, price_data: { currency: "usd", unit_amount: l.amount, product_data: { name: l.name } } })),
+        payment_intent_data: { transfer_group: cart.id, metadata: { kind: "cart", cart_id: cart.id } },
+        metadata: { kind: "cart", cart_id: cart.id }
+      }, `checkout-cart-${cart.id}`);
+    },
+    getPaymentIntent: (id) => call("GET", `/v1/payment_intents/${encodeURIComponent(id)}`),
+    transfer: ({ amountCents, destination, group, sourceCharge, key }) => call("POST", "/v1/transfers", { amount: amountCents, currency: "usd", destination, transfer_group: group, ...(sourceCharge ? { source_transaction: sourceCharge } : {}) }, key),
+    reverseTransfer: ({ transfer, amountCents, key }) => call("POST", `/v1/transfers/${encodeURIComponent(transfer)}/reversals`, { amount: amountCents }, key),
     expireCheckoutSession: (id) => call("POST", `/v1/checkout/sessions/${encodeURIComponent(id)}/expire`, {}),
 
     getCheckoutSession: (id) => call("GET", `/v1/checkout/sessions/${encodeURIComponent(id)}`),
 
     // Refund a deposit. reverse_transfer pulls the money back from the group; the app fee is returned too.
-    refund({ paymentIntent, amountCents, key, applicationFee = true }) {
-      return call("POST", "/v1/refunds", { payment_intent: paymentIntent, amount: amountCents, reverse_transfer: "true", ...(applicationFee ? { refund_application_fee: "true" } : {}) }, key);
+    // destination=false: a cart charge (the platform holds the money); the vendor's transfer is reversed separately.
+    refund({ paymentIntent, amountCents, key, applicationFee = true, destination = true }) {
+      return call("POST", "/v1/refunds", { payment_intent: paymentIntent, amount: amountCents, ...(destination ? { reverse_transfer: "true", ...(applicationFee ? { refund_application_fee: "true" } : {}) } : {}) }, key);
     },
 
     createAccount: (email) => call("POST", "/v1/accounts", { type: "express", country: "US", email, capabilities: { card_payments: { requested: true }, transfers: { requested: true } } }),

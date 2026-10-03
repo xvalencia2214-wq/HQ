@@ -218,10 +218,10 @@ test("bookings: quote, hold, double-booking, pay, accept, refunds by policy, pri
   assert.equal((await owner.patch(`/api/bookings/${b6.id}`, { action: "accept" })).status, 400);
 });
 
-test("holds: re-clicking Pay reuses your own hold; changing details replaces it; at most 3 unpaid holds", async () => {
+test("holds: re-clicking Pay reuses your own hold; changing details replaces it; at most 6 unpaid holds (a whole party)", async () => {
   const owner = client(S.base), cust = client(S.base), rival = client(S.base);
   await owner.signup("h1@example.com", "Hold Owner"); await cust.signup("h2@example.com", "Hold Cust"); await rival.signup("h3@example.com", "Rival");
-  const ds = [inDays(41), inDays(42), inDays(43), inDays(44)];
+  const ds = [inDays(41), inDays(42), inDays(43), inDays(44), inDays(45), inDays(46), inDays(47)];
   const gid = await makeGroup(owner, { name: "Hold Band", dates: ds });
   const first = await cust.post("/api/bookings", bookingBody(gid, ds[0]));
   const again = await cust.post("/api/bookings", bookingBody(gid, ds[0])); // double-click
@@ -231,10 +231,10 @@ test("holds: re-clicking Pay reuses your own hold; changing details replaces it;
   const changed = await cust.post("/api/bookings", bookingBody(gid, ds[0], { hours: 3 })); // different price: replaces the hold
   assert.equal(changed.status, 200); assert.notEqual(changed.json.booking.id, first.json.booking.id);
   assert.equal(S.db.get("SELECT status FROM bookings WHERE id = ?", first.json.booking.id).status, "cancelled");
-  await cust.post("/api/bookings", bookingBody(gid, ds[1])); await cust.post("/api/bookings", bookingBody(gid, ds[2]));
-  const fourth = await cust.post("/api/bookings", bookingBody(gid, ds[3]));
-  assert.equal(fourth.status, 429);
-  assert.equal((await rival.post("/api/bookings", bookingBody(gid, ds[3]))).status, 200); // the squatter did not block it
+  for (const d of ds.slice(1, 6)) assert.equal((await cust.post("/api/bookings", bookingBody(gid, d))).status, 200);
+  const seventh = await cust.post("/api/bookings", bookingBody(gid, ds[6]));
+  assert.equal(seventh.status, 429);
+  assert.equal((await rival.post("/api/bookings", bookingBody(gid, ds[6]))).status, 200); // the squatter did not block it
 });
 
 test("messaging: contact details hidden until confirmed; sample listings auto-reply", async () => {

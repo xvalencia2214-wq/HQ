@@ -25,6 +25,10 @@ Do each step of stripe.md section B. For each, compare Stripe Dashboard (test mo
 | 7 | Featured placement bought | one $49 charge | | |
 | 8 | Declined test card `4000 0000 0000 9995` | clear message; slot freed after 30 minutes | | |
 | 9 | Webhook "Resend" twice | nothing refunded or confirmed twice | | |
+| 11 | Payment plan: $50, then the rest | two payments to the group, no fee on either | | |
+| 12 | Padrino pays $40 from the family link, then the group cancels | each payment refunded to the card that paid it | | |
+| 13 | Pay two deposits at once | one platform charge + one transfer per vendor (deposit − fee); declining one reverses its transfer | | |
+| 14 | Bundle booked together | each deposit lower by the bundle's % | | |
 | 10 | Show-up guarantee: no-show report, then admin Refund | everything paid is refunded; booking shows Cancelled | | |
 
 ## 3. Cross-check the Admin page

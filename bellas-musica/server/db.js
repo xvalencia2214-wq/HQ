@@ -121,6 +121,47 @@ CREATE TABLE IF NOT EXISTS party_timeline (
   booking_id TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_timeline_booking ON party_timeline(booking_id);
+-- Part of a booking's balance paid on its own: a payment plan, or a padrino paying toward a vendor.
+CREATE TABLE IF NOT EXISTS balance_parts (
+  id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL REFERENCES bookings(id),
+  payer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  payer_name TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  amount_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',          -- pending | paid | partial_refund | refunded | stray
+  session_id TEXT NOT NULL DEFAULT '',
+  pi TEXT NOT NULL DEFAULT '',
+  refund_cents INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  paid_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_parts_booking ON balance_parts(booking_id);
+-- Several deposits paid in one checkout (one charge, then a transfer to each vendor).
+CREATE TABLE IF NOT EXISTS carts (
+  id TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id),
+  booking_ids TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',          -- pending | paid
+  session_id TEXT NOT NULL DEFAULT '',
+  pi TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+-- Vendors that sell together: book all of them for the same day in one checkout and each gives the discount.
+CREATE TABLE IF NOT EXISTS bundles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  discount_pct INTEGER NOT NULL,
+  created_by TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bundle_members (
+  bundle_id TEXT NOT NULL REFERENCES bundles(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  accepted INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (bundle_id, group_id)
+);
 CREATE TABLE IF NOT EXISTS addons (
   id INTEGER PRIMARY KEY,
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -328,6 +369,13 @@ export function openDb(config) {
     return true;
   };
   ensureColumn("groups", "min_hours", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("bookings", "balance_parts_cents", "INTEGER NOT NULL DEFAULT 0"); // balance paid in parts (plan or padrinos), gross
+  ensureColumn("bookings", "cart_id", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "stripe_transfer_id", "TEXT NOT NULL DEFAULT ''");   // cart bookings: our transfer to the vendor
+  ensureColumn("bookings", "transfer_cents", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "transfer_reversed_cents", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("bookings", "bundle_id", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("bookings", "discount_cents", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "hourly", "INTEGER NOT NULL DEFAULT 1"); // 0: booked by package only (tents, food trucks...)
   ensureColumn("bookings", "addons_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn("bookings", "addons_cents", "INTEGER NOT NULL DEFAULT 0");

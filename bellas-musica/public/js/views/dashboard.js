@@ -119,7 +119,7 @@ async function requests({ g, body, refresh }) {
   };
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
-      ${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
+      ${(b.parts || []).filter((p) => p.status !== "stray").length ? `<br><span class="small">💵 ${(b.parts || []).filter((p) => p.status !== "stray").map((p) => esc(t("plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) }))).join(" · ")}</span>` : ""}${b.discount_cents ? `<br><span class="small">🤝 ${esc(t("bun.discounted", { amount: money(b.discount_cents) }))}</span>` : ""}${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
@@ -274,7 +274,27 @@ function extras({ g, body, refresh }) {
     <label for="ao-name">${esc(t("ao.name"))}</label><input id="ao-name" name="name" required maxlength="60">
     <label for="ao-desc">${esc(t("ao.desc"))}</label><input id="ao-desc" name="description" maxlength="160">
     <label for="ao-price">${esc(t("ao.price"))}</label><input id="ao-price" name="price" type="number" min="0" max="5000" step="5" inputmode="numeric" value="0" required>
-    <div id="aoerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("ao.add"))}</button></form></div>`;
+    <div id="aoerr" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("ao.add"))}</button></form></div>
+    <div class="panel" id="bundles-panel"><h2 class="sec">🤝 ${esc(t("bun.manage"))}</h2><p class="dim small">${esc(t("bun.manageHint"))}</p><div id="bun-list" class="dim">…</div>
+    <form id="bunform" novalidate><h3>${esc(t("bun.new"))}</h3><label for="bu-name">${esc(t("bun.name"))}</label><input id="bu-name" maxlength="60" placeholder="${esc(t("bun.namePh"))}">
+    <div class="row"><div><label for="bu-pct">${esc(t("bun.pct"))}</label><input id="bu-pct" type="number" min="5" max="30" value="10"></div><div><label for="bu-partners">${esc(t("bun.partners"))}</label><input id="bu-partners" placeholder="${esc(t("bun.partnersPh"))}"></div></div>
+    <div id="bu-err" class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("bun.create"))}</button></form></div>`;
+  const drawBundles = async () => {
+    const box = document.getElementById("bun-list"); if (!box) return;
+    let list = [];
+    try { list = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/bundles`)).bundles; } catch { /* shown empty */ }
+    box.innerHTML = list.length ? `<ul class="plist">${list.map((b) => `<li><span><strong>${esc(b.name)}</strong> · ${b.discount_pct}% <span class="badge ${b.active ? "confirmed" : "requested"}">${esc(t(b.active ? "bun.active" : "bun.waiting"))}</span><br><span class="small">${b.members.map((m) => `${esc(m.name)}${m.accepted ? " ✓" : " …"}`).join(" + ")}</span></span>
+      <span>${b.mine_accepted ? "" : `<button type="button" class="btn small" data-bacc="${esc(b.id)}">${esc(t("bun.accept"))}</button> `}<button type="button" class="linkbtn small" data-bleave="${esc(b.id)}">${esc(t(b.created_by === g.id ? "bun.end" : "bun.leave"))}</button></span></li>`).join("")}</ul>` : `<span class="dim">${esc(t("bun.none"))}</span>`;
+    box.querySelectorAll("[data-bacc]").forEach((x) => { x.onclick = async () => { try { await api.post(`/api/bundles/${encodeURIComponent(x.dataset.bacc)}/accept`, { groupId: g.id }); drawBundles(); } catch (e) { toast(e.message, "error"); } }; });
+    box.querySelectorAll("[data-bleave]").forEach((x) => { x.onclick = async () => { if (!confirm(t("bun.confirmLeave"))) return; try { await api.del(`/api/bundles/${encodeURIComponent(x.dataset.bleave)}?groupId=${encodeURIComponent(g.id)}`); drawBundles(); } catch (e) { toast(e.message, "error"); } }; });
+  };
+  drawBundles();
+  document.getElementById("bunform").onsubmit = async (e) => {
+    e.preventDefault();
+    const partners = document.getElementById("bu-partners").value.split(/[\s,]+/).filter(Boolean);
+    try { await api.post(`/api/groups/${encodeURIComponent(g.id)}/bundles`, { name: document.getElementById("bu-name").value, discount_pct: Number(document.getElementById("bu-pct").value), partners }); e.target.reset(); toast(t("bun.sent")); drawBundles(); }
+    catch (ex) { document.getElementById("bu-err").textContent = ex.message; }
+  };
   body.querySelectorAll("[data-preset]").forEach((b) => { b.onclick = () => { const n = document.getElementById("ao-name"); n.value = b.dataset.preset; document.getElementById("ao-price").focus(); document.getElementById("ao-price").select(); }; });
   body.querySelectorAll("[data-delao]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del("/api/addons/" + b.dataset.delao); refresh(); } catch (e) { toast(e.message, "error"); } }; });
   document.getElementById("aoform").onsubmit = async (e) => {

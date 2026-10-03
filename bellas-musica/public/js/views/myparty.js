@@ -7,6 +7,7 @@ import { TEMPLATES, TEMPLATE_KEYS, guestMath } from "../party-templates.js";
 import { categorySections } from "./party.js";
 import { loadFavs } from "../fav.js";
 import { qrSvg } from "../qr.js";
+import { cartBox, wireCart } from "./bookings.js";
 
 const pct = (part, whole) => (whole > 0 ? Math.max(0, Math.min(100, Math.round((part / whole) * 100))) : 0);
 const statusWord = (s) => t(s === "unpaid" ? "pp.unpaid" : "status." + s);
@@ -55,8 +56,8 @@ export async function myParty(app, id) {
           <div class="sum strong"><span>${esc(m.left_cents < 0 ? t("pp.over", { amount: money(-m.left_cents) }) : t("pp.left"))}</span><span>${m.left_cents < 0 ? "" : money(m.left_cents)}</span></div>` : `<p class="dim small">${esc(t("pp.noBudget"))}</p>`}
         ${tpl && P.budget_cents ? `<details class="split"><summary>${esc(t("pp.split"))}</summary><ul>${CAT_ORDER.filter((c) => tpl.split[c]).map((c) => `<li>${CAT_ICON[c]} ${esc(t("cat." + c))}: ${esc(money(Math.round((P.budget_cents * tpl.split[c]) / 10000) * 100))}${m.by_category[c] ? ` · ${esc(t("pp.booked"))} ${money(m.by_category[c])}` : ""}</li>`).join("")}</ul></details>` : ""}
       </div>
-      <div class="panel"><h2 class="sec">✅ ${esc(t("pp.vendors"))}</h2>
-        ${P.vendors.length ? `<ul class="plist">${P.vendors.map((v) => `<li><span>${CAT_ICON[v.category] || ""} <a href="#/booking/${esc(v.id)}">${esc(v.group_name)}</a> <span class="dim small">· ${esc(t("type." + v.type))} · ${esc(v.time)}</span><br><span class="small ${v.status === "unpaid" ? "warn" : "dim"}">${esc(statusWord(v.status))}${v.balance_left_cents ? " · " + esc(t("pp.balanceLeft", { amount: money(v.balance_left_cents) })) : ""}</span></span><strong>${money(v.total_cents)}</strong></li>`).join("")}</ul>` : `<p class="dim">${esc(t("pp.noVendors"))}</p>`}
+      <div class="panel"><h2 class="sec">✅ ${esc(t("pp.vendors"))}</h2>${cartBox(P.vendors.map((v) => ({ id: v.id, status: v.status === "unpaid" ? "pending_payment" : v.status, deposit_cents: v.deposit_cents, group_name: v.group_name })))}
+        ${P.vendors.length ? `<ul class="plist">${P.vendors.map((v) => `<li><span>${CAT_ICON[v.category] || ""} <a href="#/booking/${esc(v.id)}">${esc(v.group_name)}</a> <span class="dim small">· ${esc(t("type." + v.type))} · ${esc(v.time)}</span><br><span class="small ${v.status === "unpaid" ? "warn" : "dim"}">${esc(statusWord(v.status))}${v.balance_left_cents ? " · " + esc(t("pp.balanceLeft", { amount: money(v.balance_left_cents) })) : ""}</span>${v.padrinos.length ? `<br><span class="small">🎁 ${esc(t("pad.list", { names: v.padrinos.map((x) => `${x.name} (${money(x.amount_cents)})`).join(", ") }))}</span>` : ""}</span><strong>${money(v.total_cents)}</strong></li>`).join("")}</ul>` : `<p class="dim">${esc(t("pp.noVendors"))}</p>`}
         <h3 class="sec small-h">${esc(t("party.need"))}</h3><div class="chips needs" id="pp-needs">${CAT_ORDER.map((c) => `<label class="chk chip need${P.booked_categories.includes(c) ? " done" : ""}"><input type="checkbox" value="${c}"${P.needs.includes(c) ? " checked" : ""}> <span>${CAT_ICON[c]} ${esc(t("cat." + c))}${P.booked_categories.includes(c) ? " ✓" : ""}</span></label>`).join("")}</div>
       </div>
     </div>
@@ -97,6 +98,7 @@ export async function myParty(app, id) {
   const save = async (body) => { P = (await api.patch(`/api/parties/${encodeURIComponent(P.id)}`, body)).party; };
   function wire() {
     const $ = (s) => document.getElementById(s);
+    wireCart(app);
     $("pp-share").onclick = () => { $("pp-sharebox").hidden = !$("pp-sharebox").hidden; };
     $("pp-copy").onclick = async () => { try { await navigator.clipboard.writeText(P.share_url); toast(t("share.copied")); } catch { $("pp-link").select(); } };
     $("pp-rotate").onclick = async () => { if (!confirm(t("pp.newLink") + "?")) return; P = (await api.post(`/api/parties/${encodeURIComponent(P.id)}/share`)).party; draw(); $("pp-sharebox").hidden = false; };

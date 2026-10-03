@@ -529,3 +529,8 @@ main .linkbtn { color: var(--ink-2); text-decoration: underline; background: non
 main .linkbtn:hover, main .linkbtn:focus-visible { color: var(--ink); }
 .tlrow { grid-template-columns: 140px minmax(0, 1fr) minmax(0, 150px) auto; }
 @media (max-width: 560px) { .tlrow { grid-template-columns: 130px minmax(0, 1fr) auto; } }
+.cartbox { margin-bottom: 12px; }
+.cartbox .btn { margin-top: 8px; }
+.padform, .part-form { flex-basis: 100%; margin-top: 6px; }
+.plist li { flex-wrap: wrap; }
+.panel.deal { border-color: var(--gold); }

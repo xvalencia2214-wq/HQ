@@ -30,6 +30,15 @@ Use card `4242 4242 4242 4242`, any future date, any CVC. For a group to receive
 
 The Admin page's money tiles should match what Stripe shows (deposits collected, refunded, fees kept).
 
+## B2. Payment plans, padrinos and one checkout (also test these)
+
+10. **Payment plan**: after the group accepts, the customer taps "Pay part of the balance" and pays $50, then pays the rest. Stripe shows two separate payments, each going to the group's account with **no** application fee.
+11. **Padrino**: from the party's family link, a second account taps "Be a padrino" and pays $40 toward that vendor. Cancel the booking as the group: each payment is refunded to the card that paid it.
+12. **One checkout**: hold two vendors for the same day, then "Pay all at once" from My bookings. Stripe shows **one** payment on your platform account (not a destination charge) with a transfer group, followed by **one transfer per vendor** (deposit minus your fee). Decline one booking: the customer is refunded from that one payment, and the vendor's transfer shows a reversal for its share.
+13. **Bundle**: two vendors in an active bundle, booked for the same day in one checkout: each deposit is 10% (or the bundle's %) lower.
+
+One checkout uses Stripe's "separate charges and transfers" (the money lands on the platform first, then we transfer each vendor its share). Connect Express supports this for US accounts with no extra setup. If a transfer or a reversal ever fails, you get an alert and it is retried every hour.
+
 ## C. Go live
 
 1. Complete Stripe's live-mode activation. Switch the dashboard to **Live** and repeat A.4 and A.5 with **live** keys and a **live** webhook endpoint.

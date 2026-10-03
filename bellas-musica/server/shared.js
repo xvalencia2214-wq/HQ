@@ -1,7 +1,9 @@
 import { HttpError, now, safeJson, todayStr, addDays, rid, withLock } from "./util.js";
-import { SLOTS, categoryOf } from "./pricing.js";
+import { SLOTS, categoryOf, balancePaidInApp } from "./pricing.js";
+export { balancePaidInApp };
 import { lookupZip } from "./geo.js";
 import { embedUrl } from "./media.js";
+import { usd } from "./emails.js";
 
 const ACTIVE = "('pending_payment','requested','confirmed')";
 export const HOLD_SECONDS = 1800; // an unpaid booking holds its slot for 30 minutes
@@ -163,29 +165,72 @@ export async function refundBooking(ctx, booking, cents) {
   cents = Math.min(cents, booking.deposit_cents - booking.refund_cents); // never refund more than was charged
   if (cents <= 0) return booking;
   if (stripe.live && booking.stripe_payment_intent && !booking.stripe_payment_intent.startsWith("sim_")) {
-    try { await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}` }); }
+    try {
+      // Paid in a cart: refund the customer from the shared charge; the vendor's transfer is settled just below.
+      if (booking.cart_id) await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}`, destination: false });
+      else await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}` });
+    }
     catch (e) { ctx.alert(`REFUND FAILED for booking ${booking.id} (${(cents / 100).toFixed(2)} USD): ${e.message}`, "refund-" + booking.id); throw e; }
   }
   const total = booking.refund_cents + cents;
   db.run("UPDATE bookings SET refund_cents = ?, payment_status = ?, updated_at = ? WHERE id = ?",
     total, total >= booking.deposit_cents ? "refunded" : "partial_refund", now(), booking.id);
+  if (booking.cart_id) await settleCartTransfer(ctx, booking.id);
   return db.get("SELECT * FROM bookings WHERE id = ?", booking.id);
 }
 
 // The balance is a second payment on the same booking, refunded on its own PaymentIntent.
 export async function refundBalance(ctx, booking, cents) {
   const { db, stripe } = ctx;
-  if (booking.balance_status !== "paid" && booking.balance_status !== "partial_refund") return booking;
-  const owed = booking.total_cents - booking.deposit_cents;
-  cents = Math.min(cents, owed - booking.balance_refund_cents);
+  const paidIn = balancePaidInApp(booking);
+  cents = Math.min(cents, paidIn - booking.balance_refund_cents);
   if (cents <= 0) return booking;
-  if (stripe.live && booking.balance_pi && !booking.balance_pi.startsWith("sim_")) {
-    try { await stripe.refund({ paymentIntent: booking.balance_pi, amountCents: cents, key: `refund-bal-${booking.id}-${cents}`, applicationFee: false }); }
-    catch (e) { ctx.alert(`BALANCE REFUND FAILED for booking ${booking.id} (${(cents / 100).toFixed(2)} USD): ${e.message}`, "refund-bal-" + booking.id); throw e; }
+  if (booking.balance_parts_cents > 0) {
+    // Paid in parts (installments, padrinos): newest first, each back to the card that paid it. Totals are saved after
+    // each part, so if one refund fails the next attempt continues where this one stopped.
+    let left = cents;
+    for (const p of db.all("SELECT * FROM balance_parts WHERE booking_id = ? AND status IN ('paid','partial_refund') ORDER BY paid_at DESC, rowid DESC", booking.id)) {
+      if (left <= 0) break;
+      const take = Math.min(left, p.amount_cents - p.refund_cents);
+      if (take <= 0) continue;
+      if (stripe.live && p.pi && !p.pi.startsWith("sim_")) {
+        try { await stripe.refund({ paymentIntent: p.pi, amountCents: take, key: `refund-part-${p.id}-${p.refund_cents + take}`, applicationFee: false }); }
+        catch (e) { ctx.alert(`BALANCE REFUND FAILED for booking ${booking.id}, part ${p.id} (${(take / 100).toFixed(2)} USD): ${e.message}`, "refund-part-" + p.id); throw e; }
+      }
+      db.tx(() => {
+        db.run("UPDATE balance_parts SET refund_cents = refund_cents + ?, status = CASE WHEN refund_cents + ? >= amount_cents THEN 'refunded' ELSE 'partial_refund' END WHERE id = ?", take, take, p.id);
+        db.run("UPDATE bookings SET balance_refund_cents = balance_refund_cents + ?, updated_at = ? WHERE id = ?", take, now(), booking.id);
+      });
+      left -= take;
+    }
+  } else {
+    if (stripe.live && booking.balance_pi && !booking.balance_pi.startsWith("sim_")) {
+      try { await stripe.refund({ paymentIntent: booking.balance_pi, amountCents: cents, key: `refund-bal-${booking.id}-${cents}`, applicationFee: false }); }
+      catch (e) { ctx.alert(`BALANCE REFUND FAILED for booking ${booking.id} (${(cents / 100).toFixed(2)} USD): ${e.message}`, "refund-bal-" + booking.id); throw e; }
+    }
+    db.run("UPDATE bookings SET balance_refund_cents = balance_refund_cents + ?, updated_at = ? WHERE id = ?", cents, now(), booking.id);
   }
-  const total = booking.balance_refund_cents + cents;
-  db.run("UPDATE bookings SET balance_refund_cents = ?, balance_status = ?, updated_at = ? WHERE id = ?", total, total >= owed ? "refunded" : "partial_refund", now(), booking.id);
+  const after = db.get("SELECT * FROM bookings WHERE id = ?", booking.id);
+  db.run("UPDATE bookings SET balance_status = ? WHERE id = ?", after.balance_refund_cents >= paidIn ? "refunded" : "partial_refund", booking.id);
   return db.get("SELECT * FROM bookings WHERE id = ?", booking.id);
+}
+
+// A cart booking's vendor should hold (deposit - fee) of what was kept: the same proportion as a destination charge.
+const vendorShare = (b, cents) => Math.round((cents * (b.deposit_cents - b.platform_fee_cents)) / b.deposit_cents);
+export const cartTransferCents = (b) => Math.max(0, vendorShare(b, b.deposit_cents - b.refund_cents));
+// After a refund, take back from the vendor's transfer exactly what it should no longer hold. Computed from running totals,
+// so a retry never takes back twice; if Stripe fails it is alerted and retried by the hourly job.
+export async function settleCartTransfer(ctx, bookingId) {
+  const { db, stripe } = ctx;
+  const b = db.get("SELECT * FROM bookings WHERE id = ?", bookingId);
+  if (!b || !b.stripe_transfer_id || !stripe.live) return;
+  const shouldHold = cartTransferCents(b), holds = b.transfer_cents - b.transfer_reversed_cents;
+  const back = holds - shouldHold;
+  if (back <= 0) return;
+  try {
+    await stripe.reverseTransfer({ transfer: b.stripe_transfer_id, amountCents: back, key: `reverse-${b.id}-${b.transfer_reversed_cents + back}` });
+    db.run("UPDATE bookings SET transfer_reversed_cents = transfer_reversed_cents + ? WHERE id = ?", back, b.id);
+  } catch (e) { ctx.alert(`TRANSFER REVERSAL FAILED for cart booking ${b.id} (${(back / 100).toFixed(2)} USD): ${e.message}. It will be retried.`, "reverse-" + b.id); }
 }
 
 // A payment that must not stand (a second payment, or money that arrived after a cancellation) goes straight back, in full,
@@ -210,9 +255,9 @@ async function markBalancePaidLocked(ctx, bookingId, paymentIntent) {
   if (!b) return null;
   if (paymentIntent && b.balance_pi === paymentIntent) return b; // the same payment reported twice
   const owed = b.total_cents - b.deposit_cents;
-  const payable = b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && owed > 0 && b.date >= todayStr();
+  const payable = b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && owed > 0 && b.date >= todayStr() && !b.balance_parts_cents;
   if (!payable) {
-    const why = b.balance_status === "paid" ? "second payment of the balance" : b.balance_status === "offline" ? "balance was already marked received outside the app" : `booking is ${b.status}`;
+    const why = b.balance_parts_cents ? "full balance paid after part of it was already paid" : b.balance_status === "paid" ? "second payment of the balance" : b.balance_status === "offline" ? "balance was already marked received outside the app" : `booking is ${b.status}`;
     await strayRefund(ctx, b, paymentIntent, owed, why);
     return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
   }
@@ -259,6 +304,100 @@ async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
     ctx.notify.to(paid.customer_id, "booking.received.customer", { ...v, url: `${base}/#/booking/${paid.id}` });
   }
   return paid;
+}
+
+// ---- balance parts (payment plan installments and padrinos) ----
+export async function markPartPaid(ctx, partId, paymentIntent) {
+  const p0 = ctx.db.get("SELECT booking_id FROM balance_parts WHERE id = ?", partId);
+  if (!p0) return null;
+  return withLock("booking:" + p0.booking_id, () => markPartPaidLocked(ctx, partId, paymentIntent));
+}
+async function markPartPaidLocked(ctx, partId, paymentIntent) {
+  const { db } = ctx;
+  const p = db.get("SELECT * FROM balance_parts WHERE id = ?", partId);
+  const b = db.get("SELECT * FROM bookings WHERE id = ?", p.booking_id);
+  if (p.status !== "pending") {
+    if (!paymentIntent || p.pi === paymentIntent) return p; // the same payment reported twice
+    await strayRefund(ctx, b, paymentIntent, p.amount_cents, "second payment of the same balance part");
+    return p;
+  }
+  const owed = b.total_cents - b.deposit_cents;
+  const payable = b.status === "confirmed" && b.payment_status === "paid" && b.balance_status === "unpaid" && b.date >= todayStr() && b.balance_parts_cents + p.amount_cents <= owed;
+  if (!payable) {
+    // Money for a booking that no longer takes it (cancelled, paid off, marked paid in cash, or two payers at once): it goes back in full.
+    await strayRefund(ctx, b, paymentIntent, p.amount_cents, b.balance_parts_cents + p.amount_cents > owed ? "balance part would pay more than is owed" : `booking is ${b.status}, balance ${b.balance_status}`);
+    db.run("UPDATE balance_parts SET status = 'stray', pi = ?, paid_at = ? WHERE id = ?", paymentIntent || "", now(), p.id);
+    return db.get("SELECT * FROM balance_parts WHERE id = ?", p.id);
+  }
+  db.tx(() => {
+    db.run("UPDATE balance_parts SET status = 'paid', pi = ?, paid_at = ? WHERE id = ?", paymentIntent || "", now(), p.id);
+    db.run("UPDATE bookings SET balance_parts_cents = balance_parts_cents + ?, updated_at = ? WHERE id = ?", p.amount_cents, now(), b.id);
+    if (b.balance_parts_cents + p.amount_cents >= owed) db.run("UPDATE bookings SET balance_status = 'paid', balance_paid_at = ? WHERE id = ?", now(), b.id);
+  });
+  const paid = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+  const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
+  const v = { ...ctx.notify.bookingVars(paid, g), amount: usd(p.amount_cents), payer: p.payer_name, left: usd(owed - paid.balance_parts_cents), url: `${ctx.config.baseUrl}/#/booking/${paid.id}` };
+  ctx.notify.to(paid.customer_id, p.payer_id && p.payer_id !== paid.customer_id ? "part.padrino.customer" : "part.paid.customer", v);
+  if (g.owner_id) ctx.notify.to(g.owner_id, "part.paid.group", { ...v, url: `${ctx.config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+  return db.get("SELECT * FROM balance_parts WHERE id = ?", p.id);
+}
+
+// ---- one checkout for several deposits ----
+export async function markCartPaid(ctx, cartId, paymentIntent) {
+  return withLock("cart:" + cartId, async () => {
+    const { db, stripe } = ctx;
+    const cart = db.get("SELECT * FROM carts WHERE id = ?", cartId);
+    if (!cart) return null;
+    if (cart.status === "paid") {
+      if (paymentIntent && cart.pi !== paymentIntent) ctx.alert(`A second payment arrived for cart ${cart.id} (${paymentIntent}). Refund it in Stripe.`, "cart-dup-" + cart.id);
+      return cart;
+    }
+    db.run("UPDATE carts SET status = 'paid', pi = ? WHERE id = ?", paymentIntent || "", cart.id);
+    for (const id of safeJson(cart.booking_ids, [])) {
+      const b = db.get("SELECT * FROM bookings WHERE id = ?", id);
+      if (!b) continue;
+      if (b.payment_status !== "unpaid") {
+        // This deposit was already paid on its own: its share of the cart charge goes back.
+        await cartStrayRefund(ctx, cart, b, paymentIntent);
+        continue;
+      }
+      db.run("UPDATE bookings SET cart_id = ? WHERE id = ?", cart.id, id);
+      await markBookingPaid(ctx, id, paymentIntent); // a request to the vendor, or refunded if its slot is gone
+    }
+    if (stripe.live) await transferCart(ctx, cart.id);
+    return db.get("SELECT * FROM carts WHERE id = ?", cart.id);
+  });
+}
+async function cartStrayRefund(ctx, cart, b, paymentIntent) {
+  const { db, stripe } = ctx;
+  const marker = `${paymentIntent}#${b.id}`;
+  if (db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) return;
+  if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
+    try { await stripe.refund({ paymentIntent, amountCents: b.deposit_cents, key: `stray-cart-${cart.id}-${b.id}`, destination: false }); }
+    catch (e) { ctx.alert(`CART REFUND FAILED for booking ${b.id} in cart ${cart.id}: ${e.message}`, "stray-cart-" + b.id); throw e; }
+  }
+  db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", b.id, marker, b.deposit_cents, "deposit was already paid on its own before the cart payment arrived", now());
+}
+
+// Send each vendor its share of a cart charge. Safe to call again: bookings already transferred are skipped (the hourly job retries failures).
+export async function transferCart(ctx, cartId) {
+  const { db, stripe } = ctx;
+  const cart = db.get("SELECT * FROM carts WHERE id = ?", cartId);
+  if (!cart || cart.status !== "paid" || !stripe.live || !cart.pi || cart.pi.startsWith("sim_")) return;
+  let charge = "";
+  try { charge = String((await stripe.getPaymentIntent(cart.pi)).latest_charge || ""); } catch { /* transfer without source_transaction */ }
+  for (const id of safeJson(cart.booking_ids, [])) {
+    await withLock("booking:" + id, async () => {
+      const b = db.get("SELECT b.*, g.stripe_account_id FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", id);
+      if (!b || b.stripe_transfer_id || b.cart_id !== cart.id || !["paid", "partial_refund"].includes(b.payment_status)) return;
+      const amount = cartTransferCents(b);
+      if (amount <= 0 || !b.stripe_account_id) return;
+      try {
+        const tr = await stripe.transfer({ amountCents: amount, destination: b.stripe_account_id, group: cart.id, sourceCharge: charge, key: `transfer-${b.id}` });
+        db.run("UPDATE bookings SET stripe_transfer_id = ?, transfer_cents = ? WHERE id = ?", String(tr.id || ""), amount, b.id);
+      } catch (e) { ctx.alert(`TRANSFER FAILED for cart booking ${b.id} (${(amount / 100).toFixed(2)} USD): ${e.message}. It will be retried.`, "transfer-" + b.id); }
+    });
+  }
 }
 
 export function markFeaturePaid(ctx, featureId) {

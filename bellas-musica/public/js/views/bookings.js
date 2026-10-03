@@ -20,13 +20,14 @@ function card(b) {
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
       ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}">${esc(t("agr.link"))}</a> ` : ""}
       ${b.can_pay_balance ? `<button class="btn small" data-balance="${esc(b.id)}">${esc(t("bal.payNow", { amount: money(b.balance_cents) }))}</button> ` : ""}
+      ${b.can_pay_part ? `<button class="btn ghost small" data-part="${esc(b.id)}" data-left="${b.balance_left_cents}">${esc(t("plan.payPart"))}</button> ` : ""}
       ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}
       ${b.can_cancel ? `<button class="btn ghost small" data-cancel="${esc(b.id)}" data-refund="${b.refund_if_cancel_cents}">${esc(t("bk.cancel"))}</button>` : ""}
       ${b.can_confirm_arrival ? `<button class="btn ghost small" data-arrived="${esc(b.id)}">${esc(t("show.arrived"))}</button> ` : ""}
       ${b.can_report_noshow ? `<button class="btn ghost small" data-noshow="${esc(b.id)}">${esc(t("show.report"))}</button> ` : ""}
       ${b.can_review ? `<button class="btn small" data-review="${esc(b.id)}">${esc(t("bk.review"))}</button>` : ""}
       ${b.reviewed ? `<span class="dim small">✓ ${esc(t("bk.reviewed"))}</span>` : ""}</div>
-    <div class="review-form" hidden></div><div class="resched-form" hidden></div></div>`;
+    <div class="review-form" hidden></div><div class="resched-form" hidden></div><div class="part-form" hidden></div></div>`;
 }
 
 // The arrival code (event day and the day before), the group's check-in, and where a no-show report stands.
@@ -38,10 +39,14 @@ function guaranteeInfo(b) {
   return out;
 }
 
-// What is owed on top of the deposit, in words the customer can act on.
+// What is owed on top of the deposit, in words the customer can act on, and who has paid toward it (installments, padrinos).
 function balanceInfo(b) {
   if (b.balance_cents <= 0 || b.status !== "confirmed") return "";
   const line = (key, vars) => `<div class="dim small">${esc(t(key, vars))}</div>`;
+  const paidParts = (b.parts || []).filter((p) => p.status !== "stray");
+  const who = paidParts.length ? `<div class="dim small parts">${paidParts.map((p) => esc(t(p.by_customer ? "plan.youPaid" : "plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) })) + (p.note ? ` <em>(${esc(p.note)})</em>` : "")).join(" · ")}</div>` : "";
+  if (paidParts.length && b.balance_status === "unpaid") return who + line("plan.left", { amount: money(b.balance_left_cents) });
+  if (paidParts.length && b.balance_status === "paid") return who + line("bal.paid");
   if (b.balance_status === "paid") return line("bal.paid");
   if (b.balance_status === "offline") return line("bal.offline");
   if (b.balance_status === "refunded") return line("bal.refunded");
@@ -81,10 +86,25 @@ function reschedulePanel(holder, b, groupId, reload) {
   draw();
 }
 
+// Several unpaid holds: pay all their deposits in one checkout.
+export function cartBox(bookings) {
+  const unpaid = bookings.filter((b) => b.status === "pending_payment");
+  if (unpaid.length < 2) return "";
+  const total = unpaid.reduce((n, b) => n + b.deposit_cents, 0);
+  return `<div class="note cartbox"><strong>🛒 ${esc(t("cart.title", { n: unpaid.length }))}</strong><br><span class="small">${esc(unpaid.map((b) => b.group_name).join(" · "))}</span><br>
+    <button type="button" class="btn small" data-cart="${esc(unpaid.slice(0, 6).map((b) => b.id).join(","))}">${esc(t("cart.pay", { amount: money(total) }))}</button> <span class="dim small">${esc(t("cart.hint"))}</span></div>`;
+}
+export function wireCart(root) {
+  root.querySelectorAll("[data-cart]").forEach((b) => { b.onclick = async () => {
+    b.disabled = true;
+    try { goto((await api.post("/api/cart", { bookingIds: b.dataset.cart.split(",") })).payment.url); } catch (e) { toast(e.message, "error"); b.disabled = false; }
+  }; });
+}
+
 export async function myBookings(app) {
   const { bookings } = await api.get("/api/my/bookings");
-  app.innerHTML = `<h1 class="sec">${esc(t("bk.title"))}</h1><div class="panel">${bookings.length ? bookings.map(card).join("") : `<div class="empty">${esc(t("bk.none"))} <a href="#/">${esc(t("nav.find"))}</a></div>`}</div>`;
-  wire(app, () => myBookings(app));
+  app.innerHTML = `<h1 class="sec">${esc(t("bk.title"))}</h1>${cartBox(bookings)}<div class="panel">${bookings.length ? bookings.map(card).join("") : `<div class="empty">${esc(t("bk.none"))} <a href="#/">${esc(t("nav.find"))}</a></div>`}</div>`;
+  wire(app, () => myBookings(app)); wireCart(app);
 }
 
 function wire(root, reload) {
@@ -100,6 +120,20 @@ function wire(root, reload) {
       b.disabled = true;
       try { goto((await api.post(`/api/bookings/${encodeURIComponent(b.dataset.balance)}/balance`)).payment.url); }
       catch (e) { toast(e.message, "error"); b.disabled = false; }
+    };
+  });
+  // pay part of the balance (a payment plan): any amount from $20, or the rest
+  root.querySelectorAll("[data-part]").forEach((b) => {
+    b.onclick = () => {
+      const holder = b.closest(".req").querySelector(".part-form"), left = Number(b.dataset.left);
+      holder.hidden = false;
+      const sug = [2, 3].map((n) => Math.ceil(left / n / 100)).filter((x) => x >= 20);
+      holder.innerHTML = `<form class="cform"><p class="dim small" style="flex-basis:100%">${esc(t("plan.hint", { amount: money(left) }))}${sug.length ? " " + esc(t("plan.suggest", { two: money(sug[0] * 100), three: money((sug[1] || sug[0]) * 100) })) : ""}</p>
+        <label class="sr-only" for="pa-${esc(b.dataset.part)}">${esc(t("plan.amount"))}</label><input id="pa-${esc(b.dataset.part)}" type="number" min="20" max="${Math.ceil(left / 100)}" inputmode="numeric" placeholder="${esc(t("plan.amount"))}" value="${sug[0] || Math.ceil(left / 100)}">
+        <button class="btn small" type="submit">${esc(t("plan.pay"))}</button> <button type="button" class="btn ghost small" data-rest>${esc(t("plan.rest", { amount: money(left) }))}</button><div class="err" role="alert" style="flex-basis:100%"></div></form>`;
+      const go = async (body) => { try { goto((await api.post(`/api/bookings/${encodeURIComponent(b.dataset.part)}/parts`, body)).payment.url); } catch (ex) { holder.querySelector(".err").textContent = ex.message; } };
+      holder.querySelector("form").onsubmit = (e) => { e.preventDefault(); go({ amount: Number(holder.querySelector("input").value) }); };
+      holder.querySelector("[data-rest]").onclick = () => go({ rest: true });
     };
   });
   root.querySelectorAll("[data-resched]").forEach((b) => {
@@ -176,6 +210,14 @@ export async function simulatedPay(app, kind, id) {
     if (!b || !b.can_pay_balance) { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
     title = t("bal.payTitle", { name: b.group_name }); amount = b.balance_cents;
     summary = `${esc(fmtDate(b.date))} · ${esc(b.time)}`;
+  } else if (kind === "part") {
+    let p; try { p = (await api.get(`/api/parts/${encodeURIComponent(id)}`)).part; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
+    if (p.status !== "pending") { app.innerHTML = `<div class="panel empty">${esc(t("plan.done"))}</div>`; return; }
+    title = t("plan.payTitle", { name: p.group_name }); amount = p.amount_cents; summary = `${esc(fmtDate(p.date))} · ${esc(p.time)}`;
+  } else if (kind === "cart") {
+    let c; try { c = (await api.get(`/api/carts/${encodeURIComponent(id)}`)).cart; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
+    title = t("cart.payTitle"); amount = c.amount_cents;
+    summary = c.items.map((x) => `${esc(x.group_name)} · ${esc(fmtDate(x.date))} · ${money(x.deposit_cents)}${x.discount_cents ? ` <span class="tag trust">${esc(t("bun.saved", { amount: money(x.discount_cents) }))}</span>` : ""}`).join("<br>");
   } else { title = t("pay.featureTitle"); amount = state.meta.feature_price_cents; summary = esc(t("pay.featureText")); }
   app.innerHTML = `<div class="panel narrow"><h1>${esc(title)}</h1><p>${summary}</p><div class="sum strong"><span>${esc(t(kind === "balance" ? "bal.amount" : "pay.amount"))}</span><span>${money(amount)}</span></div>
     <div class="note">${esc(t("pay.testMode"))}</div><div id="payerr" class="err" role="alert"></div><button class="btn wide" id="paybtn">${esc(t("pay.button", { amount: money(amount) }))}</button></div>`;
@@ -184,6 +226,8 @@ export async function simulatedPay(app, kind, id) {
     try {
       if (kind === "booking") { await api.post(`/api/bookings/${encodeURIComponent(id)}/simulate-pay`); location.hash = `#/booking/${id}?paid=1`; }
       else if (kind === "balance") { await api.post(`/api/bookings/${encodeURIComponent(id)}/simulate-pay-balance`); location.hash = `#/booking/${id}?balance=1`; }
+      else if (kind === "part") { const r = await api.post(`/api/parts/${encodeURIComponent(id)}/simulate-pay`); toast(t("plan.thanks")); location.hash = r.part.mine ? `#/booking/${r.part.booking_id}` : "#/bookings"; }
+      else if (kind === "cart") { await api.post(`/api/carts/${encodeURIComponent(id)}/simulate-pay`); toast(t("cart.thanks")); location.hash = "#/bookings"; }
       else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t("dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
     } catch (e) { document.getElementById("payerr").textContent = e.message; document.getElementById("paybtn").disabled = false; }
   };

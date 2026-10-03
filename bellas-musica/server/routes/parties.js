@@ -1,5 +1,5 @@
 import { HttpError, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr, addDays } from "../util.js";
-import { CATEGORIES, EVENT_TYPES, categoryOf } from "../pricing.js";
+import { CATEGORIES, EVENT_TYPES, balancePaidInApp, categoryOf } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { LIVE_SQL, firstPhotos, fromCents, isLive, newId, ratingMap, ratingOf } from "../shared.js";
 import { maskContact } from "./messages.js";
@@ -13,9 +13,7 @@ const TEMPLATES = ["quince", "wedding", "birthday", "bautizo", "backyard", "grad
 // What has been paid in the app for a booking so far (deposit after refunds, plus the balance or its parts).
 export function paidInApp(b) {
   const deposit = ["paid", "partial_refund"].includes(b.payment_status) ? b.deposit_cents - b.refund_cents : 0;
-  const owed = b.total_cents - b.deposit_cents;
-  const balance = ["paid", "partial_refund"].includes(b.balance_status) ? owed - b.balance_refund_cents : (b.balance_parts_cents || 0);
-  return deposit + balance;
+  return deposit + Math.max(0, balancePaidInApp(b) - b.balance_refund_cents);
 }
 
 export default function partyRoutes(ctx, add) {
@@ -70,7 +68,9 @@ export default function partyRoutes(ctx, add) {
       const base = { id: b.id, group_id: b.group_id, group_name: b.group_name, type: b.group_type, category: categoryOf(b.group_type), time: b.time, status: b.status === "pending_payment" ? "unpaid" : b.status };
       if (role === "thanks") return base;
       const paid = paidInApp(b);
-      return { ...base, total_cents: b.total_cents, paid_cents: role === "owner" ? paid : undefined, balance_left_cents: b.status === "confirmed" ? Math.max(0, owed - (["paid", "partial_refund"].includes(b.balance_status) ? owed : b.balance_parts_cents || 0)) : null, balance_offline: b.balance_status === "offline" };
+      const padrinos = db.all("SELECT payer_name, amount_cents FROM balance_parts WHERE booking_id = ? AND payer_id != ? AND status IN ('paid','partial_refund')", b.id, b.customer_id)
+        .map((x) => (role === "owner" ? { name: x.payer_name, amount_cents: x.amount_cents } : { name: x.payer_name }));
+      return { ...base, padrinos, deposit_cents: role === "owner" ? b.deposit_cents : undefined, total_cents: b.total_cents, paid_cents: role === "owner" ? paid : undefined, balance_left_cents: b.status === "confirmed" ? Math.max(0, owed - (["paid", "partial_refund"].includes(b.balance_status) ? owed : b.balance_parts_cents || 0)) : null, balance_offline: b.balance_status === "offline" };
     });
     const base = {
       id: p.id, title: p.title, event: p.event, date: p.date, zip: p.zip, guests: p.guests, template: p.template,

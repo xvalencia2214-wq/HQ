@@ -78,6 +78,19 @@ export async function fakeStripe() {
       if (key) state.idem.set(key, out);
       return send(out);
     }
+    if (req.method === "GET" && req.url.startsWith("/v1/payment_intents/")) return send({ id: req.url.split("/").pop(), latest_charge: "ch_test_" + req.url.split("/").pop() });
+    if (req.method === "POST" && req.url === "/v1/transfers") {
+      const key = req.headers["idempotency-key"];
+      if (key && state.idem.has(key)) return send(state.idem.get(key));
+      const out = { id: "tr_test_" + calls.length }; (state.transfers ||= []).push({ ...form, id: out.id }); if (key) state.idem.set(key, out);
+      return send(out);
+    }
+    if (req.method === "POST" && /^\/v1\/transfers\/[^/]+\/reversals$/.test(req.url)) {
+      const key = req.headers["idempotency-key"];
+      if (key && state.idem.has(key)) return send(state.idem.get(key));
+      const out = { id: "trr_test_" + calls.length }; (state.reversals ||= []).push({ transfer: req.url.split("/")[3], amount: Number(form.amount) }); if (key) state.idem.set(key, out);
+      return send(out);
+    }
     if (req.method === "GET" && req.url === "/v1/account") return send({ id: "acct_platform", country: "US", charges_enabled: state.chargesEnabled });
     if (req.method === "GET" && req.url.startsWith("/v1/accounts?")) {
       if (!state.connectEnabled) { res.writeHead(400, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ error: { message: "You can only create new accounts if you've signed up for Connect" } })); }

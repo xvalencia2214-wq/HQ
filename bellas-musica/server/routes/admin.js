@@ -4,7 +4,7 @@ import { lookupZip } from "../geo.js";
 import { hashPassword } from "../auth.js";
 import { backupStatus } from "../backups.js";
 import { hashClaim } from "./claim.js";
-import { GROUP_TYPES, balanceCents } from "../pricing.js";
+import { GROUP_TYPES, balanceCents, balancePaidInApp } from "../pricing.js";
 import { refundBooking, refundBalance } from "../shared.js";
 import { usd } from "../emails.js";
 
@@ -55,9 +55,9 @@ export default function adminRoutes(ctx, add) {
       })(),
       texts_30d: { sent: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 1 AND created_at > ?", d30).c, failed: one("SELECT COUNT(*) c FROM sms_log WHERE error != '' AND created_at > ?", d30).c, logged_only: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 0 AND error = '' AND created_at > ?", d30).c },
       noshow_reports: db.all(
-        `SELECT b.id, g.name AS group_name, u.name AS customer, u.email AS customer_email, b.date, b.time, b.deposit_cents, b.total_cents, b.balance_status, b.noshow_note, b.noshow_reply, b.noshow_at, b.refund_cents, b.balance_refund_cents
+        `SELECT b.id, g.name AS group_name, u.name AS customer, u.email AS customer_email, b.date, b.time, b.deposit_cents, b.total_cents, b.balance_status, b.balance_parts_cents, b.noshow_note, b.noshow_reply, b.noshow_at, b.refund_cents, b.balance_refund_cents
          FROM bookings b JOIN groups g ON g.id = b.group_id JOIN users u ON u.id = b.customer_id WHERE b.noshow_status = 'reported' ORDER BY b.noshow_at`
-      ).map((r) => ({ ...r, paid_cents: (r.deposit_cents - r.refund_cents) + (["paid", "partial_refund"].includes(r.balance_status) ? r.total_cents - r.deposit_cents - r.balance_refund_cents : 0) })),
+      ).map((r) => ({ ...r, paid_cents: (r.deposit_cents - r.refund_cents) + (balancePaidInApp(r) - r.balance_refund_cents) })),
       invites: db.all("SELECT id, name, type, zip, created_at FROM groups WHERE invited = 1 AND owner_id IS NULL ORDER BY created_at DESC").map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "" })),
       groups_list: db.all(
         `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,

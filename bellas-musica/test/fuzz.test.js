@@ -20,13 +20,21 @@ function checkInvariants(db, fake, log) {
     if (b.platform_fee_cents > b.deposit_cents || b.deposit_cents > b.total_cents) fail("money ordering broken", b);
   }
   for (const b of db.all("SELECT * FROM bookings")) {
-    const owed = b.total_cents - b.deposit_cents;
+    const owed = b.total_cents - b.deposit_cents, paidIn = b.balance_parts_cents > 0 ? b.balance_parts_cents : owed;
     if (b.balance_refund_cents < 0 || b.balance_refund_cents > owed) fail("balance refund out of range", b);
+    // balance paid in parts (installments, padrinos): the booking's totals equal the sum of its parts
+    const pt = db.get("SELECT COALESCE(SUM(amount_cents), 0) paid, COALESCE(SUM(refund_cents), 0) ref, COALESCE(SUM(refund_cents > amount_cents), 0) bad FROM balance_parts WHERE booking_id = ? AND status IN ('paid','partial_refund','refunded')", b.id);
+    if (pt.paid !== b.balance_parts_cents) fail("balance parts don't add up", { b, pt });
+    if (b.balance_parts_cents > owed) fail("more than the balance was collected in parts", b);
+    if (pt.bad) fail("a part refunded more than it paid", b);
+    if (b.balance_parts_cents > 0 && pt.ref !== b.balance_refund_cents) fail("part refunds don't add up", { b, pt });
+    if (b.balance_parts_cents > 0 && b.balance_pi !== "") fail("paid both in one payment and in parts", b);
+    if (b.balance_status === "unpaid" && b.balance_parts_cents >= owed && owed > 0) fail("balance fully paid in parts but still marked unpaid", b);
     if (["unpaid", "offline"].includes(b.balance_status) && (b.balance_refund_cents !== 0 || b.balance_pi !== "")) fail("balance not paid but has a payment or refund", b);
     if (b.balance_status === "paid" && b.balance_refund_cents !== 0) fail("balance paid but has refund", b);
-    if (b.balance_status === "partial_refund" && !(b.balance_refund_cents > 0 && b.balance_refund_cents < owed)) fail("bad partial balance refund", b);
-    if (b.balance_status === "refunded" && b.balance_refund_cents !== owed) fail("balance refunded amount mismatch", b);
-    if (["paid", "partial_refund", "refunded"].includes(b.balance_status) && (!b.balance_pi || b.payment_status === "unpaid")) fail("balance paid without a payment or before the deposit", b);
+    if (b.balance_status === "partial_refund" && !(b.balance_refund_cents > 0 && b.balance_refund_cents < paidIn)) fail("bad partial balance refund", b);
+    if (b.balance_status === "refunded" && b.balance_refund_cents !== paidIn) fail("balance refunded amount mismatch", b);
+    if (["paid", "partial_refund", "refunded"].includes(b.balance_status) && ((!b.balance_pi && !b.balance_parts_cents) || b.payment_status === "unpaid")) fail("balance paid without a payment or before the deposit", b);
     if (b.balance_status !== "unpaid" && !["confirmed", "cancelled"].includes(b.status)) fail("balance touched on a booking that was never confirmed", b);
     if (b.status === "cancelled" && b.balance_status === "paid" && b.refund_cents === b.deposit_cents && b.payment_status === "refunded") fail("cancelled with everything refunded but the balance was left paid", b);
   }
@@ -45,7 +53,18 @@ function checkInvariants(db, fake, log) {
     for (const r of fake.state.refunded) byPi.set(r.pi, (byPi.get(r.pi) || 0) + r.amount);
     const ours = new Map(), add = (pi, n) => { if (pi) ours.set(pi, (ours.get(pi) || 0) + n); };
     for (const b of db.all("SELECT stripe_payment_intent dpi, refund_cents dr, balance_pi bpi, balance_refund_cents br FROM bookings")) { add(b.dpi, b.dr); add(b.bpi, b.br); }
-    for (const e of db.all("SELECT payment_intent pi, cents FROM extra_refunds")) add(e.pi, e.cents);
+    for (const e of db.all("SELECT payment_intent pi, cents FROM extra_refunds")) add(e.pi.split("#")[0], e.cents); // cart strays are recorded as "<pi>#<booking>"
+    for (const p of db.all("SELECT pi, refund_cents FROM balance_parts WHERE status != 'stray'")) add(p.pi, p.refund_cents);
+    // one checkout: each vendor got one transfer, and never more was taken back than it got
+    for (const b of db.all("SELECT id, stripe_transfer_id t FROM bookings WHERE stripe_transfer_id != ''")) {
+      const tr = (fake.state.transfers || []).filter((x) => x.id === b.t);
+      if (tr.length !== 1) fail("cart booking transfer missing or doubled", { b, tr });
+      const back = (fake.state.reversals || []).filter((x) => x.transfer === b.t).reduce((n, x) => n + x.amount, 0);
+      if (back > Number(tr[0].amount)) fail("reversed more than was transferred", { b, back, tr });
+      const row = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+      const should = Math.max(0, Math.round(((row.deposit_cents - row.refund_cents) * (row.deposit_cents - row.platform_fee_cents)) / row.deposit_cents));
+      if (Number(tr[0].amount) - back !== should) fail("the vendor doesn't hold exactly its share of what was kept", { row, back, should });
+    }
     for (const pi of new Set([...byPi.keys(), ...ours.keys()])) {
       if ((byPi.get(pi) || 0) !== (ours.get(pi) || 0)) fail("Stripe refunds do not match our records", { pi, stripe: byPi.get(pi) || 0, ours: ours.get(pi) || 0 });
     }
@@ -76,6 +95,42 @@ async function run(mode, seed, steps) {
     for (let i = 0; i < steps; i++) {
       const roll = R() * 100, b = bookings.length ? pick(bookings) : null;
       let what;
+      if (b && R() < 0.09) { // part of the balance: the customer or a padrino, sometimes the rest, sometimes too much, sometimes two at once
+        const conf = S.db.all("SELECT id FROM bookings WHERE status = 'confirmed' AND balance_status = 'unpaid'").map((x) => x.id);
+        const pb = (conf.length && R() < 0.85 ? bookings.find((x) => x.id === pick(conf)) : null) || b;
+        const payer = R() < 0.6 ? pb.cust : pick(custs);
+        const left = S.db.get("SELECT total_cents - deposit_cents - balance_parts_cents l FROM bookings WHERE id = ?", pb.id).l;
+        const body = R() < 0.3 ? { rest: true } : { amount: Math.max(1, Math.round((left / 100) * R() * 1.2)) };
+        what = `part ${pb.id} ${JSON.stringify(body)}`;
+        let start;
+        if (payer === pb.cust) start = ok(await payer.post(`/api/bookings/${pb.id}/parts`, body), what);
+        else {
+          const bk = S.db.get("SELECT date, customer_id FROM bookings WHERE id = ?", pb.id);
+          let party = S.db.get("SELECT share_token FROM parties WHERE customer_id = ? AND date = ?", bk.customer_id, bk.date);
+          if (!party) { const made = await pb.cust.post("/api/parties", { date: bk.date, zip: "60608" }); party = made.status === 200 ? { share_token: made.json.party.share_url.split("/fp/")[1] } : null; }
+          start = party ? ok(await payer.post(`/api/fp/${party.share_token}/padrino`, { ...body, bookingId: pb.id, name: "Padrino" }), what + " (padrino)") : { status: 400 };
+        }
+        if (start.status === 200) {
+          const amt = S.db.get("SELECT amount_cents a FROM balance_parts WHERE id = ?", start.json.part_id).a;
+          const pay = async () => (fake
+            ? postWebhook(S.base, { id: `evt_p_${Math.floor(R() * 1e9)}`, type: "checkout.session.completed", data: { object: { payment_status: "paid", amount_total: amt, payment_intent: "pi_part_" + start.json.part_id, metadata: { kind: "part", part_id: start.json.part_id } } } }, "whsec_f")
+            : payer.post(`/api/parts/${start.json.part_id}/simulate-pay`));
+          if (R() < 0.15) (await Promise.all([pay(), pay()])).forEach((r) => ok(r, what + " double pay")); else ok(await pay(), what + " pay");
+        }
+        log.push(what); checkInvariants(S.db, fake, log); continue;
+      }
+      if (R() < 0.03) { // one checkout for several unpaid holds of one customer
+        const ci = Math.floor(R() * custs.length), c = custs[ci];
+        const ids = S.db.all("SELECT b.id FROM bookings b JOIN users u ON u.id = b.customer_id WHERE b.status = 'pending_payment' AND u.email = ?", `fc${ci}@example.com`).map((x) => x.id).slice(0, 3);
+        what = `cart ${ids.join(",")}`;
+        const r = ok(await c.post("/api/cart", { bookingIds: ids }), what);
+        if (r.status === 200) {
+          if (R() < 0.3) { const id = ids[0]; ok(fake ? await postWebhook(S.base, completed(id, S.db.get("SELECT deposit_cents d FROM bookings WHERE id = ?", id).d), "whsec_f") : await c.post(`/api/bookings/${id}/simulate-pay`), what + " (one paid on its own first)"); }
+          if (fake) ok(await postWebhook(S.base, { id: `evt_c_${Math.floor(R() * 1e9)}`, type: "checkout.session.completed", data: { object: { payment_status: "paid", amount_total: r.json.amount_cents, payment_intent: "pi_cart_" + r.json.cart_id, metadata: { kind: "cart", cart_id: r.json.cart_id } } } }, "whsec_f"), what + " pay");
+          else ok(await c.post(`/api/carts/${r.json.cart_id}/simulate-pay`), what + " pay");
+        }
+        log.push(what); checkInvariants(S.db, fake, log); continue;
+      }
       if (b && R() < 0.05) { // show-up guarantee: the event passes, the customer may report a no-show, the admin decides (sometimes twice at once)
         what = `no-show ${b.id}`;
         if (R() < 0.6) S.db.run("UPDATE bookings SET date = ? WHERE id = ? AND status = 'confirmed'", inDays(-1), b.id);
@@ -162,8 +217,8 @@ async function run(mode, seed, steps) {
       assert.ok(!(days[r.d] || []).includes(r.t), `held reschedule slot is still public: ${JSON.stringify(r)}`);
     }
     const stats = S.db.all("SELECT status, COUNT(*) c FROM bookings GROUP BY status").map((r) => `${r.status}:${r.c}`).join(" ");
-    const extra = S.db.get("SELECT COALESCE(SUM(resched_count), 0) moved, SUM(resched_status = 'pending') held, (SELECT COUNT(*) FROM packages WHERE private_customer_id IS NOT NULL) offers, SUM(balance_status = 'paid') bal FROM bookings");
-    return `${stats} | moved:${extra.moved} held:${extra.held} offers:${extra.offers} balances:${extra.bal}`;
+    const extra = S.db.get("SELECT COALESCE(SUM(resched_count), 0) moved, SUM(resched_status = 'pending') held, (SELECT COUNT(*) FROM packages WHERE private_customer_id IS NOT NULL) offers, SUM(balance_status = 'paid') bal, (SELECT COUNT(*) FROM balance_parts WHERE status IN ('paid','partial_refund','refunded')) parts, (SELECT COUNT(*) FROM balance_parts WHERE status = 'stray') strays, (SELECT COUNT(*) FROM carts WHERE status = 'paid') carts FROM bookings");
+    return `${stats} | moved:${extra.moved} held:${extra.held} offers:${extra.offers} balances:${extra.bal} parts:${extra.parts} stray-parts:${extra.strays} carts:${extra.carts}`;
   } finally { await S.close(); if (fake) await fake.close(); }
 }
 
