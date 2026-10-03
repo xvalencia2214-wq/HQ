@@ -1,8 +1,9 @@
 import { HttpError, addDays, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
-import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, POLICIES, SHORT_MINUTES, SLOTS, TIMES, categoryOf } from "../pricing.js";
+import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, TIMES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
 import { expirePending, firstPhotos, fromCents, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
+import { upcomingHolidays } from "./specials.js";
 
 // Which music suits which event when a group hasn't said what it plays.
 const EVENT_FIT = {
@@ -101,10 +102,10 @@ export default function searchRoutes(ctx, add) {
   add("GET", "/api/health", () => ({ ok: true }));
 
   add("GET", "/api/meta", () => ({
-    events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, times: TIMES, short_minutes: SHORT_MINUTES, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
+    events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, times: TIMES, short_minutes: SHORT_MINUTES, needs_presets: NEEDS_PRESETS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
-    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
+    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, direct_fee_pct: config.directFeePct, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone()
   }));
 
   add("GET", "/api/nearest-zip", ({ query }) => {

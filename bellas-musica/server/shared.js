@@ -95,7 +95,7 @@ export function publicGroup(ctx, g, extras = {}) {
     events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
-    events: safeJson(g.events, []), songs: safeJson(g.songs, []),
+    events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []),
     video: g.video_provider ? { provider: g.video_provider, url: embedUrl(g.video_provider, g.video_id) } : null,
     ...extras.fields
   };
@@ -107,7 +107,7 @@ export function groupDetail(ctx, g) {
     fields: {
       next_open: firstOpenDate(db, g.id),
       photos: db.all("SELECT id, file FROM photos WHERE group_id = ? ORDER BY position, created_at", g.id).map((p) => ({ id: p.id, url: "/uploads/" + p.file })),
-      packages: db.all("SELECT id, name, description, hours, minutes, price_cents FROM packages WHERE group_id = ? AND private_customer_id IS NULL ORDER BY price_cents", g.id),
+      packages: db.all("SELECT id, name, description, hours, minutes, price_cents, holiday, holiday_date FROM packages WHERE group_id = ? AND private_customer_id IS NULL AND (holiday_date = '' OR holiday_date > ?) ORDER BY holiday_date != '' DESC, price_cents", g.id, todayStr()),
       addons: db.all("SELECT id, name, description, price_cents FROM addons WHERE group_id = ? ORDER BY id", g.id),
       recent_reviews: db.all(
         `SELECT r.id, r.rating, r.text, r.created_at, r.reply, r.reply_at, u.name FROM reviews r JOIN users u ON u.id = r.customer_id
@@ -152,15 +152,25 @@ export const LIVE_SQL = "hidden = 0 AND paused = 0 AND (published_at > 0 OR demo
 export const isLive = (g) => !g.hidden && !g.paused && (g.published_at > 0 || g.demo === 1);
 
 // Not-live groups look like they don't exist to everyone except their manager, and (unless you hid them) customers who already have a booking or a conversation.
+// The listing's owner, or a helper the owner added to the team.
+export const isTeam = (db, user, g) => Boolean(user && g && (g.owner_id === user.id || db.get("SELECT 1 AS x FROM group_team WHERE group_id = ? AND user_id = ?", g.id, user.id)));
+export const roleOf = (db, user, g) => (!user || !g ? "" : g.owner_id === user.id ? "owner" : isTeam(db, user, g) ? "manager" : "");
 export function getVisibleGroup(db, id, user) {
   const g = getGroup(db, id);
-  if (isLive(g) || (user && g.owner_id === user.id)) return g;
+  if (isLive(g) || isTeam(db, user, g)) return g;
   if (user && !g.hidden && db.get("SELECT (SELECT COUNT(*) FROM bookings WHERE group_id = ? AND customer_id = ? AND status != 'expired') + (SELECT COUNT(*) FROM messages WHERE group_id = ? AND customer_id = ?) n", g.id, user.id, g.id, user.id).n) return g;
   throw new HttpError(404, "Group not found");
 }
+// Running the listing day to day: the owner or a team member.
 export function requireOwner(db, user, groupId) {
   const g = getGroup(db, groupId);
-  if (!user || g.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
+  if (!isTeam(db, user, g)) throw new HttpError(403, "You don't manage this group");
+  return g;
+}
+// Payouts, the team itself and paid upgrades: the owner only.
+export function requireRealOwner(db, user, groupId) {
+  const g = getGroup(db, groupId);
+  if (!user || g.owner_id !== user.id) throw new HttpError(403, isTeam(db, user, g) ? "Only the owner of this listing can do that" : "You don't manage this group");
   return g;
 }
 
@@ -274,7 +284,7 @@ async function markBalancePaidLocked(ctx, bookingId, paymentIntent) {
   const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
   const v = { ...ctx.notify.bookingVars(paid, g), url: `${ctx.config.baseUrl}/#/booking/${paid.id}` };
   ctx.notify.to(paid.customer_id, "balance.paid.customer", v);
-  if (g.owner_id) ctx.notify.to(g.owner_id, "balance.paid.group", { ...v, url: `${ctx.config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+  ctx.notify.toGroup(g, "balance.paid.group", { ...v, url: `${ctx.config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
   return paid;
 }
 
@@ -304,12 +314,23 @@ async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
     await refundBooking(ctx, db.get("SELECT * FROM bookings WHERE id = ?", b.id), b.deposit_cents);
     return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
   }
-  const paid = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+  let paid = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+  if (paid.status === "requested" && paid.direct) {
+    // the vendor's own payment link: the vendor already agreed, so paying confirms it
+    db.run("UPDATE bookings SET status = 'confirmed', updated_at = ? WHERE id = ?", now(), paid.id);
+    paid = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+    ctx.stats.count("booking_paid", paid.group_id); ctx.stats.count("booking_confirmed", paid.group_id);
+    const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
+    const base = ctx.config.baseUrl, v = ctx.notify.bookingVars(paid, g);
+    ctx.notify.toGroup(g, "link.paid.group", { ...v, url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    ctx.notify.to(paid.customer_id, "booking.confirmed.customer", { ...v, url: `${base}/#/booking/${paid.id}` });
+    return paid;
+  }
   if (paid.status === "requested") {
     ctx.stats.count("booking_paid", paid.group_id);
     const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
     const base = ctx.config.baseUrl, v = ctx.notify.bookingVars(paid, g);
-    if (g.owner_id) ctx.notify.to(g.owner_id, "booking.requested.group", { ...v, url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    ctx.notify.toGroup(g, "booking.requested.group", { ...v, url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     ctx.notify.to(paid.customer_id, "booking.received.customer", { ...v, url: `${base}/#/booking/${paid.id}` });
   }
   return paid;
@@ -347,7 +368,7 @@ async function markPartPaidLocked(ctx, partId, paymentIntent) {
   const g = db.get("SELECT id, name, contact_phone, owner_id FROM groups WHERE id = ?", paid.group_id);
   const v = { ...ctx.notify.bookingVars(paid, g), amount: usd(p.amount_cents), payer: p.payer_name, left: usd(owed - paid.balance_parts_cents), url: `${ctx.config.baseUrl}/#/booking/${paid.id}` };
   ctx.notify.to(paid.customer_id, p.payer_id && p.payer_id !== paid.customer_id ? "part.padrino.customer" : "part.paid.customer", v);
-  if (g.owner_id) ctx.notify.to(g.owner_id, "part.paid.group", { ...v, url: `${ctx.config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+  ctx.notify.toGroup(g, "part.paid.group", { ...v, url: `${ctx.config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
   return db.get("SELECT * FROM balance_parts WHERE id = ?", p.id);
 }
 

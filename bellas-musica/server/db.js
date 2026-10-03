@@ -162,6 +162,87 @@ CREATE TABLE IF NOT EXISTS bundle_members (
   accepted INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (bundle_id, group_id)
 );
+-- Helpers who run a listing with its owner (answer requests and messages, manage the calendar and lineups). Payouts, the
+-- team itself and paid upgrades stay with the owner.
+CREATE TABLE IF NOT EXISTS group_team (
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  added_by INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (group_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS team_invites (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  email TEXT NOT NULL DEFAULT '',
+  token_hash TEXT NOT NULL UNIQUE,
+  created_by INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used_by INTEGER NOT NULL DEFAULT 0,
+  used_at INTEGER NOT NULL DEFAULT 0
+);
+-- A vendor's payment link for a client it found itself (WhatsApp, Facebook, word of mouth): the time is held until the
+-- link expires; the client opens it, signs in and pays the deposit, and the booking is confirmed right away.
+CREATE TABLE IF NOT EXISTS pay_links (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  created_by INTEGER NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  client_name TEXT NOT NULL,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  minutes INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  guests INTEGER NOT NULL,
+  event_zip TEXT NOT NULL,
+  address TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  total_cents INTEGER NOT NULL,
+  deposit_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',            -- open | used | cancelled
+  expires_at INTEGER NOT NULL,
+  booking_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pay_links_group ON pay_links(group_id, date);
+-- The musicians or workers a vendor sends to its gigs, and who worked (and was paid for) each booking.
+CREATE TABLE IF NOT EXISTS crew (
+  id INTEGER PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  pay_cents INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS booking_crew (
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  crew_id INTEGER NOT NULL REFERENCES crew(id) ON DELETE CASCADE,
+  pay_cents INTEGER NOT NULL DEFAULT 0,
+  sent_at INTEGER NOT NULL DEFAULT 0,
+  paid_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (booking_id, crew_id)
+);
+-- Added at the party: one more hour, an add-on, or anything else, paid in the app or in cash.
+CREATE TABLE IF NOT EXISTS extras (
+  id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,                              -- hour | addon | other
+  label TEXT NOT NULL,
+  minutes INTEGER NOT NULL DEFAULT 0,
+  amount_cents INTEGER NOT NULL,
+  fee_cents INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,                            -- asked (by the family) | offered (waiting for payment) | paid | cash | declined | cancelled
+  asked_by TEXT NOT NULL,                          -- customer | group
+  session_id TEXT NOT NULL DEFAULT '',
+  pi TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  paid_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_extras_booking ON extras(booking_id);
 -- Times blocked by a vendor's own calendar (imported from Google/Apple/Outlook through its private iCal link).
 CREATE TABLE IF NOT EXISTS ext_busy (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -468,6 +549,12 @@ export function openDb(config) {
   ensureColumn("bookings", "duration_min", "INTEGER NOT NULL DEFAULT 0"); // 0 = hours * 60 (older bookings)
   ensureColumn("bookings", "hold_until", "INTEGER NOT NULL DEFAULT 0");   // unpaid hold deadline for payment links (0 = 30 minutes)
   db.exec("DROP INDEX IF EXISTS uq_slot");
+  ensureColumn("bookings", "direct", "INTEGER NOT NULL DEFAULT 0");        // booked through the vendor's own payment link
+  ensureColumn("bookings", "link_id", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn("groups", "needs_json", "TEXT NOT NULL DEFAULT '[]'");       // what the vendor needs from the family (power, parking...)
+  ensureColumn("bookings", "needs_json", "TEXT NOT NULL DEFAULT '[]'");     // what the family confirmed when booking
+  ensureColumn("packages", "holiday", "TEXT NOT NULL DEFAULT ''");          // a holiday serenata: mothers_day | guadalupe
+  ensureColumn("packages", "holiday_date", "TEXT NOT NULL DEFAULT ''");     // ...bookable only on this date
   ensureColumn("users", "email_verified", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("users", "email_notify", "INTEGER NOT NULL DEFAULT 1");
   const q = {

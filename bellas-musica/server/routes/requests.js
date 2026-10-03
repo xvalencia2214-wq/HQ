@@ -28,7 +28,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
   const out = [];
   for (const g of db.all(`SELECT * FROM groups WHERE ${LIVE_SQL} AND zip IN (${nearby.map(() => "?").join(",")})`, ...nearby)) {
     if (skip.has(g.id)) continue;
-    if (g.owner_id === customerId) continue;
+    if (g.owner_id === customerId || db.get("SELECT 1 AS x FROM group_team WHERE group_id = ? AND user_id = ?", g.id, customerId)) continue; // their own listing
     if (!g.demo && !g.owner_id) continue;              // an unclaimed invitation has nobody to answer
     if (!isBookable(ctx, g)) continue;
     if (categoryOf(g.type) !== category) continue; // music by default; tents, food, decorations... when asked
@@ -68,7 +68,7 @@ function deliver(ctx, r, picked, round) {
     }
   });
   for (const { g } of picked) {
-    if (g.owner_id) ctx.notify.to(g.owner_id, "request.group", { group: g.name, event: r.event, date: r.date, guests: String(r.guests), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=messages` }, { phone: g.contact_phone });
+    ctx.notify.toGroup(g, "request.group", { group: g.name, event: r.event, date: r.date, guests: String(r.guests), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=messages` }, { phone: g.contact_phone });
   }
 }
 

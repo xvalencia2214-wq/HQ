@@ -1,13 +1,14 @@
 import crypto from "node:crypto";
-import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
+import { HttpError, addDays, int, isDate, isZip, now, oneOf, safeJson, str, todayStr, daysBetween, withLock } from "../util.js";
 import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balanceLeft, balancePaidInApp, refundPercent, isTime } from "../pricing.js";
 import { assertStart, checkStart, durationOf, packageMinutes } from "../schedule.js";
+import { extrasOf, extrasPaidCents, markExtraPaid } from "./extras.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
-import { RESCHED_TTL, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner } from "../shared.js";
+import { RESCHED_TTL, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner, isTeam } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -34,6 +35,7 @@ export default function bookingRoutes(ctx, add) {
         if (!user || pkg.private_customer_id !== user.id) throw new HttpError(400, "That package isn't offered by this group");
         if (pkg.expires_at <= now()) throw new HttpError(400, "This custom offer has expired. Ask the group for a new one.");
       }
+      if (pkg.holiday_date && pkg.holiday_date !== date) throw new HttpError(400, `This special is only for ${pkg.holiday_date}`);
     }
     if (!pkg && group.hourly === 0) throw new HttpError(400, `${group.name} is booked by package. Pick one of their packages.`);
     const minHours = group.min_hours || 1; // the group's own minimum applies to booking by the hour; its listed packages are priced as shown
@@ -80,7 +82,7 @@ export default function bookingRoutes(ctx, add) {
     db.run("UPDATE bookings SET checkin_code = ? WHERE id = ? AND checkin_code = ''", code, b.id);
     return db.get("SELECT checkin_code c FROM bookings WHERE id = ?", b.id).c;
   };
-  const canNoShow = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && !b.noshow_status && b.date < today && daysBetween(b.date, today) <= NOSHOW_WINDOW_DAYS;
+  const canNoShow = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && !b.noshow_status && b.date < today && daysBetween(b.date, today) <= NOSHOW_WINDOW_DAYS && !extrasPaidCents(db, b.id);
   const canReschedule = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !reschedPending(b) && b.resched_count < RESCHED_MAX && daysBetween(today, b.date) >= RESCHED_MIN_DAYS;
   const clearResched = (id, extraSql = "") => db.run(`UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = ''${extraSql}, updated_at = ? WHERE id = ?`, now(), id);
 
@@ -96,7 +98,8 @@ export default function bookingRoutes(ctx, add) {
       balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
       balance_paid_cents: balancePaidInApp(b), balance_left_cents: balanceLeft(b),
       parts: db.all("SELECT id, payer_id, payer_name, note, amount_cents, status, paid_at FROM balance_parts WHERE booking_id = ? AND status != 'pending' ORDER BY paid_at", b.id).map((p) => ({ payer_name: p.payer_name, note: p.note, amount_cents: p.amount_cents, status: p.status, paid_at: p.paid_at, by_customer: p.payer_id === b.customer_id })),
-      discount_cents: b.discount_cents, bundle_id: b.bundle_id,
+      discount_cents: b.discount_cents, bundle_id: b.bundle_id, direct: Boolean(b.direct), extras: extrasOf(db, b.id), needs: safeJson(b.needs_json, []),
+      can_extra: b.status === "confirmed" && b.payment_status !== "unpaid" && !b.noshow_status && today >= addDays(b.date, -1) && today <= addDays(b.date, 1),
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
       reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
     };
@@ -175,7 +178,7 @@ export default function bookingRoutes(ctx, add) {
     assertStart(db, getGroup(db, b.group_id), date, time, durationOf(b), { exceptId: b.id });
     db.run("UPDATE bookings SET resched_status = 'pending', resched_date = ?, resched_time = ?, resched_note = ?, resched_at = ?, updated_at = ? WHERE id = ?", date, time, str(body.note, "Note", { max: 200 }), now(), now(), b.id);
     const g = getGroup(db, b.group_id), fresh = db.get("SELECT * FROM bookings WHERE id = ?", b.id);
-    if (g.owner_id) notify.to(g.owner_id, "resched.requested.group", { ...notify.bookingVars(fresh, g), newDate: date, newTime: time, note: fresh.resched_note, url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    notify.toGroup(g, "resched.requested.group", { ...notify.bookingVars(fresh, g), newDate: date, newTime: time, note: fresh.resched_note, url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
   }), { auth: true });
 
@@ -189,7 +192,7 @@ export default function bookingRoutes(ctx, add) {
   add("POST", "/api/bookings/:id/reschedule/respond", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
     const g = b && getGroup(db, b.group_id);
-    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (!b || !isTeam(db, user, g)) throw new HttpError(404, "Booking not found");
     if (b.status !== "confirmed" || !reschedPending(b)) throw new HttpError(400, "There is no pending request on this booking.");
     // once the event day has passed (or a no-show was reported) the date can't move any more
     if (body.accept === true && (b.date < todayStr() || b.noshow_status)) throw new HttpError(400, "This event date has already passed, so it can't be moved.");
@@ -233,7 +236,7 @@ export default function bookingRoutes(ctx, add) {
   add("POST", "/api/bookings/:id/balance-offline", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
     const g = b && getGroup(db, b.group_id);
-    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (!b || !isTeam(db, user, g)) throw new HttpError(404, "Booking not found");
     if (b.status !== "confirmed" || balanceCents(b) <= 0) throw new HttpError(400, "There is no balance to mark on this booking");
     if (body.received === true) {
       if (b.balance_status !== "unpaid") throw new HttpError(400, b.balance_status === "offline" ? "Already marked as received" : "The customer already paid the balance in the app");
@@ -252,7 +255,7 @@ export default function bookingRoutes(ctx, add) {
   add("POST", "/api/bookings/:id/checkin", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
     const g = b && getGroup(db, b.group_id);
-    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (!b || !isTeam(db, user, g)) throw new HttpError(404, "Booking not found");
     if (b.status !== "confirmed") throw new HttpError(400, "Only confirmed bookings can be checked in.");
     if (b.checked_in_at) throw new HttpError(400, "Already checked in.");
     if (b.date !== todayStr()) throw new HttpError(400, "Check-in opens on the day of the event.");
@@ -297,7 +300,7 @@ export default function bookingRoutes(ctx, add) {
     // a no-show report also withdraws any request to move the date (it frees the slot it was holding)
     db.run("UPDATE bookings SET noshow_status = 'reported', noshow_note = ?, noshow_at = ?, resched_status = '', resched_date = '', resched_time = '', resched_note = '', updated_at = ? WHERE id = ?", note, now(), now(), b.id);
     const g = getGroup(db, b.group_id);
-    if (g.owner_id) notify.to(g.owner_id, "noshow.reported.group", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+    notify.toGroup(g, "noshow.reported.group", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     ctx.alert(`NO-SHOW REPORTED: booking ${b.id} (${g.name}, ${b.date}). Review it on the Admin page.`, "noshow-" + b.id);
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
   }), { auth: true });
@@ -305,7 +308,7 @@ export default function bookingRoutes(ctx, add) {
   add("POST", "/api/bookings/:id/noshow/reply", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
     const g = b && getGroup(db, b.group_id);
-    if (!b || g.owner_id !== user.id) throw new HttpError(404, "Booking not found");
+    if (!b || !isTeam(db, user, g)) throw new HttpError(404, "Booking not found");
     if (b.noshow_status !== "reported") throw new HttpError(400, "There is no open report on this booking.");
     if (b.noshow_reply) throw new HttpError(400, "You already answered this report.");
     db.run("UPDATE bookings SET noshow_reply = ?, updated_at = ? WHERE id = ?", str(body.reply, "Your answer", { min: 5, max: 400 }), now(), b.id);
@@ -316,8 +319,8 @@ export default function bookingRoutes(ctx, add) {
   // ---- add to calendar ----
   add("GET", "/api/bookings/:id/ics", ({ params, user, res }) => {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
-    const g = b && db.get("SELECT owner_id FROM groups WHERE id = ?", b.group_id);
-    const isCustomer = b && b.customer_id === user.id, isOwner = b && g && g.owner_id === user.id;
+    const g = b && db.get("SELECT id, owner_id FROM groups WHERE id = ?", b.group_id);
+    const isCustomer = b && b.customer_id === user.id, isOwner = b && g && isTeam(db, user, g);
     if (!b || (!isCustomer && !isOwner)) throw new HttpError(404, "Booking not found");
     if (!["requested", "confirmed"].includes(b.status)) throw new HttpError(400, "Only active bookings can be added to a calendar");
     const money = (c) => `$${(c / 100).toFixed(2)}`;
@@ -339,7 +342,7 @@ export default function bookingRoutes(ctx, add) {
     if (ctx.email.live && !user.email_verified) throw new HttpError(403, "Please confirm your email address first. We sent you a link; you can ask for another from the banner at the top.", { code: "verify_email" });
     if (body.acceptPolicy !== true) throw new HttpError(400, "Please accept the deposit and cancellation policy");
     const target = getVisibleGroup(db, str(body.groupId, "Group", { required: true, max: 80 }), user);
-    if (target.owner_id === user.id) throw new HttpError(400, "You can't book your own group");
+    if (isTeam(db, user, target)) throw new HttpError(400, "You can't book your own group");
     if (!isBookable(ctx, target)) throw new HttpError(400, "This group isn't taking online deposits yet. Send them a message instead.");
 
     // Their own unpaid hold on this exact slot: hand back the same checkout instead of a confusing "not available".
@@ -357,16 +360,19 @@ export default function bookingRoutes(ctx, add) {
     if (db.get("SELECT COUNT(*) c FROM bookings WHERE customer_id = ? AND status = 'pending_payment'", user.id).c >= 6) { // up to 6, so a whole party can be paid in one checkout
       throw new HttpError(429, "You have several unpaid holds. Pay for or cancel one before holding another.");
     }
+    // what the vendor needs from the family (power, parking, flat ground...): they confirm it before paying
+    const needs = safeJson(target.needs_json, []);
+    if (needs.length && body.acceptNeeds !== true) throw new HttpError(400, "Please confirm you can provide what they need");
     const r = priceRequest(body, { requireSlot: true }, user);
     const phone = normalizePhone(str(body.phone, "Phone", { required: true, max: 30 }));
     if (!phone) throw new HttpError(400, "Enter a valid US phone number");
     const id = newId("b"), q = r.quote, t = now();
     try {
       db.run(
-        `INSERT INTO bookings (id, group_id, customer_id, date, time, hours, duration_min, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
+        `INSERT INTO bookings (id, group_id, customer_id, date, time, hours, duration_min, needs_json, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
            subtotal_cents, travel_fee_cents, addons_json, addons_cents, total_cents, deposit_cents, platform_fee_cents, policy, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
-        id, r.group.id, user.id, r.date, r.time, q.hours, r.minutes, r.pkg?.id ?? null, r.pkg?.name ?? "", r.event, r.guests, r.eventZip,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`,
+        id, r.group.id, user.id, r.date, r.time, q.hours, r.minutes, JSON.stringify(needs), r.pkg?.id ?? null, r.pkg?.name ?? "", r.event, r.guests, r.eventZip,
         str(body.name, "Name", { required: true, max: 80 }), phone, str(body.address, "Event location", { required: true, max: 160 }), str(body.message, "Message", { max: 500 }),
         q.subtotal_cents, q.travel_fee_cents, JSON.stringify(q.addons.map((a) => ({ name: a.name, price_cents: a.price_cents }))), q.addons_cents, q.total_cents, q.deposit_cents, q.platform_fee_cents, q.policy, t, t);
     } catch (e) {
@@ -421,7 +427,7 @@ export default function bookingRoutes(ctx, add) {
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, params.id);
     if (!b) throw new HttpError(404, "Booking not found");
     const g = getGroup(db, b.group_id);
-    const isOwner = g.owner_id === user.id, isCustomer = b.customer_id === user.id;
+    const isOwner = isTeam(db, user, g), isCustomer = b.customer_id === user.id;
     if (!isOwner && !isCustomer) throw new HttpError(404, "Booking not found");
     const base = config.baseUrl, bv = notify.bookingVars(b, g);
     const today = todayStr();
@@ -456,7 +462,7 @@ export default function bookingRoutes(ctx, add) {
       setStatus("cancelled");
       const refunded = after.refund_cents + after.balance_refund_cents;
       if (isOwner) notify.to(b.customer_id, "booking.cancelled.customer", { ...bv, refund: usd(refunded), url: `${base}/#/` });
-      else if (g.owner_id) notify.to(g.owner_id, "booking.cancelled.group", { ...bv, refund: usd(refunded), url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
+      else notify.toGroup(g, "booking.cancelled.group", { ...bv, refund: usd(refunded), url: `${base}/#/dashboard?g=${g.id}&tab=requests` }, { phone: g.contact_phone });
     }
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), isOwner ? "owner" : "customer") };
   }), { auth: true });
@@ -483,6 +489,10 @@ export default function bookingRoutes(ctx, add) {
           const p = db.get("SELECT amount_cents FROM balance_parts WHERE id = ?", String(obj.metadata.part_id));
           if (p && obj.amount_total === p.amount_cents) await markPartPaid(ctx, String(obj.metadata.part_id), String(obj.payment_intent || ""));
           else console.error("webhook: amount mismatch or unknown balance part", obj.metadata?.part_id);
+        } else if (kind === "extra") {
+          const x = db.get("SELECT amount_cents FROM extras WHERE id = ?", String(obj.metadata.extra_id));
+          if (x && obj.amount_total === x.amount_cents) await markExtraPaid(ctx, String(obj.metadata.extra_id), String(obj.payment_intent || ""));
+          else console.error("webhook: amount mismatch or unknown extra", obj.metadata?.extra_id);
         } else if (kind === "cart") {
           const c = db.get("SELECT amount_cents FROM carts WHERE id = ?", String(obj.metadata.cart_id));
           if (c && obj.amount_total === c.amount_cents) await markCartPaid(ctx, String(obj.metadata.cart_id), String(obj.payment_intent || ""));

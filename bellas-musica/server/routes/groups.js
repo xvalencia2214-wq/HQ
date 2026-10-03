@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
-import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, MAX_HOURS, POLICIES, SHORT_MINUTES, SLOTS, categoryOf } from "../pricing.js";
+import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, MAX_HOURS, MAX_NEEDS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, categoryOf } from "../pricing.js";
 import { cleanEntries, durationOf, peakLoad } from "../schedule.js";
 import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
-import { activeOffers, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending } from "../shared.js";
+import { activeOffers, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -15,7 +15,7 @@ const MAX_PHOTOS = 10;
 const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 
 const slug = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "group";
-const dollarsToCents = (v, name, { min, max }) => int(v, name, { min, max }) * 100;
+export const dollarsToCents = (v, name, { min, max }) => int(v, name, { min, max }) * 100;
 
 function stringList(v, name, { maxItems, maxLen }) {
   if (!Array.isArray(v)) throw new HttpError(400, `${name} must be a list`);
@@ -126,11 +126,15 @@ export default function groupRoutes(ctx, add) {
     return manageView(getGroup(db, g.id));
   }, { auth: true });
 
-  add("GET", "/api/my/groups", ({ user }) => ({ groups: db.all("SELECT * FROM groups WHERE owner_id = ? ORDER BY created_at", user.id).map(manageView) }), { auth: true });
+  // the listings you own, and the ones you help run
+  add("GET", "/api/my/groups", ({ user }) => ({
+    groups: db.all("SELECT * FROM groups WHERE owner_id = ? OR id IN (SELECT group_id FROM group_team WHERE user_id = ?) ORDER BY created_at", user.id, user.id)
+      .map((g) => ({ ...manageView(g), my_role: g.owner_id === user.id ? "owner" : "manager" }))
+  }), { auth: true });
 
   add("GET", "/api/groups/:id", ({ params, user }) => {
     const g = getVisibleGroup(db, params.id, user);
-    const isOwner = Boolean(user && g.owner_id === user.id);
+    const isOwner = isTeam(db, user, g);
     if (!isOwner) ctx.stats.count("group_view", g.id); // a group looking at its own page is not a customer view
     return { ...groupDetail(ctx, g), is_owner: isOwner };
   });
@@ -147,6 +151,7 @@ export default function groupRoutes(ctx, add) {
       set.hourly = body.hourly ? 1 : 0;
       if (body.hourly && (set.rate_cents ?? g.rate_cents) < 5000) throw new HttpError(400, "Set a price per hour (at least $50) to take bookings by the hour");
     }
+    if (body.needs !== undefined) set.needs_json = JSON.stringify(stringList(body.needs, "What you need", { maxItems: MAX_NEEDS, maxLen: 80 }).map((x) => maskContact(x).text));
     if (body.weather_policy !== undefined) set.weather_policy = maskContact(str(body.weather_policy, "Weather policy", { max: 300 })).text;
     if (body.min_hours !== undefined) set.min_hours = int(body.min_hours, "Minimum hours", { min: 1, max: MAX_HOURS });
     // several trucks, crews or lineups can work at the same time; travel/setup time is kept free after each booking
@@ -204,8 +209,9 @@ export default function groupRoutes(ctx, add) {
   }, { auth: true });
   const ownedPackage = (user, id) => {
     const p = db.get("SELECT p.*, g.owner_id FROM packages p JOIN groups g ON g.id = p.group_id WHERE p.id = ?", id);
+    const mine = p && isTeam(db, user, { id: p.group_id, owner_id: p.owner_id });
     if (!p || p.private_customer_id !== null) throw new HttpError(404, "Package not found"); // custom offers have their own routes
-    if (p.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
+    if (!mine) throw new HttpError(403, "You don't manage this group");
     return p;
   };
   add("PATCH", "/api/packages/:pid", ({ params, body, user }) => {
@@ -238,8 +244,9 @@ export default function groupRoutes(ctx, add) {
   }, { auth: true });
   const ownedAddon = (user, id) => {
     const a = db.get("SELECT a.*, g.owner_id FROM addons a JOIN groups g ON g.id = a.group_id WHERE a.id = ?", id);
+    const mine = a && isTeam(db, user, { id: a.group_id, owner_id: a.owner_id });
     if (!a) throw new HttpError(404, "Add-on not found");
-    if (a.owner_id !== user.id) throw new HttpError(403, "You don't manage this group");
+    if (!mine) throw new HttpError(403, "You don't manage this group");
     return a;
   };
   add("PATCH", "/api/addons/:aid", ({ params, body, user }) => {
@@ -403,7 +410,7 @@ export default function groupRoutes(ctx, add) {
 
   // ---- payouts (Stripe Connect Express) ----
   add("POST", "/api/groups/:id/stripe/onboard", async ({ params, user }) => {
-    const g = requireOwner(db, user, params.id);
+    const g = requireRealOwner(db, user, params.id);
     if (!stripe.live) { db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", g.id); return { ready: true, simulated: true }; }
     let account = g.stripe_account_id;
     if (!account) {
@@ -415,7 +422,7 @@ export default function groupRoutes(ctx, add) {
   }, { auth: true });
 
   add("POST", "/api/groups/:id/stripe/refresh", async ({ params, user }) => {
-    const g = requireOwner(db, user, params.id);
+    const g = requireRealOwner(db, user, params.id);
     if (!stripe.live) return { ready: Boolean(g.stripe_ready) };
     if (!g.stripe_account_id) return { ready: false };
     const acct = await stripe.getAccount(g.stripe_account_id);
@@ -427,7 +434,7 @@ export default function groupRoutes(ctx, add) {
 
   // ---- paid featured placement (30 days) ----
   add("POST", "/api/groups/:id/feature", async ({ params, user }) => {
-    const g = requireOwner(db, user, params.id);
+    const g = requireRealOwner(db, user, params.id);
     const id = newId("f");
     db.run("INSERT INTO payments_feature (id, group_id, amount_cents, created_at) VALUES (?, ?, ?, ?)", id, g.id, config.featurePriceCents, now());
     if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/feature/${id}`, amount_cents: config.featurePriceCents };

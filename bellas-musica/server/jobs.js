@@ -41,7 +41,7 @@ export function sendEventReminders(ctx, { hour = businessHour() } = {}) {
     db.run("UPDATE bookings SET reminder1_sent = 1 WHERE id = ?", b.id); sent++;
     const v = notify.bookingVars(b, { name: b.group_name });
     notify.to(b.customer_id, "event.reminder.customer", { ...v, when: "tomorrow", balanceDue: balanceDue(b), url: `${config.baseUrl}/#/booking/${b.id}` });
-    if (b.owner_id) notify.to(b.owner_id, "event.reminder.group", { ...v, phone: b.phone, balanceLine: balanceDue(b) ? `Balance to collect: ${balanceDue(b)}` : "Balance already paid.", url: `${config.baseUrl}/#/dashboard?g=${b.group_id}&tab=requests` }, { phone: b.contact_phone });
+    notify.toGroup({ id: b.group_id, owner_id: b.owner_id }, "event.reminder.group", { ...v, phone: b.phone, balanceLine: balanceDue(b) ? `Balance to collect: ${balanceDue(b)}` : "Balance already paid.", url: `${config.baseUrl}/#/dashboard?g=${b.group_id}&tab=requests` }, { phone: b.contact_phone });
   }
   return sent;
 }

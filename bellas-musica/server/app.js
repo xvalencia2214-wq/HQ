@@ -31,6 +31,11 @@ import telemetryRoutes from "./routes/telemetry.js";
 import partyRoutes from "./routes/parties.js";
 import payPlusRoutes from "./routes/payplus.js";
 import vendorRoutes from "./routes/vendors.js";
+import teamRoutes from "./routes/team.js";
+import payLinkRoutes from "./routes/paylinks.js";
+import crewRoutes from "./routes/crew.js";
+import extrasRoutes from "./routes/extras.js";
+import specialsRoutes from "./routes/specials.js";
 import { renderVendorSite } from "./site.js";
 
 const TYPES = {
@@ -88,7 +93,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {

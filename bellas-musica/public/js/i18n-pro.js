@@ -11,6 +11,7 @@ export const EN3 = {
   "cal.oneTime": "One start time", "cal.add": "Add", "cal.from": "From", "cal.to": "To", "cal.addWindow": "Open this window",
   "cal.window": "Any start from {from} to {to}", "cal.remove": "Remove", "cal.badWindow": "The window has to end after it starts.",
   "cal.copy": "Copy this day to every {day} for the next 8 weeks", "cal.copied": "Copied to the next 8 weeks ✓", "cal.bookedList": "Booked:",
+  "earn.extras": "Extras at the party",
   "pk.length": "Length", "pk.short": "Or a short set", "pk.noShort": "No (use the hours)"
 };
 export const ES3 = {
@@ -23,5 +24,6 @@ export const ES3 = {
   "cal.oneTime": "Una hora de inicio", "cal.add": "Agregar", "cal.from": "Desde", "cal.to": "Hasta", "cal.addWindow": "Abrir este horario",
   "cal.window": "Cualquier inicio de {from} a {to}", "cal.remove": "Quitar", "cal.badWindow": "El horario tiene que terminar después de empezar.",
   "cal.copy": "Copiar este día a cada {day} de las próximas 8 semanas", "cal.copied": "Copiado a las próximas 8 semanas ✓", "cal.bookedList": "Reservado:",
+  "earn.extras": "Extras en la fiesta",
   "pk.length": "Duración", "pk.short": "O un set corto", "pk.noShort": "No (usar las horas)"
 };

@@ -3,6 +3,7 @@ import path from "node:path";
 import { HttpError, int, now, rid, str, todayStr } from "../util.js";
 import { sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
+import { isTeam } from "../shared.js";
 
 // Only a customer with a confirmed, paid booking whose date has passed can review it, once.
 export default function reviewRoutes(ctx, add) {
@@ -37,7 +38,7 @@ export default function reviewRoutes(ctx, add) {
   // The group can answer a review once in public (and edit or remove that answer). No contact details in it.
   const ownedReview = (id, user) => {
     const r = db.get("SELECT r.id, r.group_id, g.owner_id FROM reviews r JOIN groups g ON g.id = r.group_id WHERE r.id = ?", id);
-    if (!r || r.owner_id !== user.id) throw new HttpError(404, "Review not found");
+    if (!r || !isTeam(db, user, { id: r.group_id, owner_id: r.owner_id })) throw new HttpError(404, "Review not found");
     return r;
   };
   add("POST", "/api/reviews/:id/reply", ({ params, body, user }) => {

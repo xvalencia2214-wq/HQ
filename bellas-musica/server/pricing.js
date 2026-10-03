@@ -89,6 +89,58 @@ export const ADDON_PRESETS = {
   "Photographer": [{ en: "Second photographer", es: "Segundo fotógrafo" }, { en: "Printed album", es: "Álbum impreso" }],
   _: [{ en: "Sound system", es: "Equipo de sonido" }, { en: "Wireless microphone", es: "Micrófono inalámbrico" }, { en: "Delivery and setup", es: "Entrega y montaje" }]
 };
+// "What we need from you": ready-made lines a vendor can tap to add (the family confirms them when booking).
+export const NEEDS_PRESETS = {
+  music: [
+    { en: "A power outlet within 50 feet", es: "Un enchufe a menos de 50 pies" },
+    { en: "A covered spot if it rains", es: "Un lugar techado si llueve" },
+    { en: "Parking near the door for our van", es: "Estacionamiento cerca de la puerta para nuestra camioneta" },
+    { en: "A 10x10 ft space to play", es: "Un espacio de 10x10 pies para tocar" },
+    { en: "Water for the musicians", es: "Agua para los músicos" }
+  ],
+  food: [
+    { en: "Space to park the truck (about 40 ft)", es: "Espacio para estacionar la troca (unos 40 pies)" },
+    { en: "Level ground", es: "Piso parejo" },
+    { en: "A power outlet (or we bring a generator)", es: "Un enchufe (o traemos generador)" },
+    { en: "A table for serving", es: "Una mesa para servir" }
+  ],
+  rentals: [
+    { en: "Flat ground (grass or concrete)", es: "Piso plano (pasto o concreto)" },
+    { en: "A clear path for the delivery truck", es: "Paso libre para la troca de entrega" },
+    { en: "OK to stake into the ground", es: "Permiso para clavar estacas en el piso" },
+    { en: "Someone there at delivery and pickup", es: "Alguien que nos reciba al entregar y recoger" }
+  ],
+  decor: [
+    { en: "Access to the hall 3 hours before", es: "Acceso al salón 3 horas antes" },
+    { en: "A power outlet for the lights", es: "Un enchufe para las luces" },
+    { en: "Your colors and theme a week before", es: "Tus colores y tema una semana antes" }
+  ],
+  photo: [
+    { en: "A list of must-have photos", es: "Una lista de las fotos que no pueden faltar" },
+    { en: "A seat and a plate for the photographer", es: "Un lugar y un plato para el fotógrafo" }
+  ],
+  services: [
+    { en: "The venue's rules and the guest count", es: "Las reglas del lugar y el número de invitados" },
+    { en: "A spot by the door for the guard", es: "Un lugar junto a la puerta para el guardia" }
+  ],
+  venues: [
+    { en: "The final guest count a week before", es: "El número final de invitados una semana antes" },
+    { en: "Your decorator's and DJ's arrival times", es: "La hora en que llegan tu decorador y tu DJ" }
+  ]
+};
+export const MAX_NEEDS = 12;
+// Holiday serenatas: Mother's Day (May 10, from midnight on) and the Virgen de Guadalupe (December 12, mañanitas at dawn).
+export const HOLIDAYS = {
+  mothers_day: { month: 5, day: 10, emoji: "🌹" },
+  guadalupe: { month: 12, day: 12, emoji: "🌹" }
+};
+// The next date of a holiday on or after `today` (YYYY-MM-DD).
+export function holidayDate(key, today) {
+  const h = HOLIDAYS[key];
+  if (!h) return "";
+  const y = Number(today.slice(0, 4)), md = `${String(h.month).padStart(2, "0")}-${String(h.day).padStart(2, "0")}`;
+  return `${y}-${md}` > today ? `${y}-${md}` : `${y + 1}-${md}`;
+}
 export const MAX_ADDONS = 12;
 export const MAX_HOURS = 8;
 

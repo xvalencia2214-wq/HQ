@@ -190,7 +190,7 @@ export default function payPlusRoutes(ctx, add) {
       db.run("INSERT INTO bundle_members (bundle_id, group_id, accepted) VALUES (?, ?, 1)", id, g.id);
       for (const x of partners) db.run("INSERT INTO bundle_members (bundle_id, group_id, accepted) VALUES (?, ?, ?)", id, x.id, x.owner_id && x.owner_id === g.owner_id ? 1 : 0);
     });
-    for (const x of partners) if (x.owner_id && x.owner_id !== g.owner_id) ctx.notify.to(x.owner_id, "bundle.invite.group", { group: x.name, partner: g.name, bundle: name, pct: String(pct), url: `${config.baseUrl}/#/dashboard?g=${x.id}&tab=extras` });
+    for (const x of partners) if (x.owner_id && x.owner_id !== g.owner_id) ctx.notify.toGroup(x, "bundle.invite.group", { group: x.name, partner: g.name, bundle: name, pct: String(pct), url: `${config.baseUrl}/#/dashboard?g=${x.id}&tab=extras` });
     return { bundle: bundleView(db.get("SELECT * FROM bundles WHERE id = ?", id), g.id) };
   }, { auth: true });
   add("POST", "/api/bundles/:bid/accept", ({ params, body, user }) => {

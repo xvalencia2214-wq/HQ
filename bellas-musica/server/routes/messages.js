@@ -1,6 +1,6 @@
 import { HttpError, addDays, int, isDate, now, oneOf, str, todayStr } from "../util.js";
 import { EVENT_TYPES } from "../pricing.js";
-import { getGroup, getVisibleGroup, requireOwner } from "../shared.js";
+import { getGroup, getVisibleGroup, isTeam, requireOwner } from "../shared.js";
 
 const HIDDEN = "[hidden until a booking is confirmed]";
 // Phone numbers, emails and "text me on WhatsApp" style contact details stay out of chat until a booking is confirmed.
@@ -39,7 +39,7 @@ export default function messageRoutes(ctx, add) {
     }
     // One notification per 30 minutes per conversation.
     if (!recent) {
-      if (sender === "customer" && group.owner_id) ctx.notify.to(group.owner_id, "message.group", { group: group.name, url: `${config.baseUrl}/#/dashboard?g=${group.id}&tab=messages` }, { phone: group.contact_phone });
+      if (sender === "customer") ctx.notify.toGroup(group, "message.group", { group: group.name, url: `${config.baseUrl}/#/dashboard?g=${group.id}&tab=messages` }, { phone: group.contact_phone });
       else if (sender === "group") ctx.notify.to(customerId, "message.customer", { group: group.name, url: `${config.baseUrl}/#/messages?g=${group.id}` });
     }
     markRead(group.id, customerId, sender);
@@ -62,24 +62,25 @@ export default function messageRoutes(ctx, add) {
       `SELECT COUNT(DISTINCT m.group_id) c FROM messages m
        LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'customer'
        WHERE m.customer_id = ? AND m.sender = 'group' AND m.id > COALESCE(r.last_id, 0)`, user.id).c;
-    const owns = db.get("SELECT COUNT(*) c FROM groups WHERE owner_id = ?", user.id).c > 0;
-    const requests = owns ? db.get("SELECT COUNT(*) c FROM bookings b JOIN groups g ON g.id = b.group_id WHERE g.owner_id = ? AND b.status = 'requested'", user.id).c : 0;
+    const MINE = "(g.owner_id = ? OR g.id IN (SELECT group_id FROM group_team WHERE user_id = ?))"; // owned or on the team
+    const owns = db.get(`SELECT COUNT(*) c FROM groups g WHERE ${MINE}`, user.id, user.id).c > 0;
+    const requests = owns ? db.get(`SELECT COUNT(*) c FROM bookings b JOIN groups g ON g.id = b.group_id WHERE ${MINE} AND b.status = 'requested'`, user.id, user.id).c : 0;
     const managerUnread = owns ? db.get(
       `SELECT COUNT(DISTINCT m.group_id || '-' || m.customer_id) c FROM messages m JOIN groups g ON g.id = m.group_id
        LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'group'
-       WHERE g.owner_id = ? AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, user.id).c : 0;
+       WHERE ${MINE} AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, user.id, user.id).c : 0;
     return { messages: customerUnread, manager: { owns, requests, messages: managerUnread } };
   }, { auth: true });
   add("POST", "/api/groups/:id/messages", ({ params, body, user, ip }) => {
     const group = getVisibleGroup(db, params.id, user);
-    if (group.owner_id === user.id) throw new HttpError(400, "You can't message your own group");
+    if (isTeam(db, user, group)) throw new HttpError(400, "You can't message your own group");
     return post({ group, customerId: user.id, sender: "customer", body, user, ip });
   }, { auth: true });
 
   // One-tap "ask for a quote": sends the group the event details as a chat message, so nobody has to type them out.
   add("POST", "/api/groups/:id/quote-request", ({ params, body, user, ip }) => {
     const group = getVisibleGroup(db, params.id, user);
-    if (group.owner_id === user.id) throw new HttpError(400, "You can't message your own group");
+    if (isTeam(db, user, group)) throw new HttpError(400, "You can't message your own group");
     const event = oneOf(body.event, "Event type", EVENT_TYPES);
     const guests = int(body.guests, "Guests", { min: 1, max: 5000 });
     const hours = int(body.hours, "Hours", { min: 1, max: 12 });

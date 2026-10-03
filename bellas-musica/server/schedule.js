@@ -56,7 +56,7 @@ export function shortestMinutes(db, g) {
 export const capacityOf = (g) => Math.min(MAX_CAPACITY, Math.max(1, g.capacity || 1));
 
 // ---- what is already taken ----
-export function busyIntervals(db, g, date, { exceptId = "" } = {}) {
+export function busyIntervals(db, g, date, { exceptId = "", exceptLink = "" } = {}) {
   const buffer = Math.max(0, g.buffer_min || 0), out = [];
   const near = [[addDays(date, -1), -1440], [date, 0], [addDays(date, 1), 1440]];
   for (const [d, shift] of near) {
@@ -70,6 +70,11 @@ export function busyIntervals(db, g, date, { exceptId = "" } = {}) {
       out.push({ s, e: s + durationOf(b) + buffer });
     }
     for (const x of db.all("SELECT start_min, end_min FROM ext_busy WHERE group_id = ? AND date = ?", g.id, d)) out.push({ s: x.start_min + shift, e: x.end_min + shift });
+    // a payment link the vendor sent its own client holds the time until it is used or expires
+    for (const l of db.all("SELECT id, time, minutes FROM pay_links WHERE group_id = ? AND date = ? AND status = 'open' AND expires_at > ? AND id != ?", g.id, d, now(), exceptLink)) {
+      const s = timeMin(l.time) + shift;
+      out.push({ s, e: s + l.minutes + buffer });
+    }
   }
   return out;
 }
@@ -96,11 +101,11 @@ export function openTimes(db, g, date, { minutes } = {}) {
   return starts.filter((m) => fits(busy, m, m + len, cap)).map(timeLabel);
 }
 // Is `time` one of the vendor's start times that day, and does a booking of `minutes` fit there?
-export function checkStart(db, g, date, time, minutes, { exceptId = "", ignoreCalendar = false } = {}) {
+export function checkStart(db, g, date, time, minutes, { exceptId = "", exceptLink = "", ignoreCalendar = false } = {}) {
   const m = timeMin(time);
   if (m < 0) return { listed: false, fits: false };
   const listed = ignoreCalendar || startMinutes(dayEntries(db, g.id, date)).includes(m);
-  const ok = fits(busyIntervals(db, g, date, { exceptId }), m, m + minutes + Math.max(0, g.buffer_min || 0), capacityOf(g));
+  const ok = fits(busyIntervals(db, g, date, { exceptId, exceptLink }), m, m + minutes + Math.max(0, g.buffer_min || 0), capacityOf(g));
   return { listed, fits: ok };
 }
 // The same as an error, for booking, moving and paying late.

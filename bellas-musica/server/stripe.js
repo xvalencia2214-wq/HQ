@@ -47,7 +47,7 @@ export function createStripe(config) {
     mode: live ? "stripe" : "simulated",
 
     // Deposit for a booking: charged to the platform, transferred to the group's connected account minus our fee.
-    checkoutForBooking({ booking, group, successUrl, cancelUrl }) {
+    checkoutForBooking({ booking, group, successUrl, cancelUrl, attempt = "" }) {
       return call("POST", "/v1/checkout/sessions", {
         mode: "payment",
         success_url: successUrl,
@@ -61,7 +61,7 @@ export function createStripe(config) {
           metadata: { kind: "booking", booking_id: booking.id }
         },
         metadata: { kind: "booking", booking_id: booking.id }
-      }, `checkout-booking-${booking.id}`);
+      }, `checkout-booking-${booking.id}${attempt ? "-" + attempt : ""}`); // a payment link can be paid days later: a new checkout each time
     },
 
     checkoutForFeature({ feature, group, successUrl, cancelUrl }) {
@@ -95,6 +95,16 @@ export function createStripe(config) {
         payment_intent_data: { transfer_data: { destination: group.stripe_account_id }, metadata: { kind: "part", part_id: part.id, booking_id: booking.id } },
         metadata: { kind: "part", part_id: part.id, booking_id: booking.id }
       }, `checkout-part-${part.id}`);
+    },
+    // Added at the party (one more hour, an add-on): straight to the vendor, with the platform fee on it like the booking.
+    checkoutForExtra({ extra, booking, group, successUrl, cancelUrl }) {
+      return call("POST", "/v1/checkout/sessions", {
+        mode: "payment", success_url: successUrl, cancel_url: cancelUrl, client_reference_id: extra.id,
+        expires_at: Math.floor(Date.now() / 1000) + 2400,
+        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: extra.amount_cents, product_data: { name: `${group.name} on ${booking.date}: ${extra.label}` } } }],
+        payment_intent_data: { application_fee_amount: extra.fee_cents, transfer_data: { destination: group.stripe_account_id }, metadata: { kind: "extra", extra_id: extra.id, booking_id: booking.id } },
+        metadata: { kind: "extra", extra_id: extra.id, booking_id: booking.id }
+      }, `checkout-extra-${extra.id}-${Math.floor(Date.now() / 600000)}`);
     },
     // Several deposits in one charge. The money stays with the platform until we transfer each vendor its share
     // (separate charges and transfers), grouped by transfer_group so Stripe shows them together.

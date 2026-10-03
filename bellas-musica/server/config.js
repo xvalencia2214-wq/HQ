@@ -45,6 +45,7 @@ export function loadConfig(env = process.env) {
     featurePriceCents: int(env.FEATURE_PRICE_CENTS, 4900), // 30 days of featured placement
     proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
     proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
+    directFeePct: int(env.DIRECT_FEE_PCT, 3),                // the fee on a vendor's own client paid through its payment link
     partyInsuranceUrl: env.PARTY_INSURANCE_URL || "",        // a partner's event-insurance page, shown on party pages when set
     icsAllowHttp: env.ICS_ALLOW_HTTP === "1",                 // tests only: calendar imports must be https
     // Stripe (leave unset to run in simulated-payments mode)

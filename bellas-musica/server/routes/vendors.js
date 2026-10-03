@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { HttpError, int, now, oneOf, rid, str, todayStr } from "../util.js";
 import { balancePaidInApp, categoryOf } from "../pricing.js";
-import { getGroup, newId, requireOwner, isPro } from "../shared.js";
+import { getGroup, newId, requireOwner, requireRealOwner, isPro } from "../shared.js";
 import { bookingsFeed, checkCalendarUrl, syncCalendar } from "../ical.js";
 import { sniffImage } from "../media.js";
 
@@ -40,7 +40,7 @@ export default function vendorRoutes(ctx, add) {
 
   // ---- Bella's Pro: 30 days of a lower platform fee, a Pro badge and more photos ----
   add("POST", "/api/groups/:id/pro", async ({ params, user }) => {
-    const g = requireOwner(db, user, params.id);
+    const g = requireRealOwner(db, user, params.id);
     const id = newId("f");
     db.run("INSERT INTO payments_feature (id, group_id, amount_cents, kind, created_at) VALUES (?, ?, ?, 'pro', ?)", id, g.id, config.proPriceCents, now());
     if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/pro/${id}`, amount_cents: config.proPriceCents };
@@ -86,7 +86,7 @@ export default function vendorRoutes(ctx, add) {
 
   // ---- earnings: what reached the vendor through the app, by month of the event (for taxes and planning) ----
   function earnings(g, year) {
-    const months = Array.from({ length: 12 }, (_, i) => ({ month: `${year}-${String(i + 1).padStart(2, "0")}`, events: 0, deposits_cents: 0, balances_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 }));
+    const months = Array.from({ length: 12 }, (_, i) => ({ month: `${year}-${String(i + 1).padStart(2, "0")}`, events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 }));
     for (const b of db.all("SELECT * FROM bookings WHERE group_id = ? AND date LIKE ? AND payment_status != 'unpaid'", g.id, `${year}-%`)) {
       const m = months[Number(b.date.slice(5, 7)) - 1];
       const kept = b.deposit_cents - b.refund_cents;
@@ -97,8 +97,11 @@ export default function vendorRoutes(ctx, add) {
       if (b.balance_status === "offline") m.offline_cents += b.total_cents - b.deposit_cents - (b.balance_parts_cents || 0);
       m.refunded_cents += b.refund_cents + b.balance_refund_cents;
       if (b.status === "confirmed") m.events++;
+      for (const x of db.all("SELECT status, amount_cents, fee_cents FROM extras WHERE booking_id = ? AND status IN ('paid','cash')", b.id)) {
+        if (x.status === "paid") { m.extras_cents += x.amount_cents - x.fee_cents; m.fees_cents += x.fee_cents; } else m.offline_cents += x.amount_cents;
+      }
     }
-    const total = months.reduce((t, m) => { for (const k of Object.keys(t)) t[k] += m[k]; return t; }, { events: 0, deposits_cents: 0, balances_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 });
+    const total = months.reduce((t, m) => { for (const k of Object.keys(t)) t[k] += m[k]; return t; }, { events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 });
     return { year, months, total };
   }
   const yearOf = (q) => (q.year ? int(q.year, "Year", { min: 2024, max: 2100 }) : Number(todayStr().slice(0, 4)));
@@ -106,8 +109,8 @@ export default function vendorRoutes(ctx, add) {
   add("GET", "/api/groups/:id/earnings.csv", ({ params, query, user, res }) => {
     const g = requireOwner(db, user, params.id), e = earnings(g, yearOf(query));
     const d = (c) => (c / 100).toFixed(2);
-    const rows = [["month", "events", "deposits_to_you", "balances_paid_in_app", "balances_paid_outside_app", "platform_fees", "refunded_to_customers"], ...e.months.map((m) => [m.month, m.events, d(m.deposits_cents), d(m.balances_cents), d(m.offline_cents), d(m.fees_cents), d(m.refunded_cents)]),
-      ["total", e.total.events, d(e.total.deposits_cents), d(e.total.balances_cents), d(e.total.offline_cents), d(e.total.fees_cents), d(e.total.refunded_cents)]];
+    const rows = [["month", "events", "deposits_to_you", "balances_paid_in_app", "extras_paid_in_app", "paid_outside_app", "platform_fees", "refunded_to_customers"], ...e.months.map((m) => [m.month, m.events, d(m.deposits_cents), d(m.balances_cents), d(m.extras_cents), d(m.offline_cents), d(m.fees_cents), d(m.refunded_cents)]),
+      ["total", e.total.events, d(e.total.deposits_cents), d(e.total.balances_cents), d(e.total.extras_cents), d(e.total.offline_cents), d(e.total.fees_cents), d(e.total.refunded_cents)]];
     res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="earnings-${e.year}.csv"`, "Cache-Control": "no-store" });
     res.end(rows.map((r) => r.join(",")).join("\r\n") + "\r\n");
   }, { auth: true });
@@ -161,7 +164,7 @@ export default function vendorRoutes(ctx, add) {
       db.run("INSERT INTO admin_log (admin_email, action, target, details, created_at) VALUES (?, ?, ?, ?, ?)", user.email, approve ? "document approved" : "document rejected", d.group_id, d.kind, now());
     });
     const g = getGroup(db, d.group_id);
-    if (g.owner_id) ctx.notify.to(g.owner_id, approve ? "doc.approved.group" : "doc.rejected.group", { group: g.name, doc: d.kind.replace(/_/g, " "), note: str(body.note, "Note", { max: 200 }), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=payments` });
+    ctx.notify.toGroup(g, approve ? "doc.approved.group" : "doc.rejected.group", { group: g.name, doc: d.kind.replace(/_/g, " "), note: str(body.note, "Note", { max: 200 }), url: `${config.baseUrl}/#/dashboard?g=${g.id}&tab=payments` });
     return { ok: true };
   }, { auth: true });
 

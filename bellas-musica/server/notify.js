@@ -58,9 +58,18 @@ export function createNotifier(ctx) {
       total: usd(b.total_cents), deposit: usd(b.deposit_cents), balance: usd(b.total_cents - b.deposit_cents),
       payout: usd(Math.max(0, b.deposit_cents - b.platform_fee_cents)), policyKey: b.policy,
       ...arrival(b.id),
+      needs: (() => { try { return JSON.parse(b.needs_json || "[]").join("; "); } catch { return ""; } })(),
       addons: (() => { try { return JSON.parse(b.addons_json || "[]").map((a) => a.name).join(", "); } catch { return ""; } })()
     };
   }
   const ownerOf = (g) => g.owner_id || null;
-  return { to, toEmail, bookingVars, ownerOf, sign, verifyUnsub, unsubUrl };
+  // Everyone who runs a listing: the owner (texts go to the listing's alert number if set) and each team member (their own
+  // email and phone, by their own settings).
+  function toGroup(g, kind, vars = {}, opts = {}) {
+    if (!g) return;
+    if (g.owner_id) to(g.owner_id, kind, vars, opts);
+    const { phone, ...rest } = opts;
+    for (const m of db.all("SELECT user_id FROM group_team WHERE group_id = ? AND user_id != ?", g.id, g.owner_id || 0)) to(m.user_id, kind, vars, rest);
+  }
+  return { to, toGroup, toEmail, bookingVars, ownerOf, sign, verifyUnsub, unsubUrl };
 }
