@@ -40,7 +40,7 @@ try {
   await drag(300, 800);
   ok("swiping back down returns to the first card", Math.abs(await p.evaluate(() => document.getElementById("feed").scrollTop)) < 3);
   // tapping the heart and Message with a finger
-  await p.locator(".reel[data-i='0'] .heart").tap(); await p.waitForSelector(".reel[data-i='0'] .heart"); // logged out: goes to log in
+  await p.locator(".reel[data-i='0'] .heart").tap(); await p.waitForFunction(() => location.hash.startsWith("#/login"), null, { timeout: 10000 }).catch(() => {}); // logged out: goes to log in
   ok("tapping a heart while logged out opens the log-in screen", p.url().includes("#/login"));
 
   // ---- tap target sizes on the main screens ----
