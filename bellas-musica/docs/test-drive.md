@@ -56,7 +56,8 @@ else. Or use a private (incognito) window for a second person at the same time.
 
 - In Rosa's party, press *Share with family* and copy the link. Open it in Tío Juan's window, press
   **🎁 Be a padrino** and pay part of the DJ's balance.
-- **My bookings:** his anniversary request to the DJ is waiting for an answer.
+- **My bookings:** his anniversary request to the DJ is waiting for an answer. Until the DJ accepts, cancelling gives
+  the whole deposit back; if the DJ doesn't answer within 3 days, it's cancelled and refunded on its own.
 
 ## 3. DJ Relámpago (dj@prueba.com)
 

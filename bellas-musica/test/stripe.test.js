@@ -117,6 +117,7 @@ test("refunds: reverse the transfer and app fee; a failed refund changes nothing
   const b2 = (await cust.post("/api/bookings", bookingBody(gid, day(35)))).json.booking;
   await postWebhook(S.base, completed(b2), SECRET);
   S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(5), b2.id); // 5 days out on a moderate policy = 50%
+  S.db.run("UPDATE bookings SET status = 'confirmed' WHERE id = ?", b2.id); // the group accepted (before that, cancelling is free)
   const c = await cust.patch(`/api/bookings/${b2.id}`, { action: "cancel" });
   assert.equal(c.json.booking.refund_cents, 7500);
   assert.equal(lastCall((x) => x.url === "/v1/refunds").form.amount, "7500");

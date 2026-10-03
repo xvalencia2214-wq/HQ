@@ -4,6 +4,7 @@ import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, r
 import { assertStart, checkStart, durationOf, packageMinutes } from "../schedule.js";
 import { extrasOf, extrasPaidCents, markExtraPaid } from "./extras.js";
 import { canTip, markTipPaid, tipsOf, tipsPaidCents } from "./tips.js";
+import { ANSWER_HOURS } from "../jobs.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -107,8 +108,8 @@ export default function bookingRoutes(ctx, add) {
     };
     if (role === "customer") {
       out.can_cancel = ["requested", "confirmed", "pending_payment"].includes(b.status) && b.date > today;
-      out.refund_if_cancel_cents = b.status === "pending_payment" ? 0 : refundForCancel(b, today);
-      out.refund_percent_now = refundPercent(b.policy, daysBetween(today, b.date));
+      out.refund_if_cancel_cents = b.status === "pending_payment" ? 0 : b.status === "requested" ? b.deposit_cents - b.refund_cents : refundForCancel(b, today);
+      out.refund_percent_now = b.status === "requested" ? 100 : refundPercent(b.policy, daysBetween(today, b.date));
       out.can_review = b.status === "confirmed" && b.date < today && !["unpaid", "refunded"].includes(b.payment_status) && !b.reviewed;
       out.reviewed = Boolean(b.reviewed);
       out.can_pay_balance = canPayBalance(b, today);
@@ -126,6 +127,7 @@ export default function bookingRoutes(ctx, add) {
       out.platform_fee_cents = b.platform_fee_cents;
       out.payout_cents = Math.max(0, b.deposit_cents - b.platform_fee_cents);
       out.can_respond = b.status === "requested";
+      if (out.can_respond) out.answer_by = Math.min(b.created_at + ANSWER_HOURS * 3600, Math.floor(Date.parse(b.date + "T05:00:00Z") / 1000)); // then it's cancelled and refunded (about midnight in Chicago on the event day)
       out.checkin_locked = b.checkin_locked_until > now();
       out.can_checkin = b.status === "confirmed" && !b.checked_in_at && b.date === today && !out.checkin_locked;
       out.checked_in = Boolean(b.checked_in_at);
@@ -459,7 +461,8 @@ export default function bookingRoutes(ctx, add) {
       if (!["pending_payment", "requested", "confirmed"].includes(b.status)) throw new HttpError(400, "This booking can't be cancelled");
       if (b.date <= today) throw new HttpError(400, "This event has already started or passed");
       // The group cancelling always refunds everything paid in the app; a customer's refund follows the policy they accepted.
-      const parts = isOwner ? { deposit: b.deposit_cents, balance: balancePaid ? balancePaidInApp(b) : 0 } : refundParts(b, today);
+      // A request the group hasn't accepted yet is a free cancel: the group never committed to the date.
+      const parts = isOwner || b.status === "requested" ? { deposit: b.deposit_cents, balance: balancePaid ? balancePaidInApp(b) : 0 } : refundParts(b, today);
       const after = await settle(parts.deposit, parts.balance);
       setStatus("cancelled");
       const refunded = after.refund_cents + after.balance_refund_cents;
@@ -486,26 +489,27 @@ export default function bookingRoutes(ctx, add) {
         } else if (kind === "balance") {
           const b = db.get("SELECT total_cents, deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
           if (b && obj.amount_total === b.total_cents - b.deposit_cents) await markBalancePaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown booking (balance)", obj.metadata?.booking_id);
+          else ctx.alert(`A payment for booking (balance) ${obj.metadata?.booking_id} (${obj.payment_intent}) doesn't match what is owed. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.booking_id);
         } else if (kind === "part") {
           const p = db.get("SELECT amount_cents FROM balance_parts WHERE id = ?", String(obj.metadata.part_id));
           if (p && obj.amount_total === p.amount_cents) await markPartPaid(ctx, String(obj.metadata.part_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown balance part", obj.metadata?.part_id);
+          else ctx.alert(`A payment for balance part ${obj.metadata?.part_id} (${obj.payment_intent}) doesn't match what is owed. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.part_id);
         } else if (kind === "tip") {
           const tp = db.get("SELECT amount_cents FROM tips WHERE id = ?", String(obj.metadata.tip_id));
           if (tp && obj.amount_total === tp.amount_cents) await markTipPaid(ctx, String(obj.metadata.tip_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown tip", obj.metadata?.tip_id);
+          else ctx.alert(`A payment for tip ${obj.metadata?.tip_id} (${obj.payment_intent}) doesn't match what is owed. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.tip_id);
         } else if (kind === "extra") {
           const x = db.get("SELECT amount_cents FROM extras WHERE id = ?", String(obj.metadata.extra_id));
           if (x && obj.amount_total === x.amount_cents) await markExtraPaid(ctx, String(obj.metadata.extra_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown extra", obj.metadata?.extra_id);
+          else ctx.alert(`A payment for extra ${obj.metadata?.extra_id} (${obj.payment_intent}) doesn't match what is owed. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.extra_id);
         } else if (kind === "cart") {
           const c = db.get("SELECT amount_cents FROM carts WHERE id = ?", String(obj.metadata.cart_id));
           if (c && obj.amount_total === c.amount_cents) await markCartPaid(ctx, String(obj.metadata.cart_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown cart", obj.metadata?.cart_id);
+          else ctx.alert(`A payment for cart ${obj.metadata?.cart_id} (${obj.payment_intent}) doesn't match what is owed. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.cart_id);
         } else if (kind === "feature") {
           const f = db.get("SELECT amount_cents FROM payments_feature WHERE id = ?", String(obj.metadata.feature_id));
           if (f && obj.amount_total === f.amount_cents) markFeaturePaid(ctx, String(obj.metadata.feature_id));
+          else ctx.alert(`A payment for upgrade ${obj.metadata?.feature_id} (${obj.payment_intent}) doesn't match its price. Check it in Stripe and refund it if needed.`, "mismatch-" + obj.metadata?.feature_id);
         }
       }
     } catch (e) {

@@ -3,7 +3,7 @@
 // sends the link; the time is held until the link expires; the client signs in and pays the deposit, and the booking is
 // confirmed right away (the vendor already agreed). The fee is lower than for a client the site found.
 import crypto from "node:crypto";
-import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
+import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr, withLock } from "../util.js";
 import { EVENT_TYPES, MAX_HOURS, POLICIES, SHORT_MINUTES, isTime } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { normalizePhone } from "../sms.js";
@@ -99,7 +99,8 @@ export default function payLinkRoutes(ctx, add) {
     };
   });
 
-  add("POST", "/api/pay-link/:token/book", async ({ params, body, user }) => {
+  // one at a time per link, so a double tap can't make two bookings from it
+  add("POST", "/api/pay-link/:token/book", ({ params, body, user }) => withLock("paylink:" + findLink(params.token).id, async () => {
     const l = findLink(params.token), g = getGroup(db, l.group_id);
     if (isTeam(db, user, g)) throw new HttpError(400, "This is your own link: send it to your client.");
     if (!isBookable(ctx, g)) throw new HttpError(400, "This vendor can't take payments in the app right now. Ask them about it.");
@@ -151,5 +152,5 @@ export default function payLinkRoutes(ctx, add) {
     const session = await stripe.checkoutForBooking({ booking: b, group: g, attempt: String(now()), successUrl: `${config.baseUrl}/#/booking/${b.id}?paid=1`, cancelUrl: `${config.baseUrl}/#/pay-link/${params.token}` });
     db.run("UPDATE bookings SET stripe_session_id = ? WHERE id = ?", session.id, b.id);
     return { booking_id: b.id, payment: { mode: "stripe", url: session.url } };
-  }, { auth: true });
+  }), { auth: true });
 }

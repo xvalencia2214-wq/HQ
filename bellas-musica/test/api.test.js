@@ -198,6 +198,9 @@ test("bookings: quote, hold, double-booking, pay, accept, refunds by policy, pri
   // 4 days out (moderate): 50%
   const b3 = (await cust.post("/api/bookings", bookingBody(gid, soon))).json.booking;
   await cust.post(`/api/bookings/${b3.id}/simulate-pay`);
+  // before the group accepts, cancelling is free
+  assert.equal((await cust.get("/api/my/bookings")).json.bookings.find((b) => b.id === b3.id).refund_if_cancel_cents, 15000);
+  await owner.patch(`/api/bookings/${b3.id}`, { action: "accept" }); // once accepted, the policy applies
   const mine = (await cust.get("/api/my/bookings")).json.bookings.find((b) => b.id === b3.id);
   assert.equal(mine.refund_if_cancel_cents, 7500);
   const c3 = await cust.patch(`/api/bookings/${b3.id}`, { action: "cancel" });
@@ -435,4 +438,18 @@ test("delete account: needs the password, blocked by upcoming bookings, anonymiz
   const g2 = await makeGroup(b2, { name: "Vanishing Band" });
   assert.equal((await b2.post("/api/me/delete", { password: "correct horse battery" })).status, 200);
   assert.equal((await client(S.base).get(`/api/groups/${g2}`)).status, 404);
+});
+
+test("a listing's public story can't carry a phone number or email (shared only after a booking is confirmed)", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const o = client(S.base);
+    await o.signup("story@example.com", "Sam Story");
+    const g = (await o.post("/api/groups", { name: "Mariachi Directo", type: "Mariachi", zip: "60608", rate: 300, members: 6, story: "Since 2011. Call 312-555-0199 or write sam@gmail.com" })).json;
+    const id = g.group?.id || g.id;
+    assert.doesNotMatch(S.db.get("SELECT story FROM groups WHERE id = ?", id).story, /555-0199|gmail/);
+    assert.match(S.db.get("SELECT story FROM groups WHERE id = ?", id).story, /Since 2011/);
+    await o.patch(`/api/groups/${id}`, { story: "Weddings and quinces. WhatsApp (773) 555 0123" });
+    assert.doesNotMatch(S.db.get("SELECT story FROM groups WHERE id = ?", id).story, /555/);
+  } finally { await S.close(); }
 });

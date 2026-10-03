@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { startApp, client, fakeStripe, postWebhook } from "./helpers.js";
 import { checkInvariants } from "./invariants.js";
-import { sendReviewReminders, sendEventReminders, sendDailyTexts, housekeeping } from "../server/jobs.js";
+import { sendReviewReminders, sendEventReminders, sendDailyTexts, housekeeping, expireUnansweredRequests } from "../server/jobs.js";
 import { expandSilentRequests } from "../server/routes/requests.js";
 import { transferCart } from "../server/shared.js";
 
@@ -138,7 +138,7 @@ async function simulate({ mode, seed, steps }) {
       };
     };
     const jobs = async () => {
-      housekeeping(S.ctx); sendReviewReminders(S.ctx); sendEventReminders(S.ctx, { hour: 12 }); sendDailyTexts(S.ctx, { hour: 8 }); expandSilentRequests(S.ctx);
+      housekeeping(S.ctx); sendReviewReminders(S.ctx); sendEventReminders(S.ctx, { hour: 12 }); sendDailyTexts(S.ctx, { hour: 8 }); expandSilentRequests(S.ctx); await expireUnansweredRequests(S.ctx);
       S.ctx.expireDocuments(); await S.ctx.syncCalendars();
       if (fake) for (const c of q("SELECT DISTINCT cart_id FROM bookings WHERE cart_id != '' AND stripe_transfer_id = ''")) await transferCart(S.ctx, c.cart_id);
     };

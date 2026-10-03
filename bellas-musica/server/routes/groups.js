@@ -102,7 +102,7 @@ export default function groupRoutes(ctx, add) {
     db.run(
       `INSERT INTO groups (id, owner_id, name, type, zip, rate_cents, members, story, created_at, hourly) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${hourly ? 1 : 0})`,
       id, user.id, name, type, zip, rate,
-      int(body.members ?? 1, "Musicians", { min: 1, max: 40 }), str(body.story, "Story", { max: 800 }), now());
+      int(body.members ?? 1, "Musicians", { min: 1, max: 40 }), maskContact(str(body.story, "Story", { max: 800 })).text, now());
     // No payout account yet: in simulated mode this is instant; live mode requires Stripe onboarding.
     if (!stripe.live) db.run("UPDATE groups SET stripe_ready = 1 WHERE id = ?", id);
     return manageView(getGroup(db, id));
@@ -163,7 +163,7 @@ export default function groupRoutes(ctx, add) {
     if (body.weekly_discount_pct !== undefined) set.weekly_discount_pct = int(body.weekly_discount_pct, "Weekly discount", { min: 0, max: 30 });
     if (body.buffer_min !== undefined) set.buffer_min = Number(oneOf(Number(body.buffer_min), "Time between bookings", [0, 15, 30, 45, 60, 90, 120]));
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
-    if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });
+    if (body.story !== undefined) set.story = maskContact(str(body.story, "Story", { max: 800 })).text; // phone numbers and emails are shared once a booking is confirmed, not on the public page
     if (body.events !== undefined) set.events = JSON.stringify(stringList(body.events, "Events", { maxItems: 10, maxLen: 40 }).filter((e) => EVENT_TYPES.includes(e)));
     if (body.songs !== undefined) set.songs = JSON.stringify(stringList(body.songs, "Songs", { maxItems: 80, maxLen: 60 }));
     if (body.max_guests !== undefined) set.max_guests = int(body.max_guests, "Max guests", { min: 1, max: 5000 });

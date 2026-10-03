@@ -387,3 +387,50 @@ test("propinas, weekly gigs and the morning text", async () => {
     assert.equal(sendDailyTexts(S.ctx, { hour: 7 }), 1);
   } finally { await S.close(); }
 });
+
+test("unanswered requests: full refund if the family cancels, a reminder at 2 days, cancelled and refunded at 3 days or on the event day", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const o = client(S.base), c = client(S.base);
+    await o.signup("ans-o@example.com", "Ana Owner"); await c.signup("ans-c@example.com", "Cata Cliente");
+    const d = inDays(3), far = inDays(30), far2 = inDays(31);
+    const g = await makeGroup(o, { dates: [d, far, far2] });
+    S.db.run("UPDATE groups SET cancel_policy = 'strict' WHERE id = ?", g);
+    const book = async (date) => { const b = (await c.post("/api/bookings", bookingBody(g, date))).json.booking; await c.post(`/api/bookings/${b.id}/simulate-pay`); return b.id; };
+    // the family cancels before the group answers: everything back, even under a strict policy 3 days out
+    const b1 = await book(d);
+    const v1 = (await c.get("/api/my/bookings")).json.bookings.find((x) => x.id === b1);
+    assert.equal(v1.refund_percent_now, 100); assert.equal(v1.refund_if_cancel_cents, v1.deposit_cents);
+    assert.equal((await c.patch(`/api/bookings/${b1}`, { action: "cancel" })).status, 200);
+    const r1 = S.db.get("SELECT status, refund_cents, deposit_cents FROM bookings WHERE id = ?", b1);
+    assert.equal(r1.status, "cancelled"); assert.equal(r1.refund_cents, r1.deposit_cents);
+    // once accepted, the policy applies again
+    const b2 = await book(d);
+    await o.patch(`/api/bookings/${b2}`, { action: "accept" });
+    assert.ok((await c.get("/api/my/bookings")).json.bookings.find((x) => x.id === b2).refund_percent_now < 100);
+
+    // the group sees the deadline; after 2 days it's reminded once; after 3 days it's cancelled and refunded
+    const { expireUnansweredRequests } = await import("../server/jobs.js");
+    const b3 = await book(far);
+    assert.ok((await o.get(`/api/groups/${g}/bookings`)).json.bookings.find((x) => x.id === b3).answer_by > Date.now() / 1000);
+    S.db.run("UPDATE bookings SET created_at = created_at - 49 * 3600 WHERE id = ?", b3);
+    const mails = () => S.db.all("SELECT kind FROM email_log").map((x) => x.kind);
+    assert.equal(await expireUnansweredRequests(S.ctx), 0);
+    await expireUnansweredRequests(S.ctx);
+    assert.equal(mails().filter((k) => k === "request.reminder.group").length, 1);
+    S.db.run("UPDATE bookings SET created_at = created_at - 24 * 3600 WHERE id = ?", b3);
+    assert.equal(await expireUnansweredRequests(S.ctx), 1);
+    const r3 = S.db.get("SELECT status, refund_cents, deposit_cents FROM bookings WHERE id = ?", b3);
+    assert.equal(r3.status, "declined"); assert.equal(r3.refund_cents, r3.deposit_cents);
+    assert.ok(mails().includes("request.expired.customer") && mails().includes("request.expired.group"));
+    assert.equal(await expireUnansweredRequests(S.ctx), 0); // only once
+    // a request for tomorrow gets until the event day
+    const b4 = await book(far2);
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(1), b4);
+    assert.equal(await expireUnansweredRequests(S.ctx), 0);
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(0), b4);
+    assert.equal(await expireUnansweredRequests(S.ctx), 1);
+    // answered requests are never touched
+    assert.equal(S.db.get("SELECT status FROM bookings WHERE id = ?", b2).status, "confirmed");
+  } finally { await S.close(); }
+});

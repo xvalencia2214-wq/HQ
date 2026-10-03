@@ -386,7 +386,15 @@ export async function markCartPaid(ctx, cartId, paymentIntent) {
     const cart = db.get("SELECT * FROM carts WHERE id = ?", cartId);
     if (!cart) return null;
     if (cart.status === "paid") {
-      if (paymentIntent && cart.pi !== paymentIntent) ctx.alert(`A second payment arrived for cart ${cart.id} (${paymentIntent}). Refund it in Stripe.`, "cart-dup-" + cart.id);
+      // the same checkout paid twice (two tabs): the second payment goes straight back, in full
+      const marker = `${paymentIntent}#cart`;
+      if (paymentIntent && cart.pi !== paymentIntent && !db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) {
+        if (stripe.live && !paymentIntent.startsWith("sim_")) {
+          try { await stripe.refund({ paymentIntent, amountCents: cart.amount_cents, key: `stray-cart-dup-${cart.id}-${paymentIntent}`, destination: false }); }
+          catch (e) { ctx.alert(`A second payment for cart ${cart.id} (${paymentIntent}) could not be refunded: ${e.message}. Refund it in Stripe.`, "cart-dup-" + cart.id); throw e; }
+        }
+        db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", safeJson(cart.booking_ids, [])[0] || "", marker, cart.amount_cents, "second payment of the same checkout", now());
+      }
       return cart;
     }
     db.run("UPDATE carts SET status = 'paid', pi = ? WHERE id = ?", paymentIntent || "", cart.id);

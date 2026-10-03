@@ -12,7 +12,7 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
 npm run tryout     # test drive: practice accounts and a party in progress, to try every feature (docs/test-drive.md)
-npm test           # 134 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 137 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, unanswered requests refunded after 3 days, an access audit of every route, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
 # Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
 # events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js

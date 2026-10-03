@@ -594,6 +594,7 @@ export function openDb(config) {
   ensureColumn("users", "daily_text", "INTEGER NOT NULL DEFAULT 1");        // vendors: the morning summary text
   ensureColumn("users", "daily_text_on", "TEXT NOT NULL DEFAULT ''");       // ...last day it was sent
   ensureColumn("users", "push_only", "INTEGER NOT NULL DEFAULT 0");          // phone notifications instead of texts
+  ensureColumn("bookings", "answer_reminder_sent", "INTEGER NOT NULL DEFAULT 0"); // the group was reminded to answer a request
   ensureColumn("bookings", "direct", "INTEGER NOT NULL DEFAULT 0");        // booked through the vendor's own payment link
   ensureColumn("bookings", "link_id", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("groups", "needs_json", "TEXT NOT NULL DEFAULT '[]'");       // what the vendor needs from the family (power, parking...)

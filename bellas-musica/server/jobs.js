@@ -3,7 +3,8 @@ import { usd } from "./emails.js";
 import { balanceLeft } from "./pricing.js";
 import { backupIfNeeded } from "./backups.js";
 import { RESCHED_TTL } from "./shared.js";
-import { expirePending, transferCart, settleCartTransfer } from "./shared.js";
+import { expirePending, transferCart, settleCartTransfer, refundBooking } from "./shared.js";
+import { withLock } from "./util.js";
 import { fillDemoAvailability } from "./seed.js";
 import { expandSilentRequests } from "./routes/requests.js";
 
@@ -88,6 +89,35 @@ export function housekeeping(ctx) {
   db.run("DELETE FROM payments_feature WHERE status = 'pending' AND created_at < ?", now() - 7 * 86400);
 }
 
+// A paid request the group never answers must not hold the family's deposit: after 2 days the group is reminded, and after
+// 3 days (or once the event day arrives) the request is cancelled and the deposit refunded in full.
+export const ANSWER_HOURS = 72;
+export async function expireUnansweredRequests(ctx) {
+  const { db, config, notify } = ctx;
+  const today = todayStr(), t = now();
+  const dl = (b) => new Date((Math.min(b.created_at + ANSWER_HOURS * 3600, t + 86400)) * 1000).toLocaleString("en-US", { timeZone: getTimezone(), weekday: "short", hour: "numeric", minute: "2-digit" });
+  for (const b of db.all("SELECT b.*, g.name AS group_name, g.owner_id, g.contact_phone FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status = 'requested' AND b.payment_status = 'paid' AND b.answer_reminder_sent = 0 AND b.created_at < ? AND b.created_at >= ? AND b.date > ?", t - 48 * 3600, t - ANSWER_HOURS * 3600, today)) {
+    db.run("UPDATE bookings SET answer_reminder_sent = 1 WHERE id = ?", b.id);
+    notify.toGroup({ id: b.group_id, owner_id: b.owner_id }, "request.reminder.group", { ...notify.bookingVars(b, { name: b.group_name }), deadline: dl(b), url: `${config.baseUrl}/#/dashboard?g=${b.group_id}&tab=requests` }, { phone: b.contact_phone });
+  }
+  let n = 0;
+  for (const { id } of db.all("SELECT id FROM bookings WHERE status = 'requested' AND (created_at < ? OR date <= ?)", t - ANSWER_HOURS * 3600, today)) {
+    try {
+      await withLock("booking:" + id, async () => {
+        const b = db.get("SELECT b.*, g.name AS group_name, g.owner_id, g.contact_phone FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", id);
+        if (!b || b.status !== "requested") return; // answered meanwhile
+        const after = await refundBooking(ctx, b, b.deposit_cents - b.refund_cents); // refund first: if it fails, it's retried next hour
+        db.run("UPDATE bookings SET status = 'declined', updated_at = ? WHERE id = ?", now(), b.id);
+        n++;
+        const v = { ...notify.bookingVars(b, { name: b.group_name }), refund: usd(after.refund_cents) };
+        notify.to(b.customer_id, "request.expired.customer", { ...v, url: `${config.baseUrl}/#/` });
+        notify.toGroup({ id: b.group_id, owner_id: b.owner_id }, "request.expired.group", { ...v, url: `${config.baseUrl}/#/dashboard?g=${b.group_id}&tab=requests` }, { phone: b.contact_phone });
+      });
+    } catch (e) { ctx.alert(`Could not cancel the unanswered request ${id}: ${e.message}. It will be retried.`, "expire-request-" + id); }
+  }
+  return n;
+}
+
 // One-checkout payments: a vendor transfer that failed when the payment came in is retried every hour.
 function retryCartTransfers(ctx) {
   if (!ctx.stripe.live) return;
@@ -100,7 +130,7 @@ function retryCartTransfers(ctx) {
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); retryCartTransfers(ctx); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }

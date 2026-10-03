@@ -147,6 +147,9 @@ export default function authRoutes(ctx, add) {
       db.run("DELETE FROM parties WHERE customer_id = ?", user.id);
       db.run("DELETE FROM shortlists WHERE user_id = ?", user.id); // shared links stop working; items go with them
       db.run("UPDATE groups SET hidden = 1, contact_phone = '' WHERE owner_id = ?", user.id); // their listings disappear
+      db.run("DELETE FROM push_subs WHERE user_id = ?", user.id); // no more notifications on their phones
+      db.run("DELETE FROM group_team WHERE user_id = ?", user.id); // off any team they helped on
+      db.run("UPDATE users SET email_notify = 0, daily_text = 0, push_only = 0 WHERE id = ?", user.id);
     });
     res.setHeader("Set-Cookie", sessionCookie("", { secure: ctx.isSecure(req), clear: true }));
     return { ok: true };

@@ -1,3 +1,4 @@
+import dns from "node:dns/promises";
 import { HttpError, addDays, todayStr, getTimezone } from "./util.js";
 import { parseTime } from "./ics.js";
 
@@ -58,7 +59,14 @@ export function checkCalendarUrl(raw, { allowHttp = false } = {}) {
   return u.toString();
 }
 
-export async function fetchCalendar(url) {
+// A name that leads to a private or local address (a home router, this server, a cloud's internal services) is refused too.
+const PRIVATE_IP = /^(0\.|10\.|127\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|::1$|::$|f[cd]|fe[89ab]|::ffff:(0|10|127|169\.254|172\.(1[6-9]|2\d|3[01])|192\.168)\.)/i;
+export async function fetchCalendar(url, { allowHttp = false } = {}) {
+  if (!allowHttp) {
+    const addrs = await dns.lookup(new URL(url).hostname, { all: true }).catch(() => []);
+    if (!addrs.length) throw new Error("that calendar address can't be found");
+    if (addrs.some((a) => PRIVATE_IP.test(a.address))) throw new Error("that calendar address isn't allowed");
+  }
   const res = await fetch(url, { headers: { "User-Agent": "BellasMusica calendar sync", Accept: "text/calendar" }, redirect: "error", signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`the calendar answered ${res.status}`);
   const text = await res.text();
@@ -70,7 +78,7 @@ export async function fetchCalendar(url) {
 export async function syncCalendar(ctx, g) {
   const { db, config } = ctx;
   try {
-    const busy = parseBusy(await fetchCalendar(checkCalendarUrl(g.ical_import_url, { allowHttp: config.icsAllowHttp })));
+    const busy = parseBusy(await fetchCalendar(checkCalendarUrl(g.ical_import_url, { allowHttp: config.icsAllowHttp }), { allowHttp: config.icsAllowHttp }));
     db.tx(() => {
       db.run("DELETE FROM ext_busy WHERE group_id = ?", g.id);
       for (const b of busy) db.run("INSERT INTO ext_busy (group_id, date, start_min, end_min) VALUES (?, ?, ?, ?)", g.id, b.date, b.start, b.end);
