@@ -417,6 +417,8 @@ export function openDb(config) {
   ensureColumn("bookings", "transfer_reversed_cents", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("bookings", "bundle_id", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("bookings", "discount_cents", "INTEGER NOT NULL DEFAULT 0");
+  // the price of each deposit in a cart (bundle discounts): written to the booking only when the cart is paid
+  ensureColumn("carts", "items_json", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("groups", "hourly", "INTEGER NOT NULL DEFAULT 1"); // 0: booked by package only (tents, food trucks...)
   ensureColumn("bookings", "addons_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn("bookings", "addons_cents", "INTEGER NOT NULL DEFAULT 0");

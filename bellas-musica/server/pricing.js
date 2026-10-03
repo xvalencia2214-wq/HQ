@@ -36,6 +36,8 @@ export function refundPercent(policy, daysBefore) {
 export const balanceCents = (b) => b.total_cents - b.deposit_cents;
 // What was paid toward the balance in the app: the parts (payment plan, padrinos), or the whole balance in one payment.
 export const balancePaidInApp = (b) => (b.balance_parts_cents > 0 ? b.balance_parts_cents : ["paid", "partial_refund", "refunded"].includes(b.balance_status) ? balanceCents(b) : 0);
+// What is still owed on the balance: nothing once it was paid in one payment or the vendor marked it paid outside the app.
+export const balanceLeft = (b) => (["paid", "partial_refund", "refunded", "offline"].includes(b.balance_status) ? 0 : Math.max(0, balanceCents(b) - (b.balance_parts_cents || 0)));
 
 // What a customer gets back if they cancel today: the policy's percentage of everything they paid in the app
 // (the deposit, plus the balance if they already paid it). A balance paid outside the app is between them and the group.

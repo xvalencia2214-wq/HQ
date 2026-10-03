@@ -53,6 +53,15 @@ test("saved party: budget against what's booked, family link with votes and comm
     assert.equal(v.money.booked_cents, 90000); assert.equal(v.money.paid_cents, bk.deposit_cents); assert.equal(v.money.left_cents, 500000 - 90000);
     assert.deepEqual(v.booked_categories, ["music"]);
     assert.equal(v.money.by_category.music, 90000);
+    assert.equal(v.money.to_pay_cents, 90000 - bk.deposit_cents);
+    // the vendor confirms and later marks the balance paid in cash: nothing is left to pay, on the party page or the family link
+    await mo.patch(`/api/bookings/${bk.id}`, { action: "accept" });
+    assert.equal((await owner.get(`/api/parties/${P.id}`)).json.party.vendors[0].balance_left_cents, 90000 - bk.deposit_cents);
+    assert.equal((await mo.post(`/api/bookings/${bk.id}/balance-offline`, { received: true })).status, 200);
+    v = (await owner.get(`/api/parties/${P.id}`)).json.party;
+    assert.equal(v.money.to_pay_cents, 0); assert.equal(v.vendors[0].balance_left_cents, 0);
+    assert.equal((await anon.get(`/api/fp/${v.share_url.split("/fp/")[1]}`)).json.party.vendors[0].balance_left_cents, 0);
+    assert.equal((await mo.post(`/api/bookings/${bk.id}/balance-offline`, { received: false })).status, 200);
     // a booking on another date is not part of it
     await owner.post("/api/bookings", bookingBody(g2, d, { time: "4:00 PM" }));
     assert.equal((await owner.get(`/api/parties/${P.id}`)).json.party.vendors.length, 2);

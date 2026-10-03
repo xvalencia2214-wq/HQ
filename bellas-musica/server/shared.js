@@ -366,30 +366,36 @@ export async function markCartPaid(ctx, cartId, paymentIntent) {
       return cart;
     }
     db.run("UPDATE carts SET status = 'paid', pi = ? WHERE id = ?", paymentIntent || "", cart.id);
+    const items = new Map(safeJson(cart.items_json, []).map((x) => [x.id, x]));
     for (const id of safeJson(cart.booking_ids, [])) {
-      const b = db.get("SELECT * FROM bookings WHERE id = ?", id);
-      if (!b) continue;
-      if (b.payment_status !== "unpaid") {
-        // This deposit was already paid on its own: its share of the cart charge goes back.
-        await cartStrayRefund(ctx, cart, b, paymentIntent);
-        continue;
-      }
-      db.run("UPDATE bookings SET cart_id = ? WHERE id = ?", cart.id, id);
-      await markBookingPaid(ctx, id, paymentIntent); // a request to the vendor, or refunded if its slot is gone
+      await withLock("booking:" + id, async () => {
+        const b = db.get("SELECT * FROM bookings WHERE id = ?", id);
+        if (!b) return;
+        const it = items.get(id);
+        if (b.payment_status !== "unpaid") {
+          // This deposit was already paid on its own: its share of the cart charge goes back.
+          await cartStrayRefund(ctx, cart, b, paymentIntent, it ? it.deposit_cents : b.deposit_cents);
+          return;
+        }
+        // The cart's price (with any bundle discount) becomes the booking's price only now that the cart is paid.
+        if (it) db.run("UPDATE bookings SET total_cents = ?, deposit_cents = ?, platform_fee_cents = ?, discount_cents = ?, bundle_id = ? WHERE id = ?", it.total_cents, it.deposit_cents, it.platform_fee_cents, it.discount_cents, it.bundle_id || "", id);
+        db.run("UPDATE bookings SET cart_id = ? WHERE id = ?", cart.id, id);
+        await markBookingPaidLocked(ctx, id, paymentIntent); // a request to the vendor, or refunded if its slot is gone
+      });
     }
     if (stripe.live) await transferCart(ctx, cart.id);
     return db.get("SELECT * FROM carts WHERE id = ?", cart.id);
   });
 }
-async function cartStrayRefund(ctx, cart, b, paymentIntent) {
+async function cartStrayRefund(ctx, cart, b, paymentIntent, cents) {
   const { db, stripe } = ctx;
   const marker = `${paymentIntent}#${b.id}`;
-  if (db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) return;
+  if (cents <= 0 || db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) return;
   if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
-    try { await stripe.refund({ paymentIntent, amountCents: b.deposit_cents, key: `stray-cart-${cart.id}-${b.id}`, destination: false }); }
+    try { await stripe.refund({ paymentIntent, amountCents: cents, key: `stray-cart-${cart.id}-${b.id}`, destination: false }); }
     catch (e) { ctx.alert(`CART REFUND FAILED for booking ${b.id} in cart ${cart.id}: ${e.message}`, "stray-cart-" + b.id); throw e; }
   }
-  db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", b.id, marker, b.deposit_cents, "deposit was already paid on its own before the cart payment arrived", now());
+  db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", b.id, marker, cents, "deposit was already paid on its own before the cart payment arrived", now());
 }
 
 // Send each vendor its share of a cart charge. Safe to call again: bookings already transferred are skipped (the hourly job retries failures).

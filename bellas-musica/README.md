@@ -11,7 +11,10 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
-npm test           # 118 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 120 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, hostile-input fuzzer, time zones, i18n, share pages, ops
+# Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
+# events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
+SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
 # Browser scripts (need Playwright + Chromium; run with NODE_PATH=$(npm root -g)):
 node e2e/e2e.mjs [dir]                     # 48-step end-to-end run: manager sets up and publishes, customer books, chats, cancels, admin
 node e2e/e2e3.mjs [dir]                    # 14-step run of the Discover feed (video mounting, promoted slots, counters, reduced motion, desktop)
@@ -21,7 +24,7 @@ node e2e/e2e5.mjs [dir]                    # 22-step run of saved groups, shortl
 node e2e/e2e8.mjs [dir]                    # 26-step run of minimum hours and add-ons: a DJ sets a 3-hour minimum and adds fog/lighting/AV, a customer ticks them and the total updates, booking, agreement, Spanish
 node e2e/e2e9.mjs [dir]                    # 28-step run of party vendors: a tent company lists itself, category chips, Plan a party, booking a package-only vendor, Discover by category, Spanish
 node e2e/e2e10.mjs [dir]                   # 22-step run of saved parties: template, budget, weather, family link (vote + comment, no account), timeline the vendor sees, QR sign, credits page
-node e2e/e2e11.mjs [dir]                   # 16-step run of money features: a bundle set up in two dashboards, one checkout with the bundle discount, a payment plan, a padrino via the family link
+node e2e/e2e11.mjs [dir]                   # 17-step run of money features: a bundle set up in two dashboards, one checkout with the bundle discount, a payment plan, a padrino via the family link
 node e2e/e2e12.mjs [dir]                   # 18-step run of vendor tools: Pro, referral link, website page, insurance upload + admin approval, calendar sync, weather policy, WhatsApp, review photos, earnings CSV, partner-link sign-up, quotes for rentals
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/touch.mjs                         # iPad-style touch run: real finger swipes on Discover, and a tap-target size check on the main screens

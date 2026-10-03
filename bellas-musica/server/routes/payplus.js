@@ -1,6 +1,6 @@
 import { HttpError, int, now, safeJson, str, todayStr, withLock } from "../util.js";
 import { balanceCents } from "../pricing.js";
-import { LIVE_SQL, feePctFor, expirePending, getGroup, isBookable, isLive, markCartPaid, markPartPaid, newId, requireOwner } from "../shared.js";
+import { LIVE_SQL, feePctFor, expirePending, getGroup, isBookable, isLive, markBookingPaid, markCartPaid, markPartPaid, newId, requireOwner } from "../shared.js";
 import { maskContact } from "./messages.js";
 
 const MIN_PART = 2000;                // $20: the smallest installment or padrino payment (unless less is left)
@@ -74,24 +74,45 @@ export default function payPlusRoutes(ctx, add) {
   }, { auth: true });
 
   // ---- one checkout for several deposits ----
-  add("POST", "/api/cart", ({ body, user }) => withLock("cart-user:" + user.id, async () => {
+  const cartRows = (body, user) => {
     if (!Array.isArray(body.bookingIds) || body.bookingIds.length < 2 || body.bookingIds.length > MAX_CART) throw new HttpError(400, `Pick 2 to ${MAX_CART} unpaid bookings`);
     expirePending(db);
     const ids = [...new Set(body.bookingIds.map(String))];
     const rows = ids.map((id) => db.get("SELECT * FROM bookings WHERE id = ? AND customer_id = ?", id, user.id));
     if (rows.some((b) => !b)) throw new HttpError(404, "Booking not found");
     if (rows.some((b) => b.status !== "pending_payment" || b.payment_status !== "unpaid")) throw new HttpError(400, "One of these is no longer waiting for a deposit. Refresh and try again.");
-    const groups = rows.map((b) => getGroup(db, b.group_id));
+    return { ids, rows, groups: rows.map((b) => getGroup(db, b.group_id)) };
+  };
+  // What the one checkout would cost, with bundle savings, before it is started (for the button).
+  add("POST", "/api/cart/preview", ({ body, user }) => {
+    const { rows, groups } = cartRows(body, user);
+    const prices = bundlePrices(rows, groups);
+    return { amount_cents: rows.reduce((n, b) => n + (prices.get(b.id)?.deposit_cents ?? b.deposit_cents), 0), discount_cents: [...prices.values()].reduce((n, x) => n + x.discount_cents, 0) };
+  }, { auth: true });
+  add("POST", "/api/cart", ({ body, user }) => withLock("cart-user:" + user.id, async () => {
+    const { ids, rows, groups } = cartRows(body, user);
     if (stripe.live && groups.some((g) => !g.stripe_ready || !isBookable(ctx, g))) throw new HttpError(400, "One of these vendors can't take payments right now. Pay the others together and that one on its own.");
-    applyBundles(rows, groups);
-    const fresh = ids.map((id) => db.get("SELECT * FROM bookings WHERE id = ?", id));
-    const amount = fresh.reduce((n, b) => n + b.deposit_cents, 0);
+    // Each booking's own checkout is closed first so the same deposit can't be paid twice. One that can't be closed was
+    // just paid: it is recorded now and the family picks again.
+    if (stripe.live) for (const b of rows) if (b.stripe_session_id) {
+      try { await stripe.expireCheckoutSession(b.stripe_session_id); }
+      catch {
+        const s = await stripe.getCheckoutSession(b.stripe_session_id).catch(() => null);
+        if (s && s.payment_status === "paid") {
+          if (s.amount_total === b.deposit_cents) await markBookingPaid(ctx, b.id, String(s.payment_intent || ""));
+          throw new HttpError(409, "One of these deposits was just paid. Refresh and try again.");
+        }
+      }
+    }
+    // The bundle prices live in the cart and reach the bookings only when the cart is paid, so a cart that is left
+    // unpaid never lowers what a booking costs on its own.
+    const prices = bundlePrices(rows, groups);
+    const items = rows.map((b) => prices.get(b.id) || { id: b.id, total_cents: b.total_cents, deposit_cents: b.deposit_cents, platform_fee_cents: b.platform_fee_cents, discount_cents: 0, bundle_id: "" });
+    const amount = items.reduce((n, x) => n + x.deposit_cents, 0);
     const cart = { id: newId("c"), amount_cents: amount };
-    db.run("INSERT INTO carts (id, customer_id, booking_ids, amount_cents, created_at) VALUES (?, ?, ?, ?, ?)", cart.id, user.id, JSON.stringify(ids), amount, now());
+    db.run("INSERT INTO carts (id, customer_id, booking_ids, amount_cents, items_json, created_at) VALUES (?, ?, ?, ?, ?, ?)", cart.id, user.id, JSON.stringify(ids), amount, JSON.stringify(items), now());
     if (!stripe.live) return { cart_id: cart.id, amount_cents: amount, payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/cart/${cart.id}` } };
-    // Each booking's own checkout is closed so the same deposit can't be paid twice.
-    for (const b of fresh) if (b.stripe_session_id) await stripe.expireCheckoutSession(b.stripe_session_id).catch(() => {});
-    const lines = fresh.map((b, i) => ({ amount: b.deposit_cents, name: `Deposit: ${groups[i].name} on ${b.date}` }));
+    const lines = rows.map((b, i) => ({ amount: items[i].deposit_cents, name: `Deposit: ${groups[i].name} on ${b.date}` }));
     const session = await stripe.checkoutForCart({ cart, lines, successUrl: `${config.baseUrl}/#/bookings?cart=1`, cancelUrl: `${config.baseUrl}/#/bookings` });
     db.run("UPDATE carts SET session_id = ? WHERE id = ?", session.id, cart.id);
     return { cart_id: cart.id, amount_cents: amount, payment: { mode: "stripe", url: session.url } };
@@ -104,7 +125,9 @@ export default function payPlusRoutes(ctx, add) {
   };
   add("GET", "/api/carts/:id", ({ params, user }) => {
     const c = myCart(user, params.id);
-    const items = safeJson(c.booking_ids, []).map((id) => db.get("SELECT b.id, b.date, b.time, b.deposit_cents, b.discount_cents, g.name AS group_name FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", id)).filter(Boolean);
+    const priced = new Map(safeJson(c.items_json, []).map((x) => [x.id, x]));
+    const items = safeJson(c.booking_ids, []).map((id) => db.get("SELECT b.id, b.date, b.time, b.deposit_cents, b.discount_cents, g.name AS group_name FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", id)).filter(Boolean)
+      .map((b) => (priced.has(b.id) && c.status !== "paid" ? { ...b, deposit_cents: priced.get(b.id).deposit_cents, discount_cents: priced.get(b.id).discount_cents } : b));
     return { cart: { id: c.id, status: c.status, amount_cents: c.amount_cents, items } };
   }, { auth: true });
   add("POST", "/api/carts/:id/simulate-pay", async ({ params, user }) => {
@@ -118,7 +141,9 @@ export default function payPlusRoutes(ctx, add) {
   const activeBundles = (groupId) => db.all(
     `SELECT b.* FROM bundles b JOIN bundle_members m ON m.bundle_id = b.id WHERE m.group_id = ?
        AND NOT EXISTS (SELECT 1 FROM bundle_members x WHERE x.bundle_id = b.id AND x.accepted = 0)`, groupId);
-  function applyBundles(rows, groups) {
+  // The discounted price of each booking that completes an active bundle (all its members, the same day). Nothing is written.
+  function bundlePrices(rows, groups) {
+    const out = new Map();
     const byGroup = new Map(rows.map((b, i) => [b.group_id, { b, g: groups[i] }]));
     const seen = new Set();
     for (const { b } of byGroup.values()) for (const bun of activeBundles(b.group_id)) {
@@ -129,14 +154,15 @@ export default function payPlusRoutes(ctx, add) {
       if (new Set(items.map((x) => x.b.date)).size !== 1) continue;            // the same party day
       if (!items.every((x) => isLive(x.g))) continue;
       for (const { b, g } of items) {
-        if (b.discount_cents) continue;                                       // already discounted
+        if (out.has(b.id) || b.discount_cents) continue;                      // one discount per booking
         const discount = Math.round(((b.total_cents - b.travel_fee_cents) * bun.discount_pct) / 100);
         const total = b.total_cents - discount;
         const deposit = Math.ceil((total * g.deposit_pct) / 100);
         const fee = Math.min(Math.round((total * feePctFor(g, config)) / 100), deposit);
-        db.run("UPDATE bookings SET total_cents = ?, deposit_cents = ?, platform_fee_cents = ?, discount_cents = ?, bundle_id = ?, updated_at = ? WHERE id = ? AND payment_status = 'unpaid'", total, deposit, fee, discount, bun.id, now(), b.id);
+        out.set(b.id, { id: b.id, total_cents: total, deposit_cents: deposit, platform_fee_cents: fee, discount_cents: discount, bundle_id: bun.id });
       }
     }
+    return out;
   }
 
   const bundleView = (bun, viewerGroup) => {

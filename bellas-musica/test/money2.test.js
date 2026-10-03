@@ -137,27 +137,53 @@ test("one checkout for the whole party, and vendor bundles (simulated)", async (
     const h2 = (await cust.post("/api/bookings", bookingBody(tent, d, { packageId: pkg, time: "12:00 PM" }))).json.booking;
     assert.equal((await cust.post("/api/cart", { bookingIds: [h1.id] })).status, 400);
     assert.equal((await other.post("/api/cart", { bookingIds: [h1.id, h2.id] })).status, 404);
+    const plain1 = row(S, h1.id), plain2 = row(S, h2.id);
+    const preview = (await cust.post("/api/cart/preview", { bookingIds: [h1.id, h2.id] })).json;
+    assert.equal(preview.discount_cents, 15000);
+    assert.equal((await other.post("/api/cart/preview", { bookingIds: [h1.id, h2.id] })).status, 404);
     const cart = await cust.post("/api/cart", { bookingIds: [h1.id, h2.id] });
     assert.equal(cart.status, 200);
+    // the discount lives in the cart until it is paid: the bookings still cost the full price on their own
+    for (const [id, plain] of [[h1.id, plain1], [h2.id, plain2]]) { const r = row(S, id); assert.equal(r.discount_cents, 0); assert.equal(r.total_cents, plain.total_cents); assert.equal(r.deposit_cents, plain.deposit_cents); }
+    const items = (await cust.get(`/api/carts/${cart.json.cart_id}`)).json.cart.items;
+    assert.deepEqual(items.map((x) => x.discount_cents), [9000, 6000]);
+    assert.equal(items[0].deposit_cents, Math.ceil(81000 * 0.25));
+    assert.equal(cart.json.amount_cents, items[0].deposit_cents + items[1].deposit_cents);
+    assert.equal(cart.json.amount_cents, preview.amount_cents);
+    const again = await cust.post("/api/cart", { bookingIds: [h1.id, h2.id] }); // making the cart again gives the same price
+    assert.equal(again.json.amount_cents, cart.json.amount_cents);
+    assert.equal((await other.post(`/api/carts/${cart.json.cart_id}/simulate-pay`)).status, 404);
+    assert.equal((await cust.post(`/api/carts/${cart.json.cart_id}/simulate-pay`)).status, 200);
     const r1 = row(S, h1.id), r2 = row(S, h2.id);
     assert.equal(r1.discount_cents, 9000); assert.equal(r1.total_cents, 81000); assert.equal(r1.deposit_cents, Math.ceil(81000 * 0.25));
     assert.equal(r2.discount_cents, 6000); assert.equal(r2.total_cents, 54000);
     assert.equal(cart.json.amount_cents, r1.deposit_cents + r2.deposit_cents);
-    const again = await cust.post("/api/cart", { bookingIds: [h1.id, h2.id] }); // making the cart again doesn't discount twice
-    assert.equal(row(S, h1.id).total_cents, 81000); assert.equal(again.json.amount_cents, cart.json.amount_cents);
-    assert.equal((await other.post(`/api/carts/${cart.json.cart_id}/simulate-pay`)).status, 404);
-    assert.equal((await cust.post(`/api/carts/${cart.json.cart_id}/simulate-pay`)).status, 200);
     for (const id of [h1.id, h2.id]) { const r = row(S, id); assert.equal(r.status, "requested"); assert.equal(r.payment_status, "paid"); assert.equal(r.cart_id, cart.json.cart_id); }
     assert.equal((await cust.post("/api/cart", { bookingIds: [h1.id, h2.id] })).status, 400); // already paid
-    // paying the earlier cart too: the deposits were already paid, so that money goes back
+    // paying the earlier cart too: the deposits were already paid, so that money goes back (what that cart charged)
     await cust.post(`/api/carts/${again.json.cart_id}/simulate-pay`);
-    assert.equal(S.db.all("SELECT * FROM extra_refunds WHERE payment_intent LIKE ?", `sim_cart_${again.json.cart_id}#%`).length, 2);
+    const back = S.db.all("SELECT * FROM extra_refunds WHERE payment_intent LIKE ?", `sim_cart_${again.json.cart_id}#%`);
+    assert.equal(back.length, 2); assert.equal(back.reduce((n, x) => n + x.cents, 0), again.json.amount_cents);
 
     // no discount when the bundle isn't complete (only the tent) or on different days
     const h3 = (await cust.post("/api/bookings", bookingBody(tent, d2, { packageId: pkg, time: "12:00 PM" }))).json.booking;
     const h4 = (await cust.post("/api/bookings", bookingBody(mus, d, { hours: 2, time: "4:00 PM" }))).json.booking;
-    await cust.post("/api/cart", { bookingIds: [h3.id, h4.id] });
-    assert.equal(row(S, h3.id).discount_cents, 0); assert.equal(row(S, h4.id).discount_cents, 0);
+    const c34 = await cust.post("/api/cart", { bookingIds: [h3.id, h4.id] });
+    assert.equal(c34.json.amount_cents, row(S, h3.id).deposit_cents + row(S, h4.id).deposit_cents);
+    assert.deepEqual((await cust.get(`/api/carts/${c34.json.cart_id}`)).json.cart.items.map((x) => x.discount_cents), [0, 0]);
+
+    // a bundle cart that is left unpaid can't be used to pay one vendor alone at the bundle price
+    const h5 = (await cust.post("/api/bookings", bookingBody(mus, d2, { hours: 3, time: "2:00 PM" }))).json.booking;
+    const c35 = await cust.post("/api/cart", { bookingIds: [h3.id, h5.id] });
+    const items35 = (await cust.get(`/api/carts/${c35.json.cart_id}`)).json.cart.items;
+    assert.ok(items35.every((x) => x.discount_cents > 0));
+    const full5 = row(S, h5.id).total_cents;
+    await cust.post(`/api/bookings/${h5.id}/simulate-pay`);
+    assert.equal(row(S, h5.id).discount_cents, 0); assert.equal(row(S, h5.id).total_cents, full5);
+    // and if that cart is paid later anyway, the vendor already paid on its own gets its cart share back
+    await cust.post(`/api/carts/${c35.json.cart_id}/simulate-pay`);
+    assert.equal(S.db.get("SELECT cents FROM extra_refunds WHERE payment_intent = ?", `sim_cart_${c35.json.cart_id}#${h5.id}`).cents, items35.find((x) => x.id === h5.id).deposit_cents);
+    assert.equal(row(S, h3.id).cart_id, c35.json.cart_id); assert.ok(row(S, h3.id).discount_cents > 0);
 
     // leaving the bundle ends it
     assert.equal((await mo.del(`/api/bundles/${mk.json.bundle.id}?groupId=${mus}`)).status, 200);
@@ -228,5 +254,16 @@ test("live Stripe: one checkout = one charge, a transfer to each vendor, and ref
     await o1.patch(`/api/bookings/${b3.id}`, { action: "cancel" });
     const partRefund = [...F.calls].reverse().find((x) => x.url === "/v1/refunds" && x.form.payment_intent === "pi_part");
     assert.equal(partRefund.form.amount, "10000"); assert.equal(partRefund.form.reverse_transfer, "true"); assert.equal(partRefund.form.refund_application_fee, undefined);
+
+    // a deposit paid on its own checkout just before the family starts one checkout: it is recorded, and no cart is made
+    const b4 = (await cust.post("/api/bookings", bookingBody(g1, d, { hours: 2, time: "2:00 PM" }))).json.booking;
+    const b5 = (await cust.post("/api/bookings", bookingBody(g2, d, { hours: 2, time: "12:00 PM" }))).json.booking;
+    const cartsBefore = S.db.get("SELECT COUNT(*) c FROM carts").c;
+    F.state.sessionPaid = true; F.state.sessionAmount = b4.deposit_cents;
+    const late = await cust.post("/api/cart", { bookingIds: [b4.id, b5.id] });
+    F.state.sessionPaid = false;
+    assert.equal(late.status, 409);
+    assert.equal(row(S, b4.id).payment_status, "paid"); assert.equal(row(S, b4.id).status, "requested");
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM carts").c, cartsBefore);
   } finally { await S.close(); await F.close(); }
 });

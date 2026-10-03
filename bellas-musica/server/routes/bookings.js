@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, todayStr, daysBetween, withLock } from "../util.js";
-import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balancePaidInApp, refundPercent, SLOTS } from "../pricing.js";
+import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balanceLeft, balancePaidInApp, refundPercent, SLOTS } from "../pricing.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -89,7 +89,7 @@ export default function bookingRoutes(ctx, add) {
       subtotal_cents: b.subtotal_cents, travel_fee_cents: b.travel_fee_cents, addons: addonsOf(b), addons_cents: b.addons_cents, total_cents: b.total_cents, deposit_cents: b.deposit_cents,
       balance_cents: b.total_cents - b.deposit_cents, policy: b.policy, status, payment_status: b.payment_status, refund_cents: b.refund_cents, created_at: b.created_at,
       balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
-      balance_paid_cents: balancePaidInApp(b), balance_left_cents: ["paid", "partial_refund", "refunded", "offline"].includes(b.balance_status) ? 0 : Math.max(0, balanceCents(b) - (b.balance_parts_cents || 0)),
+      balance_paid_cents: balancePaidInApp(b), balance_left_cents: balanceLeft(b),
       parts: db.all("SELECT id, payer_id, payer_name, note, amount_cents, status, paid_at FROM balance_parts WHERE booking_id = ? AND status != 'pending' ORDER BY paid_at", b.id).map((p) => ({ payer_name: p.payer_name, note: p.note, amount_cents: p.amount_cents, status: p.status, paid_at: p.paid_at, by_customer: p.payer_id === b.customer_id })),
       discount_cents: b.discount_cents, bundle_id: b.bundle_id,
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
@@ -469,7 +469,8 @@ export default function bookingRoutes(ctx, add) {
         if (kind === "booking") {
           const b = db.get("SELECT deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
           if (b && obj.amount_total === b.deposit_cents) await markBookingPaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));
-          else console.error("webhook: amount mismatch or unknown booking", obj.metadata?.booking_id);
+          else if (b) ctx.alert(`A deposit payment for booking ${obj.metadata.booking_id} (${obj.payment_intent}) doesn't match its price. Check it in Stripe and refund it if needed.`, "dep-mismatch-" + obj.metadata.booking_id);
+          else console.error("webhook: unknown booking", obj.metadata?.booking_id);
         } else if (kind === "balance") {
           const b = db.get("SELECT total_cents, deposit_cents FROM bookings WHERE id = ?", String(obj.metadata.booking_id));
           if (b && obj.amount_total === b.total_cents - b.deposit_cents) await markBalancePaid(ctx, String(obj.metadata.booking_id), String(obj.payment_intent || ""));

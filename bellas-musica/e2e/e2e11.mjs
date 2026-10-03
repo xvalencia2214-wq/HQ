@@ -64,6 +64,8 @@ try {
   const h2 = (await cust.post("/api/bookings", { groupId: tent, date: d, time: "12:00 PM", packageId: pkg, event: "Wedding", guests: 80, eventZip: "60608", name: "Rosa", phone: "(312) 555-0142", address: "Backyard", acceptPolicy: true })).json.booking;
   await go(R, "#/bookings"); await R.waitForSelector(".cartbox");
   ok("My bookings offers to pay both deposits at once", /2 deposits waiting/.test(await R.locator(".cartbox").innerText()));
+  await R.waitForFunction(() => /You save \$150/.test(document.querySelector(".cartbox").innerText));
+  ok("before paying, the button shows the bundle price and the savings", /Pay all at once \(\$(\d+(\.\d+)?)\)/.test(await R.locator("[data-cart]").innerText()) && /You save \$150/.test(await R.locator(".cartbox").innerText()));
   await R.click("[data-cart]"); await R.waitForURL(/#\/pay\/cart\//); await R.waitForSelector("#paybtn");
   ok("the checkout lists both vendors and the bundle savings", /Mariachi Del Barrio/.test(await text(R)) && /Carpas La Fiesta/.test(await text(R)) && /You save \$90/.test(await text(R)) && /You save \$60/.test(await text(R)));
   await shot(R, "cart.png");

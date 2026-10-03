@@ -1,5 +1,5 @@
 import { HttpError, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr, addDays } from "../util.js";
-import { CATEGORIES, EVENT_TYPES, balancePaidInApp, categoryOf } from "../pricing.js";
+import { CATEGORIES, EVENT_TYPES, balanceLeft, balancePaidInApp, categoryOf } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { LIVE_SQL, firstPhotos, fromCents, isLive, newId, ratingMap, ratingOf } from "../shared.js";
 import { maskContact } from "./messages.js";
@@ -64,13 +64,12 @@ export default function partyRoutes(ctx, add) {
     const bookings = partyBookings(p);
     const timeline = db.all("SELECT id, at, label, booking_id FROM party_timeline WHERE party_id = ? ORDER BY at, id", p.id);
     const vendors = bookings.map((b) => {
-      const owed = b.total_cents - b.deposit_cents;
       const base = { id: b.id, group_id: b.group_id, group_name: b.group_name, type: b.group_type, category: categoryOf(b.group_type), time: b.time, status: b.status === "pending_payment" ? "unpaid" : b.status };
       if (role === "thanks") return base;
       const paid = paidInApp(b);
       const padrinos = db.all("SELECT payer_name, amount_cents FROM balance_parts WHERE booking_id = ? AND payer_id != ? AND status IN ('paid','partial_refund')", b.id, b.customer_id)
         .map((x) => (role === "owner" ? { name: x.payer_name, amount_cents: x.amount_cents } : { name: x.payer_name }));
-      return { ...base, padrinos, deposit_cents: role === "owner" ? b.deposit_cents : undefined, total_cents: b.total_cents, paid_cents: role === "owner" ? paid : undefined, balance_left_cents: b.status === "confirmed" ? Math.max(0, owed - (["paid", "partial_refund"].includes(b.balance_status) ? owed : b.balance_parts_cents || 0)) : null, balance_offline: b.balance_status === "offline" };
+      return { ...base, padrinos, deposit_cents: role === "owner" ? b.deposit_cents : undefined, total_cents: b.total_cents, paid_cents: role === "owner" ? paid : undefined, balance_left_cents: b.status === "confirmed" ? balanceLeft(b) : null, balance_offline: b.balance_status === "offline" };
     });
     const base = {
       id: p.id, title: p.title, event: p.event, date: p.date, zip: p.zip, guests: p.guests, template: p.template,
@@ -94,11 +93,13 @@ export default function partyRoutes(ctx, add) {
     if (role === "family") return out;
     const active = vendors.filter((v) => v.status !== "unpaid");
     const booked = active.reduce((n, v) => n + v.total_cents, 0), paid = vendors.reduce((n, v) => n + (v.paid_cents || 0), 0);
+    // what is still to pay: each booked vendor's balance (a balance the vendor marked paid in cash is settled)
+    const toPay = bookings.filter((b) => b.status !== "pending_payment").reduce((n, b) => n + balanceLeft(b), 0);
     const byCat = {};
     for (const v of active) byCat[v.category] = (byCat[v.category] || 0) + v.total_cents;
     return {
       ...out, budget_cents: p.budget_cents, credits_public: Boolean(p.credits_public),
-      money: { booked_cents: booked, paid_cents: paid, to_pay_cents: Math.max(0, booked - paid), left_cents: p.budget_cents ? p.budget_cents - booked : null, by_category: byCat },
+      money: { booked_cents: booked, paid_cents: paid, to_pay_cents: toPay, left_cents: p.budget_cents ? p.budget_cents - booked : null, by_category: byCat },
       share_url: `${config.baseUrl}/#/fp/${p.share_token}`, thanks_url: `${config.baseUrl}/#/thanks/${p.id}`
     };
   }

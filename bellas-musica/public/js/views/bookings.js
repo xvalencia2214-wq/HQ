@@ -96,7 +96,13 @@ export function cartBox(bookings) {
     <button type="button" class="btn small" data-cart="${esc(unpaid.slice(0, 6).map((b) => b.id).join(","))}">${esc(t("cart.pay", { amount: money(total) }))}</button> <span class="dim small">${esc(t("cart.hint"))}</span></div>`;
 }
 export function wireCart(root) {
-  root.querySelectorAll("[data-cart]").forEach((b) => { b.onclick = async () => {
+  root.querySelectorAll("[data-cart]").forEach((b) => {
+    // the real price of paying together (vendor bundles take their discount off)
+    api.post("/api/cart/preview", { bookingIds: b.dataset.cart.split(",") }).then((p) => {
+      b.textContent = t("cart.pay", { amount: money(p.amount_cents) });
+      if (p.discount_cents > 0) b.insertAdjacentHTML("afterend", ` <span class="tag trust">${esc(t("bun.saved", { amount: money(p.discount_cents) }))}</span>`);
+    }).catch(() => {});
+    b.onclick = async () => {
     b.disabled = true;
     try { goto((await api.post("/api/cart", { bookingIds: b.dataset.cart.split(",") })).payment.url); } catch (e) { toast(e.message, "error"); b.disabled = false; }
   }; });
