@@ -21,6 +21,7 @@ import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
 import { admin } from "./views/admin.js";
+import { teamInvitePage, payLinkPage, specialsPage } from "./views/business.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
@@ -118,6 +119,9 @@ async function route() {
     else if (seg[0] === "my-party" && seg[1]) await myParty(box, seg[1]);
     else if (seg[0] === "fp" && seg[1]) await familyParty(box, seg[1]);
     else if (seg[0] === "thanks" && seg[1]) await thanksPage(box, seg[1]);
+    else if (seg[0] === "team" && seg[1]) await teamInvitePage(box, seg[1]);
+    else if (seg[0] === "pay-link" && seg[1]) await payLinkPage(box, seg[1]);
+    else if (seg[0] === "specials" && seg[1]) await specialsPage(box, seg[1], params);
     else if (seg[0] === "agreement" && seg[1]) await agreement(box, seg[1], params);
     else if (seg[0] === "saved") await saved(box);
     else if (seg[0] === "quotes") await quotes(box, params);

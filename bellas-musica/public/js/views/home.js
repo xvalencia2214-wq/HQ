@@ -6,6 +6,7 @@ import { drawMap } from "../map.js";
 import { waitlistBox } from "./waitlist.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
 import { catChips, catLabel } from "../cats.js";
+import { holidayBanner } from "./business.js";
 
 const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius", "category", "soon"];
 
@@ -46,7 +47,7 @@ export async function home(app, params) {
   // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
   const catHref = (c) => { const u = new URLSearchParams(); for (const k of ["zip", "event", "date", "guests", "radius", "view"]) if (p[k]) u.set(k, p[k]); if (c !== "music") u.set("category", c); return "#/?" + u.toString(); };
 
-  app.innerHTML = `<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t(music ? "home.title" : "home.titleAny"))}</h1><p>${esc(t(music ? "home.sub" : "home.subAny"))}</p>
+  app.innerHTML = `${holidayBanner()}<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t(music ? "home.title" : "home.titleAny"))}</h1><p>${esc(t(music ? "home.sub" : "home.subAny"))}</p>
     ${catChips(cat, { href: catHref })}
     <form class="search" id="sform"><input type="hidden" id="s-category" value="${music ? "" : esc(cat)}">
       <div class="row"><div><label for="s-zip">${esc(t("f.zip"))}</label><input id="s-zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" required placeholder="60608" value="${esc(p.zip || "")}" autocomplete="postal-code">

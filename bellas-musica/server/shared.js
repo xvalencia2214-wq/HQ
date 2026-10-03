@@ -255,6 +255,7 @@ export async function settleCartTransfer(ctx, bookingId) {
 // and is written down so our records always add up to what Stripe actually refunded.
 async function strayRefund(ctx, booking, paymentIntent, cents, reason) {
   const { db, stripe } = ctx;
+  if (cents <= 0) return; // nothing was paid (a $0 balance when the deposit was 100%)
   if (paymentIntent && db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", paymentIntent)) return; // this payment was already sent back (the same payment can be reported twice)
   if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
     try { await stripe.refund({ paymentIntent, amountCents: cents, key: `stray-${paymentIntent}-${cents}`, applicationFee: false }); }

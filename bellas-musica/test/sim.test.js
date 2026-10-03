@@ -78,16 +78,27 @@ async function simulate({ mode, seed, steps }) {
       const id = created.json.id;
       await v.patch(`/api/groups/${id}`, { events: EVENTS.filter(() => chance(0.7)).concat("Birthday"), max_guests: int(80, 500), min_hours: hourly && chance(0.4) ? int(2, 4) : 1, cancel_policy: pick(["flexible", "moderate", "strict"]), deposit_pct: pick([20, 25, 30, 50]), weather_policy: chance(0.3) ? "If it rains we bring a tarp." : "" });
       const dates = {};
-      for (let d = 1; d <= 30; d++) if (chance(0.6)) dates[day(d)] = SLOTS.filter(() => chance(0.6)).slice(0, 4);
+      for (let d = 1; d <= 30; d++) if (chance(0.6)) dates[day(d)] = [...SLOTS.filter(() => chance(0.6)).slice(0, 4), ...(chance(0.2) ? ["5:00 AM"] : []), ...(chance(0.25) ? [pick(["6:00 PM-11:00 PM", "10:00 AM-2:00 PM", "9:00 PM-11:30 PM"])] : [])];
       await v.put(`/api/groups/${id}/availability`, { dates: Object.fromEntries(Object.entries(dates).filter(([, s]) => s.length)) });
       await v.post(`/api/groups/${id}/photos`, { data: PNG });
       for (let k = 0; k < (hourly ? int(0, 2) : int(1, 3)); k++) await v.post(`/api/groups/${id}/packages`, { name: `Package ${k}`, description: "Sim package", hours: int(1, 5), price: int(4, 30) * 50 });
       for (let k = 0; k < int(0, 3); k++) await v.post(`/api/groups/${id}/addons`, { name: `Extra ${k} ${type}`, price: pick([0, 25, 60, 150]) });
+      if (hourly && chance(0.4)) await v.post(`/api/groups/${id}/packages`, { name: "Serenata", description: "A few songs", minutes: pick([20, 30, 45]), price: int(3, 8) * 50 });
+      if (chance(0.4)) await v.patch(`/api/groups/${id}`, { capacity: int(1, 3), buffer_min: pick([0, 15, 30, 60]) });
+      if (chance(0.5)) await v.patch(`/api/groups/${id}`, { needs: ["A power outlet within 50 feet", "Parking near the door"].slice(0, int(1, 2)) });
       if (fake) { await v.post(`/api/groups/${id}/stripe/onboard`); await v.post(`/api/groups/${id}/stripe/refresh`); }
       const pub = await v.post(`/api/groups/${id}/publish`);
       if (pub.status !== 200) fail("publish failed", pub.json);
       if (!refCode) refCode = (await v.get("/api/my/referral")).json.code;
       vendors.push({ v, id, type, hourly });
+    }
+    // some vendors have a helper who answers for them
+    const helpers = new Map();
+    for (const g of vendors.filter(() => chance(0.4))) {
+      const h = await actor(`h-${g.id}@sim.test`, `Helper ${g.type}`).signup();
+      const inv = await g.v.post(`/api/groups/${g.id}/team/invite`, {});
+      if ((await h.post(`/api/team-invite/${inv.json.url.split("/team/")[1]}/accept`)).status !== 200) fail("helper couldn't join", inv.json);
+      helpers.set(g.id, h);
     }
     const customers = [];
     for (let i = 0; i < 8; i++) customers.push(await actor(`c${i}@sim.test`, `Cliente ${i} Martinez`, { phone: `773555${2000 + i}`, sms_opt_in: chance(0.5), source: chance(0.3) ? "iglesia" : undefined }).signup());
@@ -98,7 +109,7 @@ async function simulate({ mode, seed, steps }) {
     // ---- helpers that look at the server's real state to pick meaningful actions ----
     const q = (sql, ...a) => S.db.all(sql, ...a);
     const one = (sql, ...a) => S.db.get(sql, ...a);
-    const ownerOf = (gid) => vendors.find((x) => x.id === gid).v;
+    const ownerOf = (gid) => (helpers.has(gid) && chance(0.5) ? helpers.get(gid) : vendors.find((x) => x.id === gid).v); // the owner or a helper on the team
     const custById = (uid) => customers.find((c) => c.id === uid) || padrinos.find((c) => c.id === uid);
     const payDeposit = async (bid) => {
       const b = one("SELECT * FROM bookings WHERE id = ?", bid);
@@ -121,7 +132,7 @@ async function simulate({ mode, seed, steps }) {
       const usePkg = !pub.hourly || (pub.packages.length && chance(0.5));
       return {
         groupId: g.id, date: d, time: t, event: pick(EVENTS), guests: chance(0.05) ? 99999 : int(20, Math.max(20, pub.max_guests)), eventZip: pick(["60608", "60623", "60402", "77003"]),
-        name: "Cliente", phone: "(312) 555-0142", address: "Salón de fiestas, Chicago", message: chance(0.3) ? "Por favor llegar temprano" : "", acceptPolicy: true,
+        name: "Cliente", phone: "(312) 555-0142", address: "Salón de fiestas, Chicago", message: chance(0.3) ? "Por favor llegar temprano" : "", acceptPolicy: true, acceptNeeds: true,
         ...(usePkg && pub.packages.length ? { packageId: pick(pub.packages).id } : { hours: Math.max(pub.min_hours, int(1, 4)) }),
         ...(pub.addons.length && chance(0.5) ? { addonIds: pub.addons.filter(() => chance(0.5)).map((x) => x.id) } : {})
       };
@@ -321,7 +332,74 @@ async function simulate({ mode, seed, steps }) {
         if (sub === "share") { const r = await fetch(`${S.base}/g/${pick(vendors).id}`); if (r.status >= 500) fail("share page 5xx", r.status); }
         if (sub === "landing") { const r = await fetch(`${S.base}/chicago/${pick(["pilsen", "little-village", "cicero"])}${chance(0.5) ? "/quinceanera" : ""}`); if (r.status >= 500) fail("landing 5xx", r.status); }
         if (sub === "sitemap") { const r = await fetch(`${S.base}/sitemap.xml`); if (r.status !== 200) fail("sitemap", r.status); }
-      } else if (roll < 77) { // chat
+      } else if (roll < 79) { // a vendor's own client, through a payment link
+        const g = pick(vendors), cu = pick(customers);
+        const dd = day(int(2, 25));
+        what = `pay link ${g.type} ${dd}`;
+        const mk = await g.v.post(`/api/groups/${g.id}/paylinks`, { clientName: cu.name, date: dd, time: pick(["5:00 AM", "11:30 AM", "7:30 PM", "10:45 PM", ...SLOTS]), ...(chance(0.2) ? { minutes: pick([20, 30]) } : { hours: int(1, 4) }), event: pick(EVENTS), guests: int(20, 200), eventZip: "60608", address: chance(0.5) ? "Casa" : "", total: int(4, 40) * 50, depositPct: pick([20, 50, 100]), days: int(1, 5) });
+        if (mk.status === 200) {
+          const tok = mk.json.url.split("/pay-link/")[1];
+          if (chance(0.15)) { what += " cancelled"; await g.v.del(`/api/paylinks/${mk.json.link.id}`); }
+          if (chance(0.8)) {
+            const r = await cu.post(`/api/pay-link/${tok}/book`, { acceptPolicy: true, acceptNeeds: true, phone: "312-555-0142", address: "Salón de fiestas, Chicago" });
+            if (r.status === 200 && r.json.booking_id && chance(0.85)) {
+              what += " paid";
+              const b = one("SELECT * FROM bookings WHERE id = ?", r.json.booking_id);
+              if (fake) await webhook({ amount_total: b.deposit_cents, payment_intent: "pi_link_" + b.id, metadata: { kind: "booking", booking_id: b.id } });
+              else await cu.post(`/api/bookings/${b.id}/simulate-pay`);
+            }
+          }
+        }
+      } else if (roll < 81) { // at the party: one more hour, an add-on, something else; paid in the app, in cash, or not at all
+        const b = pick(q("SELECT * FROM bookings WHERE status = 'confirmed' AND date IN (?, ?, ?)", day(-1), day(0), day(1)));
+        what = `extra ${b?.id}`;
+        if (b) {
+          const fam = custById(b.customer_id), team = ownerOf(b.group_id);
+          let r;
+          if (chance(0.4)) r = await fam.post(`/api/bookings/${b.id}/extras`, { kind: "hour" });
+          else r = await team.post(`/api/bookings/${b.id}/extras`, chance(0.5) ? { kind: "hour", hours: int(1, 2) } : { kind: "other", label: "Una canción más", amount: int(1, 6) * 20 });
+          const open = q("SELECT * FROM extras WHERE booking_id = ? AND status IN ('asked','offered')", b.id);
+          for (const x of open) {
+            const p2 = R();
+            if (x.status === "asked") { if (p2 < 0.7) await team.post(`/api/extras/${x.id}/accept`, { amount: x.amount_cents ? undefined : 150 }); else await team.post(`/api/extras/${x.id}/cancel`); }
+            const y = one("SELECT * FROM extras WHERE id = ?", x.id);
+            if (y.status !== "offered") continue;
+            if (p2 < 0.5) { if (fake) await webhook({ amount_total: y.amount_cents, payment_intent: "pi_x_" + y.id, metadata: { kind: "extra", extra_id: y.id, booking_id: b.id } }); else await fam.post(`/api/extras/${y.id}/simulate-pay`); }
+            else if (p2 < 0.7) await team.post(`/api/extras/${y.id}/cash`);
+            else if (p2 < 0.8) await fam.post(`/api/extras/${y.id}/cancel`);
+          }
+          if (r && r.status === 200) what += " +" + (r.json.extras.at(-1)?.status || "");
+        }
+      } else if (roll < 83) { // the crew: roster, lineups, who got paid; and the payroll
+        const g = pick(vendors), team = ownerOf(g.id);
+        what = `crew ${g.type}`;
+        if (chance(0.4) || !one("SELECT 1 AS x FROM crew WHERE group_id = ?", g.id)) await team.post(`/api/groups/${g.id}/crew`, { name: `Músico ${int(1, 99)}`, role: pick(["Trompeta", "Violín", "Chofer", "Mesero"]), phone: chance(0.5) ? "773-555-0101" : "", pay: int(5, 30) * 10 });
+        const b = pick(q("SELECT id FROM bookings WHERE group_id = ? AND status IN ('requested','confirmed') AND date >= ?", g.id, day(0)));
+        if (b) {
+          const crew = q("SELECT id FROM crew WHERE group_id = ? AND active = 1", g.id).filter(() => chance(0.6));
+          await team.put(`/api/bookings/${b.id}/lineup`, { members: crew.map((c) => ({ crewId: c.id })) });
+          for (const c of crew) if (chance(0.3)) await team.post(`/api/bookings/${b.id}/lineup/${c.id}/paid`, { paid: true });
+        }
+        const pr = (await team.get(`/api/groups/${g.id}/payroll?month=${day(0).slice(0, 7)}`)).json;
+        if (pr.owed_cents < 0 || pr.paid_cents < 0) fail("payroll went negative", pr);
+      } else if (roll < 84) { // holiday serenatas: a vendor offers them, a family books one
+        const g = pick(vendors.filter((x) => x.hourly)), key = pick(["mothers_day", "guadalupe"]);
+        what = `holiday ${key} ${g.type}`;
+        await g.v.post(`/api/groups/${g.id}/specials`, { holiday: key, minutes: pick([20, 30]), price: int(3, 6) * 50, from: key === "guadalupe" ? "12:00 AM" : "6:00 PM", to: key === "guadalupe" ? "6:00 AM" : "11:30 PM" });
+        const list = (await anon.get(`/api/specials/${key}`)).json;
+        const v = list.vendors.find((x) => x.open > 0);
+        if (v) {
+          const times = (await anon.get(`/api/groups/${v.id}/availability?month=${list.date.slice(0, 7)}&minutes=${v.special.minutes}`)).json.days[list.date] || [];
+          if (times.length) {
+            const r = await c.post("/api/bookings", { ...(await bookingBodyFor(vendors.find((x) => x.id === v.id), list.date, pick(times))), packageId: v.special.id, event: "Serenata" });
+            if (r.status === 200 && chance(0.7)) await payDeposit(r.json.booking.id);
+          }
+        }
+      } else if (roll < 85) { // vendors change how many crews they have and their travel time (lowering below what's booked is refused)
+        const g = pick(vendors);
+        what = `capacity ${g.type}`;
+        await g.v.patch(`/api/groups/${g.id}`, { capacity: int(1, 3), buffer_min: pick([0, 15, 30]) });
+      } else if (roll < 87) { // chat
         const g = pick(vendors);
         what = `chat ${g.type}`;
         await c.post(`/api/groups/${g.id}/messages`, { text: chance(0.3) ? "Llámame al 312-555-0100" : "¿Tienen disponible?" });
@@ -343,7 +421,9 @@ async function simulate({ mode, seed, steps }) {
     const stats = one(`SELECT (SELECT COUNT(*) FROM bookings) bookings, (SELECT COUNT(*) FROM bookings WHERE status = 'confirmed') confirmed, (SELECT COUNT(*) FROM parties) parties,
       (SELECT COUNT(*) FROM balance_parts WHERE status IN ('paid','partial_refund','refunded')) parts, (SELECT COUNT(*) FROM carts WHERE status = 'paid') carts, (SELECT COUNT(*) FROM reviews) reviews,
       (SELECT COUNT(*) FROM bookings WHERE discount_cents > 0) bundled, (SELECT COUNT(*) FROM bookings WHERE checked_in_at > 0) checkins, (SELECT COUNT(*) FROM documents) docs, (SELECT COUNT(*) FROM ext_busy) busy,
-      (SELECT COUNT(*) FROM email_log) emails`);
+      (SELECT COUNT(*) FROM email_log) emails, (SELECT COUNT(*) FROM bookings WHERE direct = 1 AND payment_status != 'unpaid') links_paid,
+      (SELECT COUNT(*) FROM extras WHERE status IN ('paid','cash')) extras_paid, (SELECT COUNT(*) FROM booking_crew) lineup, (SELECT COUNT(*) FROM bookings b JOIN packages p ON p.id = b.package_id WHERE p.holiday != '') holiday,
+      (SELECT COUNT(*) FROM group_team) helpers, (SELECT COUNT(*) FROM bookings WHERE duration_min < 60) short, (SELECT COUNT(*) FROM bookings WHERE time IN ('5:00 AM','10:00 PM','10:30 PM','11:00 PM','11:30 PM')) late_early`);
     if (process.env.SIM_TALLY) console.log([...tally].sort().map(([k, n]) => `${n}\t${k}\t${errs.get(k) || ""}`).join("\n"));
     return `${Math.round((clock - started) / 86400000)} days simulated | ` + Object.entries(stats).map(([k, v]) => `${k}:${v}`).join(" ");
   } finally { await S.close(); side.close(); if (fake) await fake.close(); mock.timers.reset(); }

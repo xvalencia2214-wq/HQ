@@ -11,7 +11,8 @@ pretend. It uses its own practice data (the `data-tryout` folder), so it never m
 4. Type `npm run tryout` and press Enter. Wait for "TEST DRIVE is running".
 5. Open **http://localhost:3000** in Chrome.
 
-To start over with fresh practice data: `npm run tryout -- --reset`
+To start over with fresh practice data: `npm run tryout -- --reset` (do this once after downloading a new version, so the
+practice data has the newest tools).
 
 **Every password is `fiesta2026`.** To switch people, tap your name at the top, then **Log out**, then log in as someone
 else. Or use a private (incognito) window for a second person at the same time.
@@ -20,7 +21,8 @@ else. Or use a private (incognito) window for a second person at the same time.
 |---|---|
 | familia@prueba.com | Rosa, the mom planning Sofía's quinceañera |
 | padrino@prueba.com | Tío Juan, a padrino |
-| dj@prueba.com | DJ Relámpago (fog, lights, visuals, audio/video add-ons, 3-hour minimum, Pro) |
+| dj@prueba.com | DJ Relámpago (fog, lights, visuals, audio/video add-ons, 3-hour minimum, Pro, two setups at once) |
+| ayudante@prueba.com | Memo, the DJ's helper (team login) |
 | carpas@prueba.com | Carpas Lupe (tents, in a bundle with the mariachi) |
 | mariachi@prueba.com | Mariachi Sol de Jalisco (2-hour minimum) |
 | dueno@prueba.com | You, the owner (Admin page) |
@@ -38,6 +40,11 @@ else. Or use a private (incognito) window for a second person at the same time.
   - **🛒 Pay all at once:** tent + mariachi in one payment. The button shows **"You save $190"** because those two
     vendors are a bundle. Pay it with the practice card.
   - **Leave a review** with a photo for the DJ (the birthday party last week).
+  - **Mateo's baptism is today:** press **➕ Ask for one more hour**. Then log in as the DJ to accept it, and pay it here.
+  - Each booking shows **what the vendor needs from you** (power, parking…), which you confirmed when booking.
+- **Book the mariachi at 5:00 AM** (mañanitas) or a **20-minute serenata** at night: many start times are grouped as
+  early morning, daytime, evening and night.
+- **Mother's Day serenatas:** open `#/specials/mothers_day` (add it after the address) to see who plays and book a stop.
 - **Find music:** open DJ Relámpago and pick add-ons. Try 1 or 2 hours: it asks for at least 3. The tent company is
   booked by package only.
 - **Get quotes:** ask for food or rentals, not only music.
@@ -50,6 +57,20 @@ else. Or use a private (incognito) window for a second person at the same time.
 
 ## 3. DJ Relámpago (dj@prueba.com)
 
+- **My business** tab (new):
+  - **Payment link for your own client:** Karla's wedding link is waiting for payment. Make a new one, then press
+    WhatsApp or Copy. Open the link as `padrino@prueba.com` to pay it: the booking is confirmed right away, at a 3% fee.
+  - **Your musicians and crew:** Toño and Memo, with their pay. **Who's owed what** adds up each month.
+  - **What you need from the family:** tap a suggestion to add it, then Save.
+  - **Holiday serenatas:** set a Mother's Day or Virgen de Guadalupe special (length, price, hours).
+  - **Your team:** Memo is a helper. Invite someone else with a link.
+- **Requests:** on Sofía's party press **👥 Lineup**: check who goes, Save, then **WhatsApp** sends each one the time,
+  address and pay. Mark them paid. On today's baptism press **➕ Add something at the party** (one more hour, an
+  add-on or anything with a price), or accept Rosa's request.
+- **Calendar:** pick a day, open **More times** to add a 5:00 AM start or a window (6 PM to 11 PM), or copy a day to
+  every same weekday. **Bookings at the same time** (2 setups) and travel time between bookings are below it.
+- **Packages:** add a short set (Or a short set: 20 min).
+
 - **For groups:** the dashboard, with Tío Juan's request to **Accept** or **Decline**.
 - **Packages:** the add-ons (fog, dance floor lights, special lighting, visuals, audio/video). Add one from the suggestions.
 - **Profile:** the minimum hours (3) and the rain/weather policy.
@@ -58,6 +79,11 @@ else. Or use a private (incognito) window for a second person at the same time.
   website page link, licenses and insurance, and the earnings report (download the CSV for taxes).
 - **View public page**, and open the website page link from Payments.
 - **Reviews:** answer Rosa's review after she leaves it.
+
+## 3b. Memo, the helper (ayudante@prueba.com)
+
+- **For groups** opens DJ Relámpago's dashboard: he can answer requests and messages, run the calendar and lineups.
+- **Payments:** payouts, Pro and Featured say "Only the owner of this listing can do this".
 
 ## 4. Carpas Lupe (carpas@prueba.com)
 

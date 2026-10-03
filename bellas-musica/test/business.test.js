@@ -174,7 +174,9 @@ test("one more hour at the party: offered or asked, paid in the app or in cash; 
     const g = await makeGroup(o, { name: "Extra Band", dates: [d] }); // $300/hour
     const b = (await c.post("/api/bookings", bookingBody(g, d, { hours: 3 }))).json.booking;
     await c.post(`/api/bookings/${b.id}/simulate-pay`); await o.patch(`/api/bookings/${b.id}`, { action: "accept" });
-    assert.match((await o.post(`/api/bookings/${b.id}/extras`, { kind: "hour" })).json.error, /day before the event/);
+    assert.match((await o.post(`/api/bookings/${b.id}/extras`, { kind: "hour" })).json.error, /day of the event/);
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(1), b.id); // the day before: still closed (it can still be cancelled)
+    assert.equal((await o.post(`/api/bookings/${b.id}/extras`, { kind: "hour" })).status, 400);
     S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(0), b.id); // the party is today
     assert.equal((await x.post(`/api/bookings/${b.id}/extras`, { kind: "hour" })).status, 404);
     // the vendor offers one more hour at its rate

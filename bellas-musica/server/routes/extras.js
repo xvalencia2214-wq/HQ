@@ -1,6 +1,7 @@
 // "¡Otra hora!": something added at the party. The vendor offers one more hour (or an add-on, or anything with a price)
 // and the family pays it on their phone right there, or the family asks and the vendor accepts. The vendor can also mark
-// it paid in cash. Open from the day before the event to the day after.
+// it paid in cash. Open on the day of the event and the day after (once the event day starts the booking can't be cancelled,
+// so nothing paid here can end up on a cancelled booking).
 import { HttpError, addDays, int, now, oneOf, str, todayStr, withLock } from "../util.js";
 import { feePctFor, getGroup, isTeam, newId } from "../shared.js";
 import { durationOf } from "../schedule.js";
@@ -20,7 +21,9 @@ export async function markExtraPaid(ctx, extraId, paymentIntent) {
     const x = db.get("SELECT * FROM extras WHERE id = ?", extraId);
     if (!x) return null;
     if (x.status === "paid" && x.pi) return x;
-    if (x.status !== "offered") {
+    const bk = db.get("SELECT status, noshow_status FROM bookings WHERE id = ?", x.booking_id);
+    if (x.status === "offered" && (!bk || bk.status !== "confirmed" || bk.noshow_status)) db.run("UPDATE extras SET status = 'cancelled' WHERE id = ?", x.id);
+    if (x.status !== "offered" || !bk || bk.status !== "confirmed" || bk.noshow_status) {
       const marker = `${paymentIntent}#extra`;
       if (!db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) {
         if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
@@ -49,7 +52,7 @@ export default function extrasRoutes(ctx, add) {
     if (!side) throw new HttpError(404, "Booking not found");
     return { b, g, side };
   };
-  const onTheDay = (b) => { const t = todayStr(); return b.status === "confirmed" && b.payment_status !== "unpaid" && t >= addDays(b.date, -1) && t <= addDays(b.date, 1) && !b.noshow_status; };
+  const onTheDay = (b) => { const t = todayStr(); return b.status === "confirmed" && b.payment_status !== "unpaid" && t >= b.date && t <= addDays(b.date, 1) && !b.noshow_status; };
   const feeFor = (b, g, amount) => Math.round((amount * (b.direct ? config.directFeePct : feePctFor(g, config))) / 100);
   const list = (b) => ({ extras: extrasOf(db, b.id) });
 
@@ -57,7 +60,7 @@ export default function extrasRoutes(ctx, add) {
 
   add("POST", "/api/bookings/:id/extras", ({ params, body, user }) => withLock("booking:" + params.id, async () => {
     const { b, g, side } = load(user, params.id);
-    if (!onTheDay(b)) throw new HttpError(400, "Extras can be added from the day before the event to the day after.");
+    if (!onTheDay(b)) throw new HttpError(400, "Extras can be added on the day of the event and the day after.");
     if (db.get("SELECT COUNT(*) c FROM extras WHERE booking_id = ? AND status IN ('asked','offered')", b.id).c >= MAX_OPEN) throw new HttpError(400, "Finish the open extras first");
     const kind = oneOf(body.kind, "What to add", ["hour", "addon", "other"]);
     let label, minutes = 0, amount;
@@ -123,6 +126,7 @@ export default function extrasRoutes(ctx, add) {
     const { x, b, g, side } = loadExtra(user, params.eid);
     if (side !== "customer") throw new HttpError(403, "Only the family pays this");
     if (x.status !== "offered") throw new HttpError(400, x.status === "asked" ? "The vendor hasn't confirmed it yet" : "This isn't waiting for payment");
+    if (b.status !== "confirmed" || b.noshow_status) throw new HttpError(400, "This booking can't take extras any more");
     if (!stripe.live) return { payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/extra/${x.id}` } };
     if (!g.stripe_ready) throw new HttpError(400, "This vendor can't take payments in the app right now. Pay them directly.");
     const session = await stripe.checkoutForExtra({ extra: x, booking: b, group: g, successUrl: `${config.baseUrl}/#/booking/${b.id}?extra=1`, cancelUrl: `${config.baseUrl}/#/booking/${b.id}` });

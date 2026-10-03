@@ -99,7 +99,7 @@ export default function bookingRoutes(ctx, add) {
       balance_paid_cents: balancePaidInApp(b), balance_left_cents: balanceLeft(b),
       parts: db.all("SELECT id, payer_id, payer_name, note, amount_cents, status, paid_at FROM balance_parts WHERE booking_id = ? AND status != 'pending' ORDER BY paid_at", b.id).map((p) => ({ payer_name: p.payer_name, note: p.note, amount_cents: p.amount_cents, status: p.status, paid_at: p.paid_at, by_customer: p.payer_id === b.customer_id })),
       discount_cents: b.discount_cents, bundle_id: b.bundle_id, direct: Boolean(b.direct), extras: extrasOf(db, b.id), needs: safeJson(b.needs_json, []),
-      can_extra: b.status === "confirmed" && b.payment_status !== "unpaid" && !b.noshow_status && today >= addDays(b.date, -1) && today <= addDays(b.date, 1),
+      can_extra: b.status === "confirmed" && b.payment_status !== "unpaid" && !b.noshow_status && today >= b.date && today <= addDays(b.date, 1),
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
       reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
     };

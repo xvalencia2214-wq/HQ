@@ -12,7 +12,7 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
 npm run tryout     # test drive: practice accounts and a party in progress, to try every feature (docs/test-drive.md)
-npm test           # 120 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 129 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, hostile-input fuzzer, time zones, i18n, share pages, ops
 # Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
 # events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
@@ -27,6 +27,7 @@ node e2e/e2e9.mjs [dir]                    # 28-step run of party vendors: a ten
 node e2e/e2e10.mjs [dir]                   # 22-step run of saved parties: template, budget, weather, family link (vote + comment, no account), timeline the vendor sees, QR sign, credits page
 node e2e/e2e11.mjs [dir]                   # 17-step run of money features: a bundle set up in two dashboards, one checkout with the bundle discount, a payment plan, a padrino via the family link
 node e2e/e2e12.mjs [dir]                   # 18-step run of vendor tools: Pro, referral link, website page, insurance upload + admin approval, calendar sync, weather policy, WhatsApp, review photos, earnings CSV, partner-link sign-up, quotes for rentals
+node e2e/e2e13.mjs [dir]                   # 23-step run of the business tools: 5 AM start and a window, crews and travel time, needs, payment link, lineup on WhatsApp, team helper, one more hour, holiday serenatas
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/touch.mjs                         # iPad-style touch run: real finger swipes on Discover, and a tap-target size check on the main screens
 npm run spanish-sheet                      # writes docs/spanish-review.md: every screen string and email, English next to Spanish, for a native speaker to correct

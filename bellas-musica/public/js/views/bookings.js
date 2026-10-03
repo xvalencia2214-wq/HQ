@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { state } from "../state.js";
 import { t } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey, lenLabel, minutesOf, slotButtons } from "../ui.js";
+import { customerBizBox, wireCustomerBiz } from "./business.js";
 import { calendar, monthKey } from "../calendar.js";
 import { shrink } from "./dashboard.js";
 
@@ -15,7 +16,7 @@ function card(b) {
   const balanceLine = balanceInfo(b) + guaranteeInfo(b) + (b.reschedule ? `<div class="note small">${esc(t("rs.pending", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</div>` : "");
   return `<div class="req" data-id="${esc(b.id)}"><div><strong><a href="#/group/${esc(b.group_id)}">${esc(b.group_name)}</a></strong> ${statusBadge(b.status)} ${payBadge(b)}<br>
     ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}${b.addons && b.addons.length ? `<br><span class="dim small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</span>` : ""}<br>
-    <span class="dim">${esc(b.address)}</span>${cancelNote}${balanceLine}</div>
+    <span class="dim">${esc(b.address)}</span>${cancelNote}${balanceLine}${customerBizBox(b)}</div>
     <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("bk.deposit"))} ${money(b.deposit_cents)}${b.refund_cents ? ` · ${esc(t("bk.refunded", { amount: money(b.refund_cents) }))}` : ""}</span><br>
       ${b.status === "pending_payment" ? `<a class="btn small" href="#/booking/${esc(b.id)}">${esc(t("bk.payNow"))}</a> ` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
@@ -115,6 +116,7 @@ export async function myBookings(app) {
 }
 
 function wire(root, reload) {
+  wireCustomerBiz(root, reload);
   root.querySelectorAll("[data-cancel]").forEach((b) => {
     b.onclick = async () => {
       if (!confirm(t("bk.confirmCancel", { amount: money(Number(b.dataset.refund)) }))) return;
@@ -198,7 +200,7 @@ export async function bookingPage(app, id, params) {
   try { b = (await api.post(`/api/bookings/${encodeURIComponent(id)}/refresh`)).booking; }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
   const msg = params.get("balance") && ["paid", "offline"].includes(b.balance_status) ? `<div class="note ok"><strong>${esc(t("bal.thanks"))}</strong></div>`
-    : b.payment_status !== "unpaid" ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t("bk.paidText"))}</div>`
+    : b.payment_status !== "unpaid" ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t(b.status === "confirmed" ? "bk.paidConfirmed" : "bk.paidText"))}</div>`
     : params.get("cancelled") ? `<div class="note">${esc(t("bk.payCancelled"))}</div>` : "";
   app.innerHTML = `<h1 class="sec">${esc(t("bk.detail"))}</h1>${msg}<div class="panel">${card(b)}
     ${b.status === "pending_payment" && b.pay_url ? `<a class="btn" href="${esc(b.pay_url)}">${esc(t("bk.payNow"))}</a>` : ""}
@@ -229,6 +231,10 @@ export async function simulatedPay(app, kind, id) {
     let c; try { c = (await api.get(`/api/carts/${encodeURIComponent(id)}`)).cart; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
     title = t("cart.payTitle"); amount = c.amount_cents;
     summary = c.items.map((x) => `${esc(x.group_name)} · ${esc(fmtDate(x.date))} · ${money(x.deposit_cents)}${x.discount_cents ? ` <span class="tag trust">${esc(t("bun.saved", { amount: money(x.discount_cents) }))}</span>` : ""}`).join("<br>");
+  } else if (kind === "extra") {
+    let x; try { x = (await api.get(`/api/extras/${encodeURIComponent(id)}`)).extra; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
+    if (x.status !== "offered") { app.innerHTML = `<div class="panel empty">${esc(t("ex.done"))}</div>`; return; }
+    title = t("ex.payTitle", { name: x.group_name }); amount = x.amount_cents; summary = `${esc(x.label)} · ${esc(fmtDate(x.date))}`;
   } else if (kind === "pro") { title = t("pro.title"); amount = state.meta.pro_price_cents; summary = esc(t("pro.text", { fee: state.meta.pro_fee_pct, base: state.meta.fee_pct }));
   } else { title = t("pay.featureTitle"); amount = state.meta.feature_price_cents; summary = esc(t("pay.featureText")); }
   app.innerHTML = `<div class="panel narrow"><h1>${esc(title)}</h1><p>${summary}</p><div class="sum strong"><span>${esc(t(kind === "balance" ? "bal.amount" : "pay.amount"))}</span><span>${money(amount)}</span></div>
@@ -240,6 +246,7 @@ export async function simulatedPay(app, kind, id) {
       else if (kind === "balance") { await api.post(`/api/bookings/${encodeURIComponent(id)}/simulate-pay-balance`); location.hash = `#/booking/${id}?balance=1`; }
       else if (kind === "part") { const r = await api.post(`/api/parts/${encodeURIComponent(id)}/simulate-pay`); toast(t("plan.thanks")); location.hash = r.part.mine ? `#/booking/${r.part.booking_id}` : "#/bookings"; }
       else if (kind === "cart") { await api.post(`/api/carts/${encodeURIComponent(id)}/simulate-pay`); toast(t("cart.thanks")); location.hash = "#/bookings"; }
+      else if (kind === "extra") { const x = (await api.get(`/api/extras/${encodeURIComponent(id)}`)).extra; await api.post(`/api/extras/${encodeURIComponent(id)}/simulate-pay`); toast(t("ex.paid")); location.hash = `#/booking/${x.booking_id}`; }
       else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t(kind === "pro" ? "pro.done" : "dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
     } catch (e) { document.getElementById("payerr").textContent = e.message; document.getElementById("paybtn").disabled = false; }
   };

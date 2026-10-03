@@ -47,6 +47,13 @@ await ana.put(`/api/parties/${party.id}/timeline`, { items: [{ at: "18:00", labe
 await ana.post(`/api/parties/${party.id}/picks`, { groupId: id });
 await ana.patch(`/api/parties/${party.id}`, { credits_public: true });
 const famToken = party.share_url.split("/fp/")[1];
+// the vendor business tools: a payment link, a team invite, a holiday special and a lineup
+const oc = client(S.base); await oc.post("/api/auth/login", { email: "owner@qa.test", password: "correct horse battery" });
+const payTok = (await oc.post(`/api/groups/${id}/paylinks`, { clientName: "Ana Cliente", title: "Boda", date: inDays(40), time: "7:30 PM", hours: 3, event: "Wedding", guests: 100, eventZip: "60608", address: "Salón", total: 900 })).json.url.split("/pay-link/")[1];
+const teamTok = (await oc.post(`/api/groups/${id}/team/invite`, {})).json.url.split("/team/")[1];
+await oc.post(`/api/groups/${id}/specials`, { holiday: "mothers_day", minutes: 20, price: 200, from: "12:00 AM", to: "2:00 AM" });
+await oc.post(`/api/groups/${id}/crew`, { name: "Juan Trompeta", role: "Trumpet", phone: "773-555-0101", pay: 150 });
+await oc.patch(`/api/groups/${id}`, { needs: ["A power outlet within 50 feet"] });
 const screens = [
   [anon, "home", "#/", ".hero"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
   [anon, "map", "#/?zip=60608&view=map", ".leaflet-marker-icon"], [anon, "best", "#/best/60608", ".card"], [anon, "group", `#/group/${id}`, "#calbox .cal"],
@@ -56,7 +63,9 @@ const screens = [
   [own, "dash-extras", `#/dashboard?g=${id}&tab=extras`, "#pkform"], [own, "dash-media", `#/dashboard?g=${id}&tab=media`, "#vform"], [own, "dash-payments", `#/dashboard?g=${id}&tab=payments`, "#feature"],
   [own, "dash-reviews", `#/dashboard?g=${id}&tab=reviews`, ".review"], [own, "dash-messages", `#/dashboard?g=${id}&tab=messages`, ".thread"], [own, "admin", "#/admin", ".hero-fig"],
   [anon, "results-rentals", "#/?zip=60608&category=rentals", ".catrow"], [cust, "plan-party", `#/party?zip=60608&date=${inDays(30)}&tpl=quince`, ".party-cat"],
-  [cust, "my-party", `#/my-party/${party.id}`, "#pp-picks"], [cust, "party-sign", `#/my-party/${party.id}/sign`, "#qr svg"], [anon, "family-link", `#/fp/${famToken}`, ".pick"], [anon, "thanks", `#/thanks/${party.id}`, ".panel"]
+  [cust, "my-party", `#/my-party/${party.id}`, "#pp-picks"], [cust, "party-sign", `#/my-party/${party.id}/sign`, "#qr svg"], [anon, "family-link", `#/fp/${famToken}`, ".pick"], [anon, "thanks", `#/thanks/${party.id}`, ".panel"],
+  [own, "dash-business", `#/dashboard?g=${id}&tab=business`, "#biz-team .plist"], [anon, "pay-link", `#/pay-link/${payTok}`, ".pl-head"], [cust, "pay-link-in", `#/pay-link/${payTok}`, "#plpay"],
+  [anon, "team-invite", `#/team/${teamTok}`, ".panel"], [anon, "specials", "#/specials/mothers_day", ".sp-card"]
 ];
 for (const [p, name, hash, ready] of screens) console.log(String(await audit(p, name, hash, ready)).padStart(2), "violation types on", name);
 // same screens in Spanish and on a phone

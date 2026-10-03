@@ -5,12 +5,13 @@ import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPho
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { CAT_ORDER, catLabel } from "../cats.js";
+import { businessTab, bizBox, wireBiz, ownerOnly } from "./business.js";
 
 // Type picker grouped by category (music, food, rentals...).
 const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
 const catOfType = (meta, type) => CAT_ORDER.find((c) => meta.categories[c].includes(type)) || "music";
 
-const TABS = ["requests", "calendar", "listing", "extras", "media", "reviews", "payments", "messages"];
+const TABS = ["requests", "calendar", "listing", "extras", "business", "media", "reviews", "payments", "messages"];
 
 export async function dashboard(app, params) {
   const { groups } = await api.get("/api/my/groups");
@@ -20,7 +21,7 @@ export async function dashboard(app, params) {
   const link = (over) => { const q = new URLSearchParams({ g: g.id, tab, ...over }); return "#/dashboard?" + q.toString(); };
 
   app.innerHTML = `<div class="titlebar"><h1>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h1>
-    <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
+    <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}${x.my_role === "manager" ? ` (${esc(t("team.manager"))})` : ""}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
     ${g.stripe.mode === "stripe" && !g.stripe.ready ? `<div class="note warn">${esc(t("dash.needPayout"))} <a href="${esc(link({ tab: "payments" }))}">${esc(t("dash.setUp"))}</a></div>` : ""}
     ${statusBanner(g)}
     ${g.status === "draft" ? "" : checklistCard(g, link)}
@@ -32,7 +33,7 @@ export async function dashboard(app, params) {
   const refresh = () => dashboard(app, new URLSearchParams(location.hash.split("?")[1] || ""));
   const ctx = { g, body, refresh };
   wireStatus(app, g, refresh);
-  await ({ requests, calendar: calTab, listing, extras, media, reviews, payments, messages }[tab])(ctx);
+  await ({ requests, calendar: calTab, listing, extras, business: businessTab, media, reviews, payments, messages }[tab])(ctx);
 }
 
 // Draft / paused / live: what customers can see right now, and the one button that changes it.
@@ -119,14 +120,14 @@ async function requests({ g, body, refresh }) {
   };
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
-      ${(b.parts || []).filter((p) => p.status !== "stray").length ? `<br><span class="small">💵 ${(b.parts || []).filter((p) => p.status !== "stray").map((p) => esc(t("plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) }))).join(" · ")}</span>` : ""}${b.discount_cents ? `<br><span class="small">🤝 ${esc(t("bun.discounted", { amount: money(b.discount_cents) }))}</span>` : ""}${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}</div>
+      ${(b.parts || []).filter((p) => p.status !== "stray").length ? `<br><span class="small">💵 ${(b.parts || []).filter((p) => p.status !== "stray").map((p) => esc(t("plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) }))).join(" · ")}</span>` : ""}${b.discount_cents ? `<br><span class="small">🤝 ${esc(t("bun.discounted", { amount: money(b.discount_cents) }))}</span>` : ""}${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}${bizBox(b)}</div>
       <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
       ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}?g=${esc(g.id)}">${esc(t("agr.link"))}</a> ` : ""}
       ${b.can_checkin ? `<button class="btn small" data-checkin="${esc(b.id)}">${esc(t("show.checkin"))}</button> ` : ""}
       ${b.can_mark_balance_offline && b.date >= dkey(today()) ? `<button class="btn ghost small" data-off="${b.balance_status === "offline" ? "undo" : "mark"}" data-id="${esc(b.id)}" data-amount="${b.balance_cents}">${esc(t(b.balance_status === "offline" ? "bal.undoOffline" : "bal.markOffline"))}</button> ` : ""}
-      ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div></div>`;
+      ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div><div class="biz-slot"></div></div>`;
   const st30 = g.stats_30d;
   body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.requests"))}</h2>
     <div class="tiles small" aria-label="${esc(t("stat.title"))}">${[["stat.views", st30.views], ["stat.feedViews", st30.feed_views], ["stat.feedTaps", st30.feed_taps], ["stat.requests", st30.requests], ["stat.confirmed", st30.confirmed]].map(([k, v]) => `<div class="tile"><div class="tile-l">${esc(t(k))} · ${esc(t("stat.title"))}</div><div class="tile-v">${v}</div></div>`).join("")}</div>${bookings.length
@@ -167,6 +168,7 @@ async function requests({ g, body, refresh }) {
       try { await api.patch("/api/bookings/" + b.dataset.id, { action: act }); toast(t("common.saved")); refresh(); } catch (e) { toast(e.message, "error"); }
     };
   });
+  wireBiz(body, g, refresh);
 }
 
 // ---- calendar ----
@@ -446,6 +448,7 @@ async function payments({ g, body, refresh }) {
   if (ob) ob.onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/stripe/onboard`); if (r.url) goto(r.url); else refresh(); } catch (e) { toast(e.message, "error"); } };
   document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
   await growPanels({ g: cur, body, refresh });
+  ownerOnly(body, cur); // payouts, Pro and Featured are the owner's
 }
 
 // Pro, referrals, the free website page, earnings and licenses: everything that helps a vendor grow, under Payments.
@@ -475,7 +478,7 @@ async function growPanels({ g, body, refresh }) {
         <label class="btn ghost small" for="doc-file">${esc(t("doc.upload"))}</label><input type="file" id="doc-file" accept="application/pdf,image/*" hidden><div class="err" id="doc-err" role="alert" style="flex-basis:100%"></div></form></div>
   </div>
   ${e ? `<div class="panel"><div class="titlebar"><h2 class="sec">💵 ${esc(t("earn.title", { year: e.year }))}</h2><a class="btn ghost small" href="/api/groups/${esc(g.id)}/earnings.csv?year=${e.year}" download>${esc(t("earn.csv"))}</a></div>
-    <div class="tablewrap"><table class="earn"><thead><tr><th scope="col">${esc(t("earn.month"))}</th><th scope="col">${esc(t("earn.events"))}</th><th scope="col">${esc(t("earn.deposits"))}</th><th scope="col">${esc(t("earn.balances"))}</th><th scope="col">${esc(t("earn.extras"))}</th><th scope="col">${esc(t("earn.offline"))}</th><th scope="col">${esc(t("earn.fees"))}</th></tr></thead>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="${esc(t("earn.title", { year: e.year }))}"><table class="earn"><thead><tr><th scope="col">${esc(t("earn.month"))}</th><th scope="col">${esc(t("earn.events"))}</th><th scope="col">${esc(t("earn.deposits"))}</th><th scope="col">${esc(t("earn.balances"))}</th><th scope="col">${esc(t("earn.extras"))}</th><th scope="col">${esc(t("earn.offline"))}</th><th scope="col">${esc(t("earn.fees"))}</th></tr></thead>
     <tbody>${e.months.filter((m) => m.events || m.deposits_cents || m.balances_cents || m.extras_cents || m.offline_cents).map((m) => `<tr><th scope="row">${esc(new Date(m.month + "-15").toLocaleDateString(loc, { month: "long" }))}</th><td>${m.events}</td><td>${money(m.deposits_cents)}</td><td>${money(m.balances_cents)}</td><td>${money(m.extras_cents || 0)}</td><td>${money(m.offline_cents)}</td><td>${money(m.fees_cents)}</td></tr>`).join("") || `<tr><td colspan="7" class="dim">${esc(t("earn.none"))}</td></tr>`}</tbody>
     <tfoot><tr><th scope="row">${esc(t("earn.total"))}</th><td>${e.total.events}</td><td>${money(e.total.deposits_cents)}</td><td>${money(e.total.balances_cents)}</td><td>${money(e.total.extras_cents || 0)}</td><td>${money(e.total.offline_cents)}</td><td>${money(e.total.fees_cents)}</td></tr></tfoot></table></div>
     <p class="dim small">${esc(t("earn.note"))}</p></div>` : ""}`);

@@ -52,7 +52,8 @@ export async function group(app, id, params = new URLSearchParams()) {
   ${offers.length ? `<div class="panel offer"><h2 class="sec">${esc(t("off.title"))}</h2><div class="pkgs">${offers.map((o) => `<div class="pkg"><div><span class="tag trust">${esc(t("off.tag"))}</span> <strong>${esc(o.name)}</strong><br><span class="dim">${o.description ? esc(o.description) + " · " : ""}${esc(t("g.hours", { n: o.hours }))} · ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div><div class="pkg-r"><strong>${money(o.price_cents)}</strong><br><button type="button" class="btn small" data-pkg="${o.id}">${esc(t("off.book"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${deals.map((d) => `<div class="panel deal"><h2 class="sec">🤝 ${esc(t("bun.title", { pct: d.discount_pct }))}</h2><p><strong>${esc(d.name)}</strong></p><ul class="plist">${d.members.map((m) => `<li><span>${m.id === g.id ? `<strong>${esc(m.name)}</strong>` : `<a href="#/group/${esc(m.id)}">${esc(m.name)}</a>`} <span class="dim small">· ${esc(t("type." + m.type))}</span></span></li>`).join("")}</ul><p class="dim small">${esc(t("bun.how", { pct: d.discount_pct }))}</p></div>`).join("")}
   ${g.addons.length ? `<div class="panel"><h2 class="sec">${esc(t("ao.title"))}</h2><div class="pkgs">${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong></div></div>`).join("")}</div></div>` : ""}
-  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div>${p.holiday ? `<span class="tag pro">🌹 ${esc(t("sp." + p.holiday))} · ${esc(fmtDate(p.holiday_date))}</span><br>` : ""}<strong>${esc(p.name)}</strong><br><span class="dim">${p.description ? esc(p.description) + " · " : ""}${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${(g.needs || []).length ? `<div class="panel"><h2 class="sec">📋 ${esc(t("needs.publicTitle"))}</h2><ul class="needs-list">${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></div>` : ""}
   ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photos && r.photos.length ? `<div class="rphotos">${r.photos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(t("rv.photo", { name: r.name }))}" loading="lazy"></a>`).join("")}</div>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
     <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
@@ -92,7 +93,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   }
 
   // booking form
-  let pkgChoice = "";
+  let pkgChoice = params.get("pkg") || "";
   app.querySelectorAll("[data-pkg]").forEach((b) => { b.onclick = () => { pkgChoice = b.dataset.pkg; drawBook(); document.getElementById("bookpanel").scrollIntoView({ behavior: "smooth" }); if (!st.date) toast(t("g.pickFirst")); }; });
 
   function drawBook() {
@@ -106,7 +107,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     const hourChoices = Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i);
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
-      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${esc(p.name)} · ${esc(lenLabel(minutesOf(p)))} · ${money(p.price_cents)}</option>`).join("")}</select>
+      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${p.holiday ? "🌹 " : ""}${esc(p.name)} · ${esc(lenLabel(minutesOf(p)))} · ${money(p.price_cents)}</option>`).join("")}</select>
       <div id="hrs-wrap"><label for="b-hrs">${esc(t(music ? "g.hoursLabel" : "g.hoursAny"))}</label><select id="b-hrs" name="hours">${hourChoices.map((h) => `<option value="${h}"${h === Number(prev.hours || Math.max(2, g.min_hours)) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
       ${g.addons.length ? `<fieldset class="addons"><legend>${esc(t("ao.pick"))}</legend>${g.addons.map((a) => `<label class="chk addon"><input type="checkbox" name="addon" value="${a.id}"${prevAddons.includes(String(a.id)) ? " checked" : ""}> <span>${esc(a.name)}</span><span class="addon-p">${a.price_cents ? "+" + money(a.price_cents) : esc(t("ao.included"))}</span></label>`).join("")}</fieldset>` : ""}
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
@@ -117,6 +118,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       <label for="b-addr">${esc(t("g.address"))}</label><input id="b-addr" name="address" required maxlength="160" value="${v("address")}">
       <label for="b-msg">${esc(t("g.special"))}</label><textarea id="b-msg" name="message" maxlength="500" placeholder="${esc(t("g.specialHint"))}">${v("message")}</textarea>
       <div id="quote" class="quote"></div>
+      ${(g.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" id="b-needs" name="needs"> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
       <label class="chk"><input type="checkbox" id="b-agree" name="agree"> <span>${esc(t("g.agree"))}</span></label>
       <div id="bookerr" class="err" role="alert"></div>
       <button class="btn wide" type="submit" id="bookbtn">${esc(t("g.pay"))}</button></form>`;
@@ -152,9 +154,11 @@ export async function group(app, id, params = new URLSearchParams()) {
       const f = Object.fromEntries(new FormData(form)), err = document.getElementById("bookerr"), btn = document.getElementById("bookbtn");
       err.textContent = "";
       if (!document.getElementById("b-agree").checked) { err.textContent = t("g.mustAgree"); return; }
+      const needsBox = document.getElementById("b-needs");
+      if (needsBox && !needsBox.checked) { err.textContent = t("needs.must"); return; }
       btn.disabled = true;
       try {
-        const r = await api.post("/api/bookings", { groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true });
+        const r = await api.post("/api/bookings", { acceptNeeds: Boolean(document.getElementById("b-needs")?.checked), groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true });
         goto(r.payment.url);
       } catch (ex) {
         err.textContent = ex.message; btn.disabled = false;

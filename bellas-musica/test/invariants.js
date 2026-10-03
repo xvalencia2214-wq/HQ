@@ -1,5 +1,6 @@
 // Money and booking rules that must hold after every step of the stress test and the marketplace simulation.
 import assert from "node:assert/strict";
+import { addDays, todayStr } from "../server/util.js";
 
 export function checkInvariants(db, fake, log) {
   const fail = (msg, extra) => assert.fail(`${msg} ${JSON.stringify(extra)}\nlast actions:\n  ${log.slice(-12).join("\n  ")}`);
@@ -39,10 +40,11 @@ export function checkInvariants(db, fake, log) {
     if (b.noshow_status === "refunded" && (b.payment_status !== "refunded" || ["paid", "partial_refund"].includes(b.balance_status))) fail("no-show refund left money behind", b);
     if (b.noshow_status === "rejected" && b.payment_status === "refunded") fail("no-show rejected but everything was refunded", b);
   }
-  if (db.get("SELECT 1 AS x FROM extra_refunds WHERE cents <= 0")) fail("empty stray refund", {});
-  // No listing ever has more bookings running at the same moment than it has crews/trucks/lineups (capacity).
+  if (db.get("SELECT 1 AS x FROM extra_refunds WHERE cents <= 0")) fail("empty stray refund", db.get("SELECT * FROM extra_refunds WHERE cents <= 0"));
+  // No listing has more bookings running at the same moment than it has crews/trucks/lineups (capacity). Checked from
+  // yesterday on: a vendor may lower its capacity once overlapping events are over, never while they're still ahead.
   const byGroup = new Map();
-  for (const b of db.all(`SELECT b.id, b.group_id, b.date, b.time, b.hours, b.duration_min, g.capacity FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status IN ('pending_payment','requested','confirmed')`)) {
+  for (const b of db.all(`SELECT b.id, b.group_id, b.date, b.time, b.hours, b.duration_min, g.capacity FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status IN ('pending_payment','requested','confirmed') AND b.date >= ?`, addDays(todayStr(), -1))) {
     const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(b.time);
     const s = (Date.parse(b.date + "T00:00:00Z") / 60000) + ((Number(m[1]) % 12) + (m[3] === "PM" ? 12 : 0)) * 60 + Number(m[2]);
     const e = s + (b.duration_min > 0 ? b.duration_min : b.hours * 60);
@@ -51,9 +53,27 @@ export function checkInvariants(db, fake, log) {
   }
   for (const [gid, { cap, iv }] of byGroup) for (const a of iv) {
     const at = iv.filter((x) => x.s <= a.s && x.e > a.s);
-    if (at.length > cap) fail("double-booked: more bookings at once than the listing can serve", { gid, cap, at: at.map((x) => x.id) });
+    if (at.length > cap) fail("double-booked: more bookings at once than the listing can serve", { gid, cap, today: new Date().toISOString().slice(0, 10), at: at.map((x) => db.get("SELECT id, date, time, hours, duration_min, status, payment_status, created_at, updated_at, resched_count, direct FROM bookings WHERE id = ?", x.id)) });
   }
   if (db.get("SELECT 1 AS x FROM reviews GROUP BY booking_id HAVING COUNT(*) > 1")) fail("duplicate review", {});
+  // extras at the party: paid ones have a payment, never more fee than price, and only ever on a confirmed booking
+  for (const x of db.all("SELECT x.*, b.status bstatus, b.noshow_status ns, b.date FROM extras x JOIN bookings b ON b.id = x.booking_id")) {
+    if (!["asked", "offered", "paid", "cash", "declined", "cancelled"].includes(x.status)) fail("extra in an unknown state", x);
+    if (x.fee_cents < 0 || x.fee_cents > x.amount_cents) fail("extra fee out of range", x);
+    if (x.status === "paid" && (!x.pi || !x.paid_at)) fail("paid extra without a payment", x);
+    if (x.status === "cash" && x.fee_cents !== 0) fail("cash extra charged a fee", x);
+    if (["paid", "cash"].includes(x.status) && x.bstatus !== "confirmed") fail("an extra was paid on a booking that isn't confirmed", x);
+    if (["paid", "cash"].includes(x.status) && ["refunded"].includes(x.ns)) fail("everything was refunded as a no-show but an extra was kept", x);
+  }
+  // a payment link holds its time only while open; a used one points at its booking
+  for (const l of db.all("SELECT * FROM pay_links")) {
+    if (l.status === "used" && !db.get("SELECT 1 AS x FROM bookings WHERE id = ? AND link_id = ?", l.booking_id, l.id)) fail("used payment link without its booking", l);
+    if (l.deposit_cents > l.total_cents || l.deposit_cents <= 0) fail("payment link deposit out of range", l);
+  }
+  // a direct (payment link) booking that was paid is confirmed straight away, never left waiting for the vendor
+  if (db.get("SELECT 1 AS x FROM bookings WHERE direct = 1 AND status = 'requested'")) fail("a paid payment-link booking is waiting for the vendor", db.get("SELECT * FROM bookings WHERE direct = 1 AND status = 'requested'"));
+  // crew pay: a lineup only on that vendor's own bookings
+  if (db.get("SELECT 1 AS x FROM booking_crew x JOIN crew c ON c.id = x.crew_id JOIN bookings b ON b.id = x.booking_id WHERE c.group_id != b.group_id")) fail("someone from another vendor's crew on a lineup", {});
   if (fake) { // every cent we recorded as refunded was actually refunded by Stripe exactly once, on the payment it belongs to
     const byPi = new Map();
     for (const r of fake.state.refunded) byPi.set(r.pi, (byPi.get(r.pi) || 0) + r.amount);
