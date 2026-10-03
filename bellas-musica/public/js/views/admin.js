@@ -26,7 +26,7 @@ export async function admin(app) {
   app.innerHTML = `<div class="titlebar"><h1>Owner dashboard</h1><div class="chips"><span class="tag">${live ? "Payments: live" : "Payments: test mode (simulated)"}</span><span class="tag">${s.texts === "twilio" ? "Texts: live" : "Texts: simulated"}</span><span class="tag">${s.email === "resend" ? "Email: live" : "Email: simulated"}</span><span class="tag">Day = ${esc(s.timezone)}</span></div></div>
     ${live ? "" : `<div class="note">Test mode: the numbers below are from simulated payments, not real money.</div>`}
     <div class="hero-fig"><div class="tile-l">Platform fees kept</div><div class="hero-v">${cents(s.money.platform_fees_kept_cents)}</div>
-      <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured placements add ${cents(s.money.featured_revenue_cents)}.</div></div>
+      <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured and Pro passes add ${cents(s.money.featured_revenue_cents)}.</div></div>
     <div class="tiles">
       ${tile("Users", s.users.total, `${s.users.last7} in the last 7 days`)}
       ${tile("Real groups", s.groups.real, `${s.groups.sample} sample listings · ${s.groups.hidden} hidden`)}

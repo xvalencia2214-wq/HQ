@@ -212,7 +212,7 @@ export function createApp(config) {
   expirePending(db);
   return {
     server, ctx,
-    listen: (port = config.port) => new Promise((r) => server.listen(port, () => r(server.address().port))),
+    listen: (port = config.port) => new Promise((r, fail) => { server.once("error", fail); server.listen(port, () => { server.off("error", fail); r(server.address().port); }); }),
     close: () => new Promise((r) => { stopJobs(); server.close(() => { db.raw.close(); r(); }); server.closeAllConnections?.(); })
   };
 }

@@ -6,6 +6,7 @@
   "description": "Marketplace for booking live Mexican music groups",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "tryout": "node --disable-warning=ExperimentalWarning server/tryout.js",
     "preflight": "node --disable-warning=ExperimentalWarning server/preflight.js",
     "backup": "node --disable-warning=ExperimentalWarning server/backup.js",
     "admin": "node --disable-warning=ExperimentalWarning server/admin.js",

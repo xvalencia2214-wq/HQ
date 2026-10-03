@@ -11,7 +11,7 @@ function payBadge(b) {
 }
 
 function card(b) {
-  const cancelNote = b.can_cancel && b.status !== "pending_payment" ? `<div class="dim small">${esc(t("bk.cancelNote", { amount: money(b.refund_if_cancel_cents), pct: b.refund_percent_now }))}</div>` : "";
+  const cancelNote = b.can_cancel && b.status !== "pending_payment" ? `<div class="dim small">${esc(t(b.balance_paid_cents > 0 ? "bk.cancelNotePaid" : "bk.cancelNote", { amount: money(b.refund_if_cancel_cents), pct: b.refund_percent_now }))}</div>` : "";
   const balanceLine = balanceInfo(b) + guaranteeInfo(b) + (b.reschedule ? `<div class="note small">${esc(t("rs.pending", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</div>` : "");
   return `<div class="req" data-id="${esc(b.id)}"><div><strong><a href="#/group/${esc(b.group_id)}">${esc(b.group_name)}</a></strong> ${statusBadge(b.status)} ${payBadge(b)}<br>
     ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(t("g.hours", { n: b.hours }))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}${b.addons && b.addons.length ? `<br><span class="dim small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</span>` : ""}<br>

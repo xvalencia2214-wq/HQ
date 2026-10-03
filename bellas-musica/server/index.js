@@ -3,7 +3,12 @@ import { createApp } from "./app.js";
 
 const config = loadConfig();
 const app = createApp(config);
-const port = await app.listen();
+const busy = (e) => {
+  if (e && e.code !== "EADDRINUSE") throw e;
+  console.error(`\nPort ${config.port} is already in use: Bella's Música (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\n`);
+  process.exit(1);
+};
+const port = await app.listen().catch(busy);
 const { stripe, sms } = app.ctx;
 console.log(`Bella's Música running at ${config.baseUrl} (port ${port})`);
 console.log(`Payments: ${stripe.mode}${stripe.live ? "" : "  (no STRIPE_SECRET_KEY: deposits are simulated)"}`);
