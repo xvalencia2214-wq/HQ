@@ -475,3 +475,57 @@ fieldset.addons legend { padding: 0 6px; font-weight: 600; font-size: .95rem; }
 .center { text-align: center; }
 .hero .catrow, .hero .points { grid-column: 1 / -1; }
 .hero .catrow { margin-top: 18px; }
+
+/* saved party */
+.party-head .btnrow, .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.copyrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+.copyrow input { flex: 1 1 220px; min-width: 0; }
+.stack { margin-top: 10px; }
+form.inline { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; margin-bottom: 10px; }
+form.inline label { flex-basis: 100%; margin: 0; }
+form.inline input { flex: 1 1 140px; min-width: 0; }
+.meter { height: 12px; border-radius: 999px; background: var(--cream-2); overflow: hidden; margin: 10px 0 6px; }
+.meter i { display: block; height: 100%; background: var(--gold); border-radius: 999px; }
+.meter i.over { background: #c0392b; }
+.plist { list-style: none; padding: 0; margin: 0; }
+.plist li { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.plist li:last-child { border-bottom: 0; }
+.small-h { font-size: 1rem; margin-top: 16px; }
+.warn { color: #9a5b00; }
+.picks { display: grid; gap: 10px; }
+.pick { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.pick-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.pick-h .votes, .pick-h .votebtn { margin-left: auto; }
+.pcomments { list-style: none; padding: 0; margin: 6px 0; font-size: .93rem; }
+.pcomments li { padding: 3px 0; }
+.cform { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.cform input { flex: 1 1 160px; min-width: 0; }
+.tlrow { display: grid; grid-template-columns: 110px minmax(0, 1fr) minmax(0, 150px) auto; gap: 6px; margin-bottom: 6px; align-items: center; }
+@media (max-width: 560px) { .tlrow { grid-template-columns: 100px minmax(0, 1fr) auto; } .tlrow .tl-b { grid-column: 1 / 3; } }
+.tlview { list-style: none; padding: 0; }
+.tlview li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.calc { padding-left: 1.1em; line-height: 1.8; }
+.note.weather { margin-top: 10px; }
+.note.warn { border-color: #e2a33b; background: #fff7e6; }
+.guide { margin: -4px 0 8px; }
+.pickbtn { margin-top: 6px; width: 100%; }
+.savebox { margin-top: 12px; }
+.tag.soon { background: #fff2cc; color: #6b4a00; }
+/* the printable sign */
+.sign { max-width: 640px; margin: 0 auto; background: #fff; border: 2px solid var(--gold); border-radius: 24px; padding: 32px 28px; text-align: center; color: #111; }
+.sign h1 { font-size: 2.2rem; margin: 8px 0; }
+.sign-sub { font-size: 1.2rem; }
+.sign-qr svg { width: 260px; height: 260px; margin: 12px auto; display: block; }
+.sign-scan { font-weight: 600; }
+.sign-list { list-style: none; padding: 0; margin: 14px 0; font-size: 1.1rem; line-height: 1.7; }
+.sign-foot { color: #555; font-size: .9rem; }
+@media print {
+  header, footer, #banner, .noprint, .back { display: none !important; }
+  body, main { background: #fff !important; padding: 0 !important; }
+  .sign { border-width: 3px; break-inside: avoid; }
+}
+/* small text buttons on light panels (the header's .linkbtn is styled for the dark bar) */
+main .linkbtn { color: var(--ink-2); text-decoration: underline; background: none; border: 0; cursor: pointer; font: inherit; padding: 4px 6px; }
+main .linkbtn:hover, main .linkbtn:focus-visible { color: var(--ink); }
+.tlrow { grid-template-columns: 140px minmax(0, 1fr) minmax(0, 150px) auto; }
+@media (max-width: 560px) { .tlrow { grid-template-columns: 130px minmax(0, 1fr) auto; } }

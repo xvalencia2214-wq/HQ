@@ -137,6 +137,7 @@ export default function authRoutes(ctx, add) {
       db.run("DELETE FROM thread_reads WHERE customer_id = ?", user.id);
       db.run("DELETE FROM event_requests WHERE customer_id = ?", user.id);
       db.run("DELETE FROM favorites WHERE user_id = ?", user.id);
+      db.run("DELETE FROM parties WHERE customer_id = ?", user.id);
       db.run("DELETE FROM shortlists WHERE user_id = ?", user.id); // shared links stop working; items go with them
       db.run("UPDATE groups SET hidden = 1, contact_phone = '' WHERE owner_id = ?", user.id); // their listings disappear
     });

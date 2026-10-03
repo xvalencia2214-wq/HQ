@@ -7,7 +7,7 @@ import { waitlistBox } from "./waitlist.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
 import { catChips, catLabel } from "../cats.js";
 
-const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius", "category"];
+const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius", "category", "soon"];
 
 // What the customer already told us, carried into the group page so they don't have to type it twice.
 const carry = (p) => new URLSearchParams(Object.entries({ event: p.event, guests: p.guests, date: p.date, zip: p.zip }).filter(([, v]) => v)).toString();
@@ -17,6 +17,7 @@ export function groupCard(g, i, ctx = "") {
   if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
   if (g.events_done) tags.push(`<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>`);
+  if (g.open_soon) tags.push(`<span class="tag soon">${esc(t("card.soon"))}</span>`);
   if (g.min_hours > 1) tags.push(`<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>`);
   if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
   if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
@@ -38,7 +39,7 @@ export async function home(app, params) {
   const p = Object.fromEntries(params);
   const view = p.view === "map" ? "map" : "list";
   const meta = state.meta;
-  const moreOpen = ["song", "type", "max", "radius"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
+  const moreOpen = ["song", "type", "max", "radius", "soon"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
   const cat = meta.categories[p.category] ? p.category : "music", music = cat === "music";
   // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
   const catHref = (c) => { const u = new URLSearchParams(); for (const k of ["zip", "event", "date", "guests", "radius", "view"]) if (p[k]) u.set(k, p[k]); if (c !== "music") u.set("category", c); return "#/?" + u.toString(); };
@@ -56,6 +57,7 @@ export async function home(app, params) {
         <div><label for="s-type">${esc(t("f.type"))}</label><select id="s-type"><option value="">${esc(t("f.any"))}</option>${meta.categories[cat].map((x) => `<option value="${esc(x)}"${sel(x, p.type)}>${esc(t("type." + x))}</option>`).join("")}</select></div></div>
         <div class="row"><div><label for="s-max">${esc(t(music ? "f.max" : "f.maxAny"))}</label><select id="s-max"><option value="">${esc(t("f.any"))}</option>${[250, 350, 500, 900].map((v) => `<option value="${v}"${sel(v, p.max)}>${esc(t("f.upTo", { price: money(v * 100) }))}</option>`).join("")}</select></div>
         <div><label for="s-radius">${esc(t("f.radius"))}</label><select id="s-radius">${[[10, ""], [25, ""], [60, ""], [100, ""], [200, ""]].map(([n]) => `<option value="${n}"${sel(n, p.radius || 60)}>${esc(t("f.miles", { n }))}</option>`).join("")}</select></div></div>
+        <label class="chk"><input type="checkbox" id="s-soon" value="1"${p.soon === "1" ? " checked" : ""}> <span>⚡ ${esc(t("f.soon"))}</span></label>
         <div class="row"><div><label for="s-sort">${esc(t("f.sort"))}</label><select id="s-sort">${[["rating", "sort.rating"], ["price", "sort.price"], ["distance", "sort.distance"]].map(([v, k]) => `<option value="${v}"${sel(v, p.sort || "rating")}>${esc(t(k))}</option>`).join("")}</select></div></div>
       </details>
       <button class="btn" type="submit">${esc(t("f.search"))}</button>
@@ -65,7 +67,7 @@ export async function home(app, params) {
     const out = new URLSearchParams();
     for (const k of FIELDS) {
       const el = document.getElementById("s-" + k);
-      const v = el ? el.value.trim() : "";
+      const v = !el ? "" : el.type === "checkbox" ? (el.checked ? el.value : "") : el.value.trim();
       if (v && !(k === "radius" && v === "60") && !(k === "sort" && v === "rating")) out.set(k, v);
     }
     if (view === "map") out.set("view", "map");

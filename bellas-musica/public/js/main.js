@@ -15,6 +15,8 @@ import { agreement } from "./views/agreement.js";
 import { saved, shortlist } from "./views/saved.js";
 import { quotes } from "./views/quotes.js";
 import { party } from "./views/party.js";
+import { myParty, partySign } from "./views/myparty.js";
+import { familyParty, thanksPage } from "./views/family.js";
 import { myBookings, bookingPage, simulatedPay } from "./views/bookings.js";
 import { dashboard, newGroup } from "./views/dashboard.js";
 import { messagesView } from "./views/messages.js";
@@ -73,11 +75,11 @@ function renderChrome() {
   renderVerifyBanner();
   const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
   nav.classList.remove("open"); tog.setAttribute("aria-expanded", "false"); tog.setAttribute("aria-label", t("nav.menu"));
-  const cur = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] || "home";
+  const cur0 = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] || "home", cur = cur0 === "my-party" ? "party" : cur0;
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin"]);
+const needsLogin = new Set(["my-party", "bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin"]);
 
 async function route() {
   const token = ++routeToken;
@@ -106,6 +108,10 @@ async function route() {
     else if (seg[0] === "chicago") await chicago(box);
     else if (seg[0] === "discover") await discover(box);
     else if (seg[0] === "party") await party(box, params);
+    else if (seg[0] === "my-party" && seg[1] && seg[2] === "sign") await partySign(box, seg[1]);
+    else if (seg[0] === "my-party" && seg[1]) await myParty(box, seg[1]);
+    else if (seg[0] === "fp" && seg[1]) await familyParty(box, seg[1]);
+    else if (seg[0] === "thanks" && seg[1]) await thanksPage(box, seg[1]);
     else if (seg[0] === "agreement" && seg[1]) await agreement(box, seg[1], params);
     else if (seg[0] === "saved") await saved(box);
     else if (seg[0] === "quotes") await quotes(box, params);

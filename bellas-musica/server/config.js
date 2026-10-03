@@ -61,6 +61,8 @@ export function loadConfig(env = process.env) {
     businessName: env.BUSINESS_NAME || "Bella's Música",
     businessAddress: env.BUSINESS_ADDRESS || "",
     supportEmail: env.SUPPORT_EMAIL || "",
+    // Weather for outdoor parties (US National Weather Service, free, no key). WEATHER=0 turns it off.
+    weatherApi: env.WEATHER === "0" ? "" : env.WEATHER_API_BASE || "https://api.weather.gov",
     // Twilio SMS (leave unset to log messages instead of sending)
     twilioSid: env.TWILIO_ACCOUNT_SID || "",
     twilioToken: env.TWILIO_AUTH_TOKEN || "",

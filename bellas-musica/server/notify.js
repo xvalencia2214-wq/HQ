@@ -44,12 +44,20 @@ export function createNotifier(ctx) {
     email.send({ to: address, ...renderEmail(tpl[l]({ name: "", support: config.supportEmail, ...vars, ...(vars.event ? { event: eventLabel(vars.event, l) } : {}) }), { lang: l, config, unsubUrl: "" }), kind }).catch(() => {});
   }
 
+  // The arrival time the family set for this vendor on their party timeline (12-hour clock), if any.
+  const arrival = (id) => {
+    const t = ctx.db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", id);
+    if (!t) return { arrive: "", arriveLabel: "" };
+    const [h, m] = t.at.split(":").map(Number);
+    return { arrive: `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`, arriveLabel: t.label };
+  };
   // The fields most booking messages need, already formatted.
   function bookingVars(b, g) {
     return {
       group: g.name, customer: b.name, event: b.event_type, date: b.date, time: b.time, hours: b.hours, guests: b.guests, address: b.address,
       total: usd(b.total_cents), deposit: usd(b.deposit_cents), balance: usd(b.total_cents - b.deposit_cents),
       payout: usd(Math.max(0, b.deposit_cents - b.platform_fee_cents)), policyKey: b.policy,
+      ...arrival(b.id),
       addons: (() => { try { return JSON.parse(b.addons_json || "[]").map((a) => a.name).join(", "); } catch { return ""; } })()
     };
   }

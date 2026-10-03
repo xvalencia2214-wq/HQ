@@ -72,6 +72,55 @@ CREATE TABLE IF NOT EXISTS packages (
   private_customer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   expires_at INTEGER NOT NULL DEFAULT 0
 );
+-- A saved party: one date and place, a budget, what is still needed, a family link, a day-of timeline.
+CREATE TABLE IF NOT EXISTS parties (
+  id TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  event TEXT NOT NULL DEFAULT '',
+  date TEXT NOT NULL,
+  zip TEXT NOT NULL,
+  guests INTEGER NOT NULL DEFAULT 0,
+  budget_cents INTEGER NOT NULL DEFAULT 0,
+  needs TEXT NOT NULL DEFAULT '[]',
+  template TEXT NOT NULL DEFAULT '',
+  share_token TEXT NOT NULL UNIQUE,
+  credits_public INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_parties_customer ON parties(customer_id);
+CREATE TABLE IF NOT EXISTS party_picks (
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  added_by TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (party_id, group_id)
+);
+CREATE TABLE IF NOT EXISTS party_votes (
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL,
+  voter TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (party_id, group_id, voter)
+);
+CREATE TABLE IF NOT EXISTS party_comments (
+  id INTEGER PRIMARY KEY,
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL,
+  text TEXT NOT NULL,
+  is_owner INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS party_timeline (
+  id INTEGER PRIMARY KEY,
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  at TEXT NOT NULL,
+  label TEXT NOT NULL,
+  booking_id TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_timeline_booking ON party_timeline(booking_id);
 CREATE TABLE IF NOT EXISTS addons (
   id INTEGER PRIMARY KEY,
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,

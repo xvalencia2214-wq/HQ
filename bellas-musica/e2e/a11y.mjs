@@ -2,7 +2,7 @@
 //   AXE=/path/to/axe.min.js NODE_PATH=$(npm root -g) node e2e/a11y.mjs
 import fs from "node:fs";
 import { createRequire } from "node:module";
-import { startApp } from "../test/helpers.js";
+import { startApp, client, inDays } from "../test/helpers.js";
 import { seedMarketplace } from "./seed.mjs";
 const { chromium } = createRequire(import.meta.url)("playwright");
 const axeSrc = fs.readFileSync(process.env.AXE, "utf8");
@@ -40,6 +40,13 @@ async function audit(p, name, hash, ready) {
 }
 
 const anon = await person(null), cust = await person("ana@qa.test"), own = await person("owner@qa.test");
+// a saved party with a shortlist, a timeline and the credits page turned on
+const ana = client(S.base); await ana.post("/api/auth/login", { email: "ana@qa.test", password: "correct horse battery" });
+const party = (await ana.post("/api/parties", { title: "Quince de Sofía", event: "Quinceañera", date: inDays(30), zip: "60608", guests: 120, budget: 8000, template: "quince" })).json.party;
+await ana.put(`/api/parties/${party.id}/timeline`, { items: [{ at: "18:00", label: "Guests arrive" }, { at: "19:30", label: "Waltz" }] });
+await ana.post(`/api/parties/${party.id}/picks`, { groupId: id });
+await ana.patch(`/api/parties/${party.id}`, { credits_public: true });
+const famToken = party.share_url.split("/fp/")[1];
 const screens = [
   [anon, "home", "#/", ".hero"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
   [anon, "map", "#/?zip=60608&view=map", ".leaflet-marker-icon"], [anon, "best", "#/best/60608", ".card"], [anon, "group", `#/group/${id}`, "#calbox .cal"],
@@ -47,7 +54,9 @@ const screens = [
   [cust, "bookings", "#/bookings", ".req"], [cust, "saved", "#/saved", ".panel"], [cust, "quotes", "#/quotes", "#wiz"], [cust, "messages", "#/messages", ".thread"], [cust, "account", "#/account", "#pform"],
   [own, "dash-requests", `#/dashboard?g=${id}&tab=requests`, ".tabs"], [own, "dash-calendar", `#/dashboard?g=${id}&tab=calendar`, ".cal"], [own, "dash-listing", `#/dashboard?g=${id}&tab=listing`, "#lform"],
   [own, "dash-extras", `#/dashboard?g=${id}&tab=extras`, "#pkform"], [own, "dash-media", `#/dashboard?g=${id}&tab=media`, "#vform"], [own, "dash-payments", `#/dashboard?g=${id}&tab=payments`, "#feature"],
-  [own, "dash-reviews", `#/dashboard?g=${id}&tab=reviews`, ".review"], [own, "dash-messages", `#/dashboard?g=${id}&tab=messages`, ".thread"], [own, "admin", "#/admin", ".hero-fig"]
+  [own, "dash-reviews", `#/dashboard?g=${id}&tab=reviews`, ".review"], [own, "dash-messages", `#/dashboard?g=${id}&tab=messages`, ".thread"], [own, "admin", "#/admin", ".hero-fig"],
+  [anon, "results-rentals", "#/?zip=60608&category=rentals", ".catrow"], [cust, "plan-party", `#/party?zip=60608&date=${inDays(30)}&tpl=quince`, ".party-cat"],
+  [cust, "my-party", `#/my-party/${party.id}`, "#pp-picks"], [cust, "party-sign", `#/my-party/${party.id}/sign`, "#qr svg"], [anon, "family-link", `#/fp/${famToken}`, ".pick"], [anon, "thanks", `#/thanks/${party.id}`, ".panel"]
 ];
 for (const [p, name, hash, ready] of screens) console.log(String(await audit(p, name, hash, ready)).padStart(2), "violation types on", name);
 // same screens in Spanish and on a phone

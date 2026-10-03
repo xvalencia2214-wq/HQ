@@ -1,4 +1,4 @@
-import { HttpError, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
+import { HttpError, addDays, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, POLICIES, SLOTS, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
@@ -33,6 +33,7 @@ export default function searchRoutes(ctx, add) {
     if (date && date <= todayStr()) throw new HttpError(400, "Pick a future date");
     const song = q.song ? norm(str(q.song, "song", { max: 60 })) : "";
     const sort = q.sort ? oneOf(q.sort, "sort", ["rating", "price", "distance"]) : "rating";
+    const soon = q.soon === "1";
     const cap = Math.min(int(q.limit ?? limit, "limit", { min: 1, max: 50 }), 50);
 
     expirePending(db);
@@ -59,10 +60,13 @@ export default function searchRoutes(ctx, add) {
       if (song && !matched.length) continue;
       const openForDate = date ? openSlots(db, g.id, date, { expire: false }) : null;
       if (date && !openForDate.length) continue;
+      // "Last-minute": an open slot in the next 7 days
+      const openSoon = (() => { for (let i = 1; i <= 7; i++) if (openSlots(db, g.id, addDays(todayStr(), i), { expire: false }).length) return addDays(todayStr(), i); return null; })();
+      if (soon && !openSoon) continue;
       const events = safeJson(g.events, []);
       const fits = event ? (events.length ? events.includes(event) : (EVENT_FIT[event] || []).includes(g.type)) : false;
       const r = ratingOf(g, ratings);
-      list.push({ g, distance, r, fits, matched, openForDate, score: bayes(r.rating, r.reviews) });
+      list.push({ g, distance, r, fits, matched, openForDate, openSoon, score: bayes(r.rating, r.reviews) });
     }
     list.sort((a, b) => {
       const pa = isPromoted(a.g), pb = isPromoted(b.g);
@@ -83,7 +87,7 @@ export default function searchRoutes(ctx, add) {
           fields: {
             distance_miles: Math.round(x.distance), photo: photos.has(x.g.id) ? "/uploads/" + photos.get(x.g.id) : null,
             from_cents: fromCents(x.g, minPrice), fits_event: x.fits, matched_songs: x.matched.slice(0, 3),
-            open_slots: x.openForDate, lat: lookupZip(x.g.zip).lat, lon: lookupZip(x.g.zip).lon
+            open_slots: x.openForDate, open_soon: x.openSoon, lat: lookupZip(x.g.zip).lat, lon: lookupZip(x.g.zip).lon
           }
         });
         c.story = c.story.slice(0, 220);
