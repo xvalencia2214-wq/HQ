@@ -22,6 +22,7 @@ test("team logins: invite, join, run the listing; payouts and the team stay with
     const token = inv.json.url.split("/team/")[1];
     assert.equal((await client(S.base).get(`/api/team-invite/${token}`)).json.invite.group, "Team Band");
     assert.equal((await o.post(`/api/team-invite/${token}/accept`)).status, 400); // the owner already owns it
+    assert.match((await x.post(`/api/team-invite/${token}/accept`)).json.error, /for t…@example\.com/); // sent to Lupe's email: not for anyone else
     assert.equal((await m.post(`/api/team-invite/${token}/accept`)).status, 200);
     assert.equal((await x.post(`/api/team-invite/${token}/accept`)).status, 404); // one use only
     assert.ok(S.db.all("SELECT kind FROM email_log").some((r) => r.kind === "team.joined"));
@@ -248,4 +249,71 @@ test("what the vendor needs from the family, and holiday serenatas", async () =>
     assert.equal((await c.get("/api/specials/mothers_day")).json.vendors[0].open, 4);
     assert.ok((await c.get("/api/meta")).json.holidays.find((h) => h.key === "mothers_day").offering >= 1);
   } finally { await S.close(); }
+});
+
+test("money review: duplicate payments go back, old checkouts close, unpaid link holds can be cancelled, fair fees", async () => {
+  const F = await fakeStripe();
+  const S = await startApp({ DEMO_SEED: "0", STRIPE_SECRET_KEY: "sk_test_x", STRIPE_WEBHOOK_SECRET: "whsec_mr", STRIPE_API_BASE: F.url, PLATFORM_FEE_PCT: "10" });
+  let seq = 0;
+  const hook = (object) => postWebhook(S.base, { id: `evt_mr_${++seq}`, type: "checkout.session.completed", data: { object: { payment_status: "paid", ...object } } }, "whsec_mr");
+  try {
+    const o = client(S.base), c = client(S.base), found = client(S.base);
+    await o.signup("mr-o@example.com", "Money Owner"); await c.signup("mr-c@example.com", "Own Client"); await found.signup("mr-f@example.com", "Found Here");
+    const d = inDays(30), d2 = inDays(31);
+    const g = await makeGroup(o, { name: "Money Band", dates: [d, d2] });
+    const link = async (date, time) => (await o.post(`/api/groups/${g}/paylinks`, { clientName: "Ana", date, time, hours: 2, event: "Birthday", guests: 50, eventZip: "60608", address: "Casa", total: 1000, depositPct: 50 })).json;
+
+    // two tries at paying a link: the first checkout is closed before the second opens
+    const l1 = await link(d, "6:00 PM"), tok1 = l1.url.split("/pay-link/")[1];
+    const a = await c.post(`/api/pay-link/${tok1}/book`, { acceptPolicy: true, phone: "312-555-0142" });
+    const firstSession = row(S, a.json.booking_id).stripe_session_id;
+    const b2 = await c.post(`/api/pay-link/${tok1}/book`, { acceptPolicy: true, phone: "312-555-0142" });
+    assert.ok(F.calls.some((x) => x.url === `/v1/checkout/sessions/${firstSession}/expire`));
+    assert.notEqual(row(S, b2.json.booking_id).stripe_session_id, firstSession);
+    // the client's own payment is at 3%
+    assert.equal(row(S, a.json.booking_id).platform_fee_cents, 3000);
+    // two payments for the same deposit anyway: the second goes back in full
+    const bk = row(S, a.json.booking_id);
+    await hook({ amount_total: bk.deposit_cents, payment_intent: "pi_dep_1", metadata: { kind: "booking", booking_id: bk.id } });
+    await hook({ amount_total: bk.deposit_cents, payment_intent: "pi_dep_2", metadata: { kind: "booking", booking_id: bk.id } });
+    await hook({ amount_total: bk.deposit_cents, payment_intent: "pi_dep_1", metadata: { kind: "booking", booking_id: bk.id } }); // the first reported again: nothing
+    assert.equal(row(S, bk.id).status, "confirmed");
+    assert.deepEqual(F.state.refunded.filter((r) => r.pi.startsWith("pi_dep")), [{ pi: "pi_dep_2", amount: bk.deposit_cents }]);
+    assert.ok(S.db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = 'pi_dep_2'"));
+
+    // a link the client opened but never paid holds the time; the vendor can cancel it, which frees the time
+    const l2 = await link(d2, "2:00 PM"), tok2 = l2.url.split("/pay-link/")[1];
+    const held = await c.post(`/api/pay-link/${tok2}/book`, { acceptPolicy: true, phone: "312-555-0142" });
+    assert.equal((await o.post(`/api/groups/${g}/paylinks`, { clientName: "Other", date: d2, time: "2:00 PM", hours: 2, event: "Birthday", guests: 50, eventZip: "60608", total: 500 })).status, 409);
+    assert.equal((await o.del(`/api/paylinks/${l2.link.id}`)).json.link.status, "cancelled");
+    assert.equal(row(S, held.json.booking_id).status, "cancelled");
+    assert.equal((await o.post(`/api/groups/${g}/paylinks`, { clientName: "Other", date: d2, time: "2:00 PM", hours: 2, event: "Birthday", guests: 50, eventZip: "60608", total: 500 })).status, 200);
+    // a paid one can't be cancelled from here
+    assert.equal((await o.del(`/api/paylinks/${l1.link.id}`)).status, 400);
+
+    // a family that found the vendor here (they messaged first) pays the regular fee through a link
+    await found.post(`/api/groups/${g}/messages`, { text: "Hola, ¿están libres?" });
+    const l3 = await link(inDays(32), "6:00 PM");
+    await o.put(`/api/groups/${g}/availability`, { dates: { [inDays(32)]: ["6:00 PM"] } });
+    const f3 = await found.post(`/api/pay-link/${l3.url.split("/pay-link/")[1]}/book`, { acceptPolicy: true, phone: "312-555-0199" });
+    assert.equal(row(S, f3.json.booking_id).platform_fee_cents, 10000); // 10% of $1,000, not 3%
+
+    // an extra paid twice: the second payment goes back
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(0), bk.id);
+    const ex = (await o.post(`/api/bookings/${bk.id}/extras`, { kind: "other", label: "Una más", amount: 100 })).json.extras[0];
+    const p1 = await c.post(`/api/extras/${ex.id}/pay`);
+    assert.equal(p1.json.payment.mode, "stripe");
+    const s1 = S.db.get("SELECT session_id FROM extras WHERE id = ?", ex.id).session_id;
+    await c.post(`/api/extras/${ex.id}/pay`); // a second try closes the first checkout
+    assert.ok(F.calls.some((x) => x.url === `/v1/checkout/sessions/${s1}/expire`));
+    await hook({ amount_total: 10000, payment_intent: "pi_ex_1", metadata: { kind: "extra", extra_id: ex.id, booking_id: bk.id } });
+    await hook({ amount_total: 10000, payment_intent: "pi_ex_2", metadata: { kind: "extra", extra_id: ex.id, booking_id: bk.id } });
+    assert.equal(S.db.get("SELECT status, pi FROM extras WHERE id = ?", ex.id).pi, "pi_ex_1");
+    assert.deepEqual(F.state.refunded.filter((r) => r.pi.startsWith("pi_ex")), [{ pi: "pi_ex_2", amount: 10000 }]);
+
+    // team invitations are limited per day
+    let last;
+    for (let i = 0; i < 16; i++) { last = await o.post(`/api/groups/${g}/team/invite`, {}); if (i < 9) assert.equal(last.status, 200); }
+    assert.ok([400, 429].includes(last.status));
+  } finally { await S.close(); await F.close(); }
 });

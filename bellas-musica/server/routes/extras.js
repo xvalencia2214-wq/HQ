@@ -20,17 +20,17 @@ export async function markExtraPaid(ctx, extraId, paymentIntent) {
   return withLock("extra:" + extraId, async () => {
     const x = db.get("SELECT * FROM extras WHERE id = ?", extraId);
     if (!x) return null;
-    if (x.status === "paid" && x.pi) return x;
+    if (x.status === "paid" && x.pi === paymentIntent) return x; // the same payment reported twice
     const bk = db.get("SELECT status, noshow_status FROM bookings WHERE id = ?", x.booking_id);
     if (x.status === "offered" && (!bk || bk.status !== "confirmed" || bk.noshow_status)) db.run("UPDATE extras SET status = 'cancelled' WHERE id = ?", x.id);
     if (x.status !== "offered" || !bk || bk.status !== "confirmed" || bk.noshow_status) {
       const marker = `${paymentIntent}#extra`;
       if (!db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", marker)) {
         if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
-          try { await stripe.refund({ paymentIntent, amountCents: x.amount_cents, key: `stray-extra-${x.id}` }); }
+          try { await stripe.refund({ paymentIntent, amountCents: x.amount_cents, key: `stray-extra-${x.id}-${paymentIntent}` }); }
           catch (e) { ctx.alert(`EXTRA REFUND FAILED for ${x.id}: ${e.message}`, "stray-extra-" + x.id); throw e; }
         }
-        db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", x.booking_id, marker, x.amount_cents, "extra was no longer due when the payment arrived", now());
+        db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", x.booking_id, marker, x.amount_cents, x.status === "paid" ? "second payment of the same extra" : "extra was no longer due when the payment arrived", now());
       }
       return x;
     }
@@ -129,6 +129,13 @@ export default function extrasRoutes(ctx, add) {
     if (b.status !== "confirmed" || b.noshow_status) throw new HttpError(400, "This booking can't take extras any more");
     if (!stripe.live) return { payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/extra/${x.id}` } };
     if (!g.stripe_ready) throw new HttpError(400, "This vendor can't take payments in the app right now. Pay them directly.");
+    if (x.session_id) {
+      try { await stripe.expireCheckoutSession(x.session_id); }
+      catch {
+        const s = await stripe.getCheckoutSession(x.session_id).catch(() => null);
+        if (s && s.payment_status === "paid") { if (s.amount_total === x.amount_cents) await markExtraPaid(ctx, x.id, String(s.payment_intent || "")); throw new HttpError(409, "This was just paid. Refresh the page."); }
+      }
+    }
     const session = await stripe.checkoutForExtra({ extra: x, booking: b, group: g, successUrl: `${config.baseUrl}/#/booking/${b.id}?extra=1`, cancelUrl: `${config.baseUrl}/#/booking/${b.id}` });
     db.run("UPDATE extras SET session_id = ? WHERE id = ?", session.id, x.id);
     return { payment: { mode: "stripe", url: session.url } };

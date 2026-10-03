@@ -65,8 +65,10 @@ try {
   // ---- My business: needs, roster, a payment link, a holiday special, a team invite ----
   await go(B, `#/dashboard?g=${gid}&tab=business`); await B.waitForSelector("#biz-needs .chip");
   ok("the My business tab opens with every section", (await B.locator("#biz-links, #biz-crew, #biz-payroll, #biz-needs, #biz-specials, #biz-team").count()) === 6);
-  await B.click("#biz-needs .chip"); await B.click("#nd-save"); await B.waitForFunction(() => document.querySelectorAll("#biz-needs [data-nd]").length === 1);
-  ok("a preset 'what we need' line is saved", JSON.parse(S.db.get("SELECT needs_json FROM groups WHERE id = ?", gid).needs_json).length === 1);
+  await B.click("#biz-needs .chip"); await B.click("#nd-save");
+  const savedNeeds = () => JSON.parse(S.db.get("SELECT needs_json FROM groups WHERE id = ?", gid).needs_json).length === 1;
+  for (let i = 0; i < 50 && !savedNeeds(); i++) await B.waitForTimeout(100); // the save is a request: wait for it to land
+  ok("a preset 'what we need' line is saved", savedNeeds());
   await B.fill("#cw-name", "Juan Trompeta"); await B.fill("#cw-role", "Trumpet"); await B.fill("#cw-phone", "773-555-0101"); await B.fill("#cw-pay", "150");
   await B.click("#crewform button[type=submit]"); await B.waitForFunction(() => /Juan Trompeta/.test(document.getElementById("biz-crew").innerText));
   ok("a musician is added to the roster with their pay", /\$150 per gig/.test(await B.locator("#biz-crew").innerText()));
@@ -130,6 +132,7 @@ try {
   await L.waitForSelector(".tabs");
   ok("the helper joins and lands on the listing's dashboard", /DJ Relámpago/.test(await text(L)));
   await go(L, `#/dashboard?g=${gid}&tab=payments`); await L.waitForSelector("#tabbody .panel");
+  await L.waitForFunction(() => /Only the owner of this listing/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {}); // the note replaces the buttons once the panels load
   ok("the helper sees that payouts and upgrades are the owner's", /Only the owner of this listing/.test(await text(L)) && (await L.locator("#feature, #buypro").count()) === 0);
 
   // ---- the party is today: one more hour, paid on the phone ----

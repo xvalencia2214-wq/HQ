@@ -8,7 +8,7 @@ import { EVENT_TYPES, MAX_HOURS, POLICIES, SHORT_MINUTES, isTime } from "../pric
 import { lookupZip } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { dollarsToCents } from "./groups.js";
-import { expirePending, getGroup, isBookable, isTeam, newId, requireOwner } from "../shared.js";
+import { expirePending, feePctFor, getGroup, isBookable, isTeam, markBookingPaid, newId, requireOwner } from "../shared.js";
 import { assertStart } from "../schedule.js";
 
 const hash = (t) => crypto.createHash("sha256").update("paylink:" + String(t)).digest("hex");
@@ -65,8 +65,14 @@ export default function payLinkRoutes(ctx, add) {
   add("DELETE", "/api/paylinks/:lid", ({ params, user }) => {
     const l = db.get("SELECT * FROM pay_links WHERE id = ?", String(params.lid));
     if (!l || !isTeam(db, user, getGroup(db, l.group_id))) throw new HttpError(404, "Not found");
-    if (l.status !== "open") throw new HttpError(400, "This link was already used or cancelled");
-    db.run("UPDATE pay_links SET status = 'cancelled' WHERE id = ?", l.id);
+    const b = l.booking_id ? db.get("SELECT id, status, payment_status FROM bookings WHERE id = ?", l.booking_id) : null;
+    // an open link, or one the client opened but never paid (its unpaid booking holds the time until the link's deadline)
+    const unpaidHold = l.status === "used" && b && b.status === "pending_payment" && b.payment_status === "unpaid";
+    if (l.status !== "open" && !unpaidHold) throw new HttpError(400, "This link was already paid or cancelled");
+    db.tx(() => {
+      db.run("UPDATE pay_links SET status = 'cancelled' WHERE id = ?", l.id);
+      if (unpaidHold) db.run("UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE id = ? AND payment_status = 'unpaid'", now(), b.id);
+    });
     return { link: ownerView(db.get("SELECT * FROM pay_links WHERE id = ?", l.id)) };
   }, { auth: true });
 
@@ -96,6 +102,7 @@ export default function payLinkRoutes(ctx, add) {
   add("POST", "/api/pay-link/:token/book", async ({ params, body, user }) => {
     const l = findLink(params.token), g = getGroup(db, l.group_id);
     if (isTeam(db, user, g)) throw new HttpError(400, "This is your own link: send it to your client.");
+    if (!isBookable(ctx, g)) throw new HttpError(400, "This vendor can't take payments in the app right now. Ask them about it.");
     if (body.acceptPolicy !== true) throw new HttpError(400, "Please accept the deposit and cancellation policy");
     if (ctx.email.live && !user.email_verified) throw new HttpError(403, "Please confirm your email address first. We sent you a link; you can ask for another from the banner at the top.", { code: "verify_email" });
     expirePending(db);
@@ -111,7 +118,12 @@ export default function payLinkRoutes(ctx, add) {
       const needs = safeJson(g.needs_json, []);
       if (needs.length && body.acceptNeeds !== true) throw new HttpError(400, "Please confirm you can provide what they need");
       assertStart(db, g, l.date, l.time, l.minutes, { ignoreCalendar: true, exceptLink: l.id });
-      const fee = Math.min(Math.round((l.total_cents * config.directFeePct) / 100), l.deposit_cents);
+      // The lower fee is for clients the vendor brought; a family that found them here (they messaged, asked for a quote or
+      // booked through the site before) pays the regular fee, so sending a link doesn't route around it.
+      const foundHere = db.get(`SELECT 1 AS x FROM messages WHERE group_id = ? AND customer_id = ?
+        UNION SELECT 1 FROM bookings WHERE group_id = ? AND customer_id = ? AND direct = 0 AND status != 'expired'
+        UNION SELECT 1 FROM event_request_groups x JOIN event_requests r ON r.id = x.request_id WHERE x.group_id = ? AND r.customer_id = ? LIMIT 1`, g.id, user.id, g.id, user.id, g.id, user.id);
+      const fee = Math.min(Math.round((l.total_cents * (foundHere ? feePctFor(g, config) : config.directFeePct)) / 100), l.deposit_cents);
       const id = newId("b"), t = now();
       db.tx(() => {
         db.run(`INSERT INTO bookings (id, group_id, customer_id, date, time, hours, duration_min, needs_json, package_id, package_name, event_type, guests, event_zip, name, phone, address, message,
@@ -125,6 +137,17 @@ export default function payLinkRoutes(ctx, add) {
       b = db.get("SELECT * FROM bookings WHERE id = ?", id);
     }
     if (!stripe.live) return { booking_id: b.id, payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/booking/${b.id}` } };
+    // Close the checkout from an earlier try first, so the deposit can't be paid twice. One that can't be closed was paid.
+    if (b.stripe_session_id) {
+      try { await stripe.expireCheckoutSession(b.stripe_session_id); }
+      catch {
+        const s = await stripe.getCheckoutSession(b.stripe_session_id).catch(() => null);
+        if (s && s.payment_status === "paid") {
+          if (s.amount_total === b.deposit_cents) await markBookingPaid(ctx, b.id, String(s.payment_intent || ""));
+          return { booking_id: b.id, paid: true };
+        }
+      }
+    }
     const session = await stripe.checkoutForBooking({ booking: b, group: g, attempt: String(now()), successUrl: `${config.baseUrl}/#/booking/${b.id}?paid=1`, cancelUrl: `${config.baseUrl}/#/pay-link/${params.token}` });
     db.run("UPDATE bookings SET stripe_session_id = ? WHERE id = ?", session.id, b.id);
     return { booking_id: b.id, payment: { mode: "stripe", url: session.url } };

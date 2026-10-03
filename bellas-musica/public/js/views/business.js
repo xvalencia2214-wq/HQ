@@ -50,7 +50,7 @@ async function drawLinks(g) {
     </form></details>
     <div id="pl-made"></div>
     ${links.length ? `<ul class="plist pl-list">${links.map((l) => `<li><span><strong>${esc(l.client_name)}</strong> · ${esc(l.title)}<br><span class="dim small">${esc(fmtDate(l.date))} · ${esc(l.time)} · ${esc(lenLabel(l.minutes))} · ${money(l.total_cents)} (${esc(t("pl.depShort", { amount: money(l.deposit_cents) }))})</span></span>
-      <span><span class="badge ${l.booking_status === "confirmed" ? "confirmed" : l.status === "open" ? "requested" : "cancelled"}">${esc(statusText(l))}</span>${l.status === "open" ? ` <button type="button" class="linkbtn" data-plcancel="${esc(l.id)}">${esc(t("pl.cancel"))}</button>` : ""}</span></li>`).join("")}</ul>` : ""}`;
+      <span><span class="badge ${l.booking_status === "confirmed" ? "confirmed" : l.status === "open" ? "requested" : "cancelled"}">${esc(statusText(l))}</span>${l.status === "open" || (l.status === "used" && l.booking_status === "unpaid") ? ` <button type="button" class="linkbtn" data-plcancel="${esc(l.id)}">${esc(t("pl.cancel"))}</button>` : ""}</span></li>`).join("")}</ul>` : ""}`;
   const form = document.getElementById("plform");
   form.onsubmit = async (e) => {
     e.preventDefault();

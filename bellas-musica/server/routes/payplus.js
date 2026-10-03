@@ -154,7 +154,7 @@ export default function payPlusRoutes(ctx, add) {
       if (new Set(items.map((x) => x.b.date)).size !== 1) continue;            // the same party day
       if (!items.every((x) => isLive(x.g))) continue;
       for (const { b, g } of items) {
-        if (out.has(b.id) || b.discount_cents) continue;                      // one discount per booking
+        if (out.has(b.id) || b.discount_cents || b.direct) continue;          // one discount per booking; a payment link's price is the vendor's own
         const discount = Math.round(((b.total_cents - b.travel_fee_cents) * bun.discount_pct) / 100);
         const total = b.total_cents - discount;
         const deposit = Math.ceil((total * g.deposit_pct) / 100);

@@ -296,7 +296,13 @@ export function markBookingPaid(ctx, bookingId, paymentIntent) {
 async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
   const { db } = ctx;
   const b = db.get("SELECT * FROM bookings WHERE id = ?", bookingId);
-  if (!b || b.payment_status !== "unpaid") return b; // already handled
+  if (!b) return b;
+  if (b.payment_status !== "unpaid") {
+    // The same payment reported twice is fine. A different payment for a deposit that is already paid (two checkouts open
+    // at once) goes straight back, in full.
+    if (paymentIntent && b.stripe_payment_intent && paymentIntent !== b.stripe_payment_intent) await strayRefund(ctx, b, paymentIntent, b.deposit_cents, "second payment of the same deposit");
+    return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+  }
   if (b.status === "pending_payment") {
     db.run("UPDATE bookings SET status = 'requested', payment_status = 'paid', stripe_payment_intent = ?, updated_at = ? WHERE id = ?", paymentIntent, now(), b.id);
   } else if (b.status === "expired") {

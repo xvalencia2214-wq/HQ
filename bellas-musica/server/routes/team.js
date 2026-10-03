@@ -29,6 +29,8 @@ export default function teamRoutes(ctx, add) {
     const count = db.get("SELECT COUNT(*) c FROM group_team WHERE group_id = ?", g.id).c + db.get("SELECT COUNT(*) c FROM team_invites WHERE group_id = ? AND used_at = 0 AND expires_at > ?", g.id, now()).c;
     if (count >= MAX_TEAM) throw new HttpError(400, `A listing can have up to ${MAX_TEAM} helpers`);
     if (email && email === String(user.email).toLowerCase()) throw new HttpError(400, "That's you: you already own this listing");
+    // invitations send email to any address: a few a day is plenty for a real team
+    if (db.get("SELECT COUNT(*) c FROM team_invites WHERE created_by = ? AND created_at > ?", user.id, now() - 86400).c >= 15) throw new HttpError(429, "That's a lot of invitations for one day. Try again tomorrow.");
     const token = rid(24), id = newId("ti");
     db.run("INSERT INTO team_invites (id, group_id, email, token_hash, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)", id, g.id, email, hash(token), user.id, now(), now() + INVITE_DAYS * 86400);
     const url = `${config.baseUrl}/#/team/${token}`;
@@ -68,6 +70,8 @@ export default function teamRoutes(ctx, add) {
   add("POST", "/api/team-invite/:token/accept", ({ params, user }) => {
     const inv = findInvite(params.token), g = getGroup(db, inv.group_id);
     if (g.owner_id === user.id) throw new HttpError(400, "You already own this listing");
+    // an invitation sent to an email address is for that person's account only (a forwarded link isn't enough)
+    if (inv.email && inv.email !== String(user.email).toLowerCase()) throw new HttpError(403, `This invitation is for ${inv.email.replace(/^(.).*(@.*)$/, "$1…$2")}. Log in with that account.`);
     db.tx(() => {
       db.run("INSERT OR IGNORE INTO group_team (group_id, user_id, added_by, created_at) VALUES (?, ?, ?, ?)", g.id, user.id, inv.created_by, now());
       db.run("UPDATE team_invites SET used_by = ?, used_at = ? WHERE id = ? AND used_at = 0", user.id, now(), inv.id);
