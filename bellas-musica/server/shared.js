@@ -95,7 +95,7 @@ export function publicGroup(ctx, g, extras = {}) {
     events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
-    events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []),
+    events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []), weekly_discount_pct: g.weekly_discount_pct || 0,
     video: g.video_provider ? { provider: g.video_provider, url: embedUrl(g.video_provider, g.video_id) } : null,
     ...extras.fields
   };

@@ -6,6 +6,7 @@ import { maskContact } from "./messages.js";
 const MIN_PART = 2000;                // $20: the smallest installment or padrino payment (unless less is left)
 const MAX_PENDING_PARTS = 3;          // unpaid payment links one person can have open per booking
 const MAX_CART = 6;
+export const MAX_SERIES = 12;
 const MAX_BUNDLE = 5;                 // vendors in one bundle (including the one that creates it)
 
 // Payment plans and padrinos (paying the balance in parts), one checkout for several deposits, and vendor bundles.
@@ -75,11 +76,14 @@ export default function payPlusRoutes(ctx, add) {
 
   // ---- one checkout for several deposits ----
   const cartRows = (body, user) => {
-    if (!Array.isArray(body.bookingIds) || body.bookingIds.length < 2 || body.bookingIds.length > MAX_CART) throw new HttpError(400, `Pick 2 to ${MAX_CART} unpaid bookings`);
+    // a weekly series (one listing, up to 12 dates) can go in one checkout too
+    const max = Array.isArray(body.bookingIds) && body.bookingIds.length > MAX_CART && body.bookingIds.length <= MAX_SERIES ? MAX_SERIES : MAX_CART;
+    if (!Array.isArray(body.bookingIds) || body.bookingIds.length < 2 || body.bookingIds.length > max) throw new HttpError(400, `Pick 2 to ${MAX_CART} unpaid bookings`);
     expirePending(db);
     const ids = [...new Set(body.bookingIds.map(String))];
     const rows = ids.map((id) => db.get("SELECT * FROM bookings WHERE id = ? AND customer_id = ?", id, user.id));
     if (rows.some((b) => !b)) throw new HttpError(404, "Booking not found");
+    if (ids.length > MAX_CART && !(rows[0].series_id && rows.every((b) => b.series_id === rows[0].series_id))) throw new HttpError(400, `Pick 2 to ${MAX_CART} unpaid bookings`);
     if (rows.some((b) => b.status !== "pending_payment" || b.payment_status !== "unpaid")) throw new HttpError(400, "One of these is no longer waiting for a deposit. Refresh and try again.");
     return { ids, rows, groups: rows.map((b) => getGroup(db, b.group_id)) };
   };
@@ -89,8 +93,10 @@ export default function payPlusRoutes(ctx, add) {
     const prices = bundlePrices(rows, groups);
     return { amount_cents: rows.reduce((n, b) => n + (prices.get(b.id)?.deposit_cents ?? b.deposit_cents), 0), discount_cents: [...prices.values()].reduce((n, x) => n + x.discount_cents, 0) };
   }, { auth: true });
-  add("POST", "/api/cart", ({ body, user }) => withLock("cart-user:" + user.id, async () => {
-    const { ids, rows, groups } = cartRows(body, user);
+  add("POST", "/api/cart", ({ body, user }) => createCart(body.bookingIds, user), { auth: true });
+  // also used by weekly series (server/routes/series.js)
+  const createCart = (bookingIds, user) => withLock("cart-user:" + user.id, async () => {
+    const { ids, rows, groups } = cartRows({ bookingIds }, user);
     if (stripe.live && groups.some((g) => !g.stripe_ready || !isBookable(ctx, g))) throw new HttpError(400, "One of these vendors can't take payments right now. Pay the others together and that one on its own.");
     // Each booking's own checkout is closed first so the same deposit can't be paid twice. One that can't be closed was
     // just paid: it is recorded now and the family picks again.
@@ -116,7 +122,8 @@ export default function payPlusRoutes(ctx, add) {
     const session = await stripe.checkoutForCart({ cart, lines, successUrl: `${config.baseUrl}/#/bookings?cart=1`, cancelUrl: `${config.baseUrl}/#/bookings` });
     db.run("UPDATE carts SET session_id = ? WHERE id = ?", session.id, cart.id);
     return { cart_id: cart.id, amount_cents: amount, payment: { mode: "stripe", url: session.url } };
-  }), { auth: true });
+  });
+  ctx.createCart = createCart;
 
   const myCart = (user, id) => {
     const c = db.get("SELECT * FROM carts WHERE id = ?", String(id));

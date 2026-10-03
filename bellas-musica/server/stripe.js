@@ -106,6 +106,16 @@ export function createStripe(config) {
         metadata: { kind: "extra", extra_id: extra.id, booking_id: booking.id }
       }, `checkout-extra-${extra.id}-${Math.floor(Date.now() / 600000)}`);
     },
+    // A tip after the party: to the vendor, keeping only the card processing cost.
+    checkoutForTip({ tip, booking, group, successUrl, cancelUrl }) {
+      return call("POST", "/v1/checkout/sessions", {
+        mode: "payment", success_url: successUrl, cancel_url: cancelUrl, client_reference_id: tip.id,
+        expires_at: Math.floor(Date.now() / 1000) + 2400,
+        line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: tip.amount_cents, product_data: { name: `Propina for ${group.name}` } } }],
+        payment_intent_data: { ...(tip.fee_cents ? { application_fee_amount: tip.fee_cents } : {}), transfer_data: { destination: group.stripe_account_id }, metadata: { kind: "tip", tip_id: tip.id, booking_id: booking.id } },
+        metadata: { kind: "tip", tip_id: tip.id, booking_id: booking.id }
+      }, `checkout-tip-${tip.id}`);
+    },
     // Several deposits in one charge. The money stays with the platform until we transfer each vendor its share
     // (separate charges and transfers), grouped by transfer_group so Stripe shows them together.
     checkoutForCart({ cart, lines, successUrl, cancelUrl }) {

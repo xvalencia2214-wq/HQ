@@ -45,6 +45,7 @@ export function accountView(app) {
     <label for="p-phone">${esc(t("auth.phone"))}</label><input id="p-phone" name="phone" inputmode="tel" maxlength="20" value="${esc(u.phone)}">
     <label class="chk"><input type="checkbox" name="sms"${u.sms_opt_in ? " checked" : ""}> <span>${esc(t("auth.smsConsent"))}</span></label>
     <label class="chk"><input type="checkbox" name="emailnotify"${u.email_notify ? " checked" : ""}> <span>${esc(t("acct.emailNotify"))}</span></label>
+    <label class="chk"><input type="checkbox" name="dailytext"${u.daily_text !== false ? " checked" : ""}> <span>${esc(t("acct.dailyText"))}</span></label>
     ${state.meta.whatsapp ? `<fieldset class="chan"><legend>${esc(t("acct.channel"))}</legend><label class="chk"><input type="radio" name="channel" value="sms"${u.notify_channel !== "whatsapp" ? " checked" : ""}> <span>${esc(t("acct.chSms"))}</span></label><label class="chk"><input type="radio" name="channel" value="whatsapp"${u.notify_channel === "whatsapp" ? " checked" : ""}> <span>WhatsApp</span></label></fieldset>` : ""}
     <div class="dim small">${esc(t(u.email_verified ? "acct.verified" : "acct.unverified"))}</div>
     <div id="perr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>
@@ -59,7 +60,7 @@ export function accountView(app) {
   document.getElementById("pform").onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("perr"); err.textContent = "";
-    try { setUser((await api.patch("/api/me", { name: f.name, phone: f.phone, sms_opt_in: f.sms === "on", email_notify: f.emailnotify === "on", ...(f.channel ? { notify_channel: f.channel } : {}) })).user); toast(t("common.saved")); accountView(app); }
+    try { setUser((await api.patch("/api/me", { name: f.name, phone: f.phone, sms_opt_in: f.sms === "on", email_notify: f.emailnotify === "on", daily_text: f.dailytext === "on", ...(f.channel ? { notify_channel: f.channel } : {}) })).user); toast(t("common.saved")); accountView(app); }
     catch (ex) { err.textContent = ex.message; }
   };
   document.getElementById("dform").onsubmit = async (e) => {

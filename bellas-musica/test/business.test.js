@@ -317,3 +317,73 @@ test("money review: duplicate payments go back, old checkouts close, unpaid link
     assert.ok([400, 429].includes(last.status));
   } finally { await S.close(); await F.close(); }
 });
+
+test("propinas, weekly gigs and the morning text", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const o = client(S.base), c = client(S.base), x = client(S.base), m = client(S.base);
+    await o.signup("wk-o@example.com", "Beto Owner", { phone: "312-555-0101", sms_opt_in: true, lang: "es" });
+    await c.signup("wk-c@example.com", "Restaurante El Sol"); await x.signup("wk-x@example.com", "Stranger");
+    await m.signup("wk-m@example.com", "Lupe Helper", { phone: "312-555-0102", sms_opt_in: true });
+    const first = inDays(7);
+    const g = await makeGroup(o, { name: "Mariachi Viernes", dates: [] });
+    // open the same weekday for 10 weeks except the 3rd, with a 10% weekly discount
+    const dates = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [inDays(7 + 7 * i), ["7:00 PM"]]).filter((_, i) => i !== 2));
+    await o.put(`/api/groups/${g}/availability`, { dates });
+    assert.equal((await o.patch(`/api/groups/${g}`, { weekly_discount_pct: 40 })).status, 400);
+    assert.equal((await o.patch(`/api/groups/${g}`, { weekly_discount_pct: 10 })).json.weekly_discount_pct, 10);
+
+    // ---- weekly gigs ----
+    const body = bookingBody(g, first, { time: "7:00 PM", hours: 2, event: "Corporate / Restaurant", weeks: 6 });
+    assert.equal((await c.post("/api/series", { ...body, weeks: 13 })).status, 400);
+    assert.equal((await o.post("/api/series", body)).status, 400); // not your own group
+    const sr = await c.post("/api/series", body);
+    assert.equal(sr.status, 200);
+    assert.equal(sr.json.dates.length, 5); assert.deepEqual(sr.json.skipped, [inDays(21)]); // the 3rd week isn't open
+    const rows = S.db.all("SELECT * FROM bookings WHERE series_id = ? ORDER BY date", sr.json.series_id);
+    assert.equal(rows.length, 5);
+    assert.equal(rows[0].total_cents, 54000); assert.equal(rows[0].discount_cents, 6000); // $600 for 2 hours, 10% off
+    assert.equal(sr.json.cart.amount_cents, rows.reduce((n, b) => n + b.deposit_cents, 0));
+    await c.post(`/api/carts/${sr.json.cart.cart_id}/simulate-pay`);
+    assert.ok(S.db.all("SELECT status FROM bookings WHERE series_id = ?", sr.json.series_id).every((b) => b.status === "requested"));
+    const mine = (await c.get("/api/my/bookings")).json.bookings.filter((b) => b.series_id === sr.json.series_id).sort((a, b) => (a.date < b.date ? -1 : 1));
+    assert.deepEqual([mine[0].series.n, mine[0].series.of, mine[4].series.last], [1, 5, true]);
+    // the vendor accepts them all (the dashboard does one call per date)
+    for (const b of rows) assert.equal((await o.patch(`/api/bookings/${b.id}`, { action: "accept" })).status, 200);
+    // ---- propina ----
+    const b0 = rows[0];
+    assert.match((await c.post(`/api/bookings/${b0.id}/tips`, { amount: 50 })).json.error, /day of the event/);
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(-1), b0.id);
+    assert.equal((await x.post(`/api/bookings/${b0.id}/tips`, { amount: 50 })).status, 404);
+    assert.equal((await c.post(`/api/bookings/${b0.id}/tips`, { amount: 2 })).status, 400);
+    const tp = await c.post(`/api/bookings/${b0.id}/tips`, { amount: 50, note: "¡Gracias! Llámame al 312-555-0199" });
+    assert.equal(tp.json.payment.mode, "simulated");
+    await c.post(`/api/tips/${tp.json.tip_id}/simulate-pay`); await c.post(`/api/tips/${tp.json.tip_id}/simulate-pay`);
+    const t0 = S.db.get("SELECT * FROM tips WHERE id = ?", tp.json.tip_id);
+    assert.equal(t0.status, "paid"); assert.equal(t0.fee_cents, 0); assert.doesNotMatch(t0.note, /555-0199/);
+    assert.ok(S.db.all("SELECT kind FROM email_log").some((r) => r.kind === "tip.paid.group"));
+    const view = (await o.get(`/api/groups/${g}/bookings`)).json.bookings.find((b) => b.id === b0.id);
+    assert.equal(view.tips[0].amount_cents, 5000);
+    // no no-show report after tipping; earnings show the tip
+    assert.equal((await c.post(`/api/bookings/${b0.id}/noshow`, { note: "They never came to the party at all" })).status, 400);
+    const e = (await o.get(`/api/groups/${g}/earnings?year=${inDays(-1).slice(0, 4)}`)).json.earnings;
+    assert.equal(e.total.tips_cents, 5000);
+
+    // ---- the morning text ----
+    const inv = await o.post(`/api/groups/${g}/team/invite`, {});
+    await m.post(`/api/team-invite/${inv.json.url.split("/team/")[1]}/accept`);
+    S.db.run("UPDATE bookings SET date = ? WHERE id = ?", inDays(0), rows[1].id); // a gig today
+    await c.post("/api/bookings", bookingBody(g, inDays(70), { time: "7:00 PM", hours: 2 })); // nothing new: not paid yet
+    const { sendDailyTexts } = await import("../server/jobs.js");
+    assert.equal(sendDailyTexts(S.ctx, { hour: 5 }), 0); // too early
+    assert.equal(sendDailyTexts(S.ctx, { hour: 7 }), 2); // the owner and the helper
+    assert.equal(sendDailyTexts(S.ctx, { hour: 8 }), 0); // once a day
+    const texts = S.db.all("SELECT * FROM sms_log WHERE body LIKE '%Hoy:%' OR body LIKE '%Today:%'");
+    assert.ok(texts.some((x) => /Hoy: 1 evento \(7:00 PM/.test(x.body) && /por cobrar hoy/.test(x.body)), JSON.stringify(texts));
+    assert.ok(texts.some((x) => /Today: 1 gig/.test(x.body)));
+    // turned off in Account: no text
+    await m.patch("/api/me", { name: "Lupe Helper", phone: "312-555-0102", sms_opt_in: true, daily_text: false });
+    S.db.run("UPDATE users SET daily_text_on = ''");
+    assert.equal(sendDailyTexts(S.ctx, { hour: 7 }), 1);
+  } finally { await S.close(); }
+});

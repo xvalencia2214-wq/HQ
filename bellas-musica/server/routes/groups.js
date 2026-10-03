@@ -160,6 +160,7 @@ export default function groupRoutes(ctx, add) {
       const peak = peakLoad(db, g, todayStr());
       if (set.capacity < peak) throw new HttpError(400, `You already have ${peak} bookings at the same time on one day. Keep at least ${peak} until those are done.`);
     }
+    if (body.weekly_discount_pct !== undefined) set.weekly_discount_pct = int(body.weekly_discount_pct, "Weekly discount", { min: 0, max: 30 });
     if (body.buffer_min !== undefined) set.buffer_min = Number(oneOf(Number(body.buffer_min), "Time between bookings", [0, 15, 30, 45, 60, 90, 120]));
     if (body.members !== undefined) set.members = int(body.members, "Musicians", { min: 1, max: 40 });
     if (body.story !== undefined) set.story = str(body.story, "Story", { max: 800 });

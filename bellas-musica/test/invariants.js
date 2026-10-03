@@ -65,6 +65,12 @@ export function checkInvariants(db, fake, log) {
     if (["paid", "cash"].includes(x.status) && x.bstatus !== "confirmed") fail("an extra was paid on a booking that isn't confirmed", x);
     if (["paid", "cash"].includes(x.status) && ["refunded"].includes(x.ns)) fail("everything was refunded as a no-show but an extra was kept", x);
   }
+  // tips: paid ones have a payment, never more kept than the card processing cost, only after a party that took place
+  for (const tp of db.all("SELECT t.*, b.status bstatus, b.noshow_status ns FROM tips t JOIN bookings b ON b.id = t.booking_id")) {
+    if (tp.status === "paid" && (!tp.pi || !tp.paid_at)) fail("paid tip without a payment", tp);
+    if (tp.fee_cents < 0 || tp.fee_cents > Math.round(tp.amount_cents * 0.029) + 30) fail("more than card processing kept from a tip", tp);
+    if (tp.status === "paid" && tp.bstatus !== "confirmed") fail("tip on a booking that isn't confirmed", tp);
+  }
   // a payment link holds its time only while open; a used one points at its booking
   for (const l of db.all("SELECT * FROM pay_links")) {
     if (l.status === "used" && !db.get("SELECT 1 AS x FROM bookings WHERE id = ? AND link_id = ?", l.booking_id, l.id)) fail("used payment link without its booking", l);

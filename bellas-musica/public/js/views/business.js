@@ -193,16 +193,27 @@ export function bizBox(b) {
   const upcoming = ["requested", "confirmed"].includes(b.status) && b.date >= state.meta.today;
   const extras = (b.extras || []).filter((x) => x.status !== "cancelled" && x.status !== "declined");
   return `${b.direct ? `<div class="dim small">💳 ${esc(t("pl.viaLink"))}</div>` : ""}
+    ${(b.tips || []).map((x) => `<div class="small">💝 ${esc(t("tip.got", { amount: money(x.amount_cents) }))}${x.note ? ` · “${esc(x.note)}”` : ""}</div>`).join("")}
     ${(b.needs || []).length ? `<div class="dim small">📋 ${esc(t("needs.confirmed", { list: b.needs.join("; ") }))}</div>` : ""}
     ${extras.length ? `<div class="extras">${extras.map((x) => `<div class="small">➕ ${esc(x.label)} · ${x.amount_cents ? money(x.amount_cents) : esc(t("ex.noPrice"))} · <span class="badge ${x.status === "paid" || x.status === "cash" ? "confirmed" : "requested"}">${esc(exStatus(x))}</span>
       ${x.status === "asked" ? ` <button type="button" class="btn small" data-exacc="${esc(x.id)}" data-amt="${x.amount_cents}">${esc(t("ex.accept"))}</button>` : ""}
       ${["asked", "offered"].includes(x.status) ? ` <button type="button" class="btn ghost small" data-excash="${esc(x.id)}">${esc(t("ex.cash"))}</button> <button type="button" class="linkbtn" data-excan="${esc(x.id)}">${esc(t("ex.cancel"))}</button>` : ""}</div>`).join("")}</div>` : ""}
+    ${b.series ? `<div class="dim small">🔁 ${esc(t("wk.tag", { n: b.series.n, of: b.series.of }))}</div>` : ""}
+    ${b.series && b.can_respond ? `<div class="biz-btns"><button type="button" class="btn small" data-seriesacc="${esc(b.series_id)}" data-id="${esc(b.id)}">${esc(t("wk.acceptAll", { n: b.series.of }))}</button> <button type="button" class="btn ghost small" data-seriesdec="${esc(b.series_id)}" data-id="${esc(b.id)}">${esc(t("wk.declineAll"))}</button></div>` : ""}
     <div class="biz-btns">${upcoming ? `<button type="button" class="btn ghost small" data-lineup="${esc(b.id)}">👥 ${esc(t("crew.lineup"))}</button> ` : ""}${b.can_extra ? `<button type="button" class="btn ghost small" data-extra="${esc(b.id)}">➕ ${esc(t("ex.add"))}</button>` : ""}</div>`;
 }
 export function wireBiz(root, g, reload) {
   const slotOf = (btn) => btn.closest(".req").querySelector(".biz-slot");
   root.querySelectorAll("[data-lineup]").forEach((btn) => { btn.onclick = () => lineupPanel(slotOf(btn), btn.dataset.lineup, g); });
   root.querySelectorAll("[data-extra]").forEach((btn) => { btn.onclick = () => extraForm(slotOf(btn), btn.dataset.extra, g, reload); });
+  // a whole weekly series in one tap: every waiting date of it on this page
+  for (const [attr, action] of [["seriesacc", "accept"], ["seriesdec", "decline"]]) root.querySelectorAll(`[data-${attr}]`).forEach((btn) => { btn.onclick = async () => {
+    if (action === "decline" && !confirm(t("dash.confirmDecline"))) return;
+    const ids = [...new Set([...root.querySelectorAll(`[data-${attr}="${btn.dataset[attr]}"]`)].map((x) => x.dataset.id))];
+    btn.disabled = true;
+    try { for (const id of ids) await api.patch("/api/bookings/" + encodeURIComponent(id), { action }); toast(t("common.saved")); } catch (e) { toast(e.message, "error"); }
+    reload();
+  }; });
   const act = (sel, fn) => root.querySelectorAll(sel).forEach((btn) => { btn.onclick = async () => { try { await fn(btn); reload(); } catch (e) { toast(e.message, "error"); } }; });
   act("[data-exacc]", async (btn) => { const cur = Number(btn.dataset.amt) / 100; const v = prompt(t("ex.priceAsk"), cur || ""); if (v === null) throw new Error(t("ex.notChanged")); await api.post(`/api/extras/${encodeURIComponent(btn.dataset.exacc)}/accept`, { amount: Number(v) }); });
   act("[data-excash]", async (btn) => { if (!confirm(t("ex.confirmCash"))) throw new Error(t("ex.notChanged")); await api.post(`/api/extras/${encodeURIComponent(btn.dataset.excash)}/cash`); });
@@ -257,13 +268,33 @@ async function lineupPanel(slot, bookingId, g) {
 // ======================= on each booking (family side) =======================
 export function customerBizBox(b) {
   const extras = (b.extras || []).filter((x) => !["cancelled", "declined"].includes(x.status));
-  return `${(b.needs || []).length && ["requested", "confirmed"].includes(b.status) ? `<div class="dim small">📋 ${esc(t("needs.yours", { list: b.needs.join("; ") }))}</div>` : ""}
+  const nextWeek = (() => { const [y, m, d] = b.date.split("-").map(Number); const x = new Date(Date.UTC(y, m - 1, d + 7)); return x.toISOString().slice(0, 10); })();
+  return `${b.series ? `<div class="dim small">🔁 ${esc(t("wk.tag", { n: b.series.n, of: b.series.of }))}</div>` : ""}
+    ${b.series && b.series.last && ["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="#/group/${esc(b.group_id)}?date=${esc(nextWeek)}&repeat=${b.series.of}&event=${encodeURIComponent(b.event_type)}">🔁 ${esc(t("wk.more", { n: b.series.of }))}</a>` : ""}
+    ${(b.needs || []).length && ["requested", "confirmed"].includes(b.status) ? `<div class="dim small">📋 ${esc(t("needs.yours", { list: b.needs.join("; ") }))}</div>` : ""}
     ${extras.map((x) => `<div class="small">➕ ${esc(x.label)} · ${x.amount_cents ? money(x.amount_cents) : ""} · <span class="badge ${["paid", "cash"].includes(x.status) ? "confirmed" : "requested"}">${esc(exStatus(x))}</span>
       ${x.status === "offered" ? ` <button type="button" class="btn small" data-expay="${esc(x.id)}">${esc(t("ex.pay", { amount: money(x.amount_cents) }))}</button> <button type="button" class="linkbtn" data-excan="${esc(x.id)}">${esc(t("ex.noThanks"))}</button>` : ""}
       ${x.status === "asked" ? ` <button type="button" class="linkbtn" data-excan="${esc(x.id)}">${esc(t("ex.cancel"))}</button>` : ""}</div>`).join("")}
-    ${b.can_extra ? `<button type="button" class="btn ghost small" data-askhour="${esc(b.id)}">➕ ${esc(t("ex.askHour"))}</button>` : ""}`;
+    ${b.can_extra ? `<button type="button" class="btn ghost small" data-askhour="${esc(b.id)}">➕ ${esc(t("ex.askHour"))}</button>` : ""}
+    ${(b.tips || []).map((x) => `<div class="small">💝 ${esc(t("tip.gave", { amount: money(x.amount_cents) }))}</div>`).join("")}
+    ${b.can_tip ? `<div class="tipbox"><button type="button" class="btn ghost small" data-tip="${esc(b.id)}">💝 ${esc(t("tip.leave"))}</button><div class="tip-form" hidden></div></div>` : ""}`;
 }
 export function wireCustomerBiz(root, reload) {
+  root.querySelectorAll("[data-tip]").forEach((btn) => { btn.onclick = () => {
+    const box = btn.parentElement.querySelector(".tip-form"), id = btn.dataset.tip;
+    box.hidden = false;
+    box.innerHTML = `<form novalidate><p class="dim small">${esc(t("tip.hint"))}</p><div class="chips">${[20, 50, 100].map((n) => `<button type="button" class="chip" data-amt="${n}">${money(n * 100)}</button>`).join("")}</div>
+      <div class="row"><div><label for="tip-a-${esc(id)}">${esc(t("tip.amount"))}</label><input id="tip-a-${esc(id)}" name="amount" type="number" min="5" max="2000" inputmode="numeric" required></div>
+      <div><label for="tip-n-${esc(id)}">${esc(t("tip.note"))}</label><input id="tip-n-${esc(id)}" name="note" maxlength="200" placeholder="${esc(t("tip.notePh"))}"></div></div>
+      <div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("tip.send"))}</button></form>`;
+    const form = box.querySelector("form");
+    box.querySelectorAll("[data-amt]").forEach((c) => { c.onclick = () => { form.amount.value = c.dataset.amt; }; });
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      try { goto((await api.post(`/api/bookings/${encodeURIComponent(id)}/tips`, { amount: Number(form.amount.value), note: form.note.value })).payment.url); }
+      catch (ex) { form.querySelector(".err").textContent = ex.message; }
+    };
+  }; });
   root.querySelectorAll("[data-expay]").forEach((btn) => { btn.onclick = async () => { try { goto((await api.post(`/api/extras/${encodeURIComponent(btn.dataset.expay)}/pay`)).payment.url); } catch (e) { toast(e.message, "error"); } }; });
   root.querySelectorAll("[data-excan]").forEach((btn) => { btn.onclick = async () => { try { await api.post(`/api/extras/${encodeURIComponent(btn.dataset.excan)}/cancel`); reload(); } catch (e) { toast(e.message, "error"); } }; });
   root.querySelectorAll("[data-askhour]").forEach((btn) => { btn.onclick = async () => { try { await api.post(`/api/bookings/${encodeURIComponent(btn.dataset.askhour)}/extras`, { kind: "hour" }); toast(t("ex.asked")); reload(); } catch (e) { toast(e.message, "error"); } }; });

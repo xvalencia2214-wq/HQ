@@ -3,6 +3,7 @@ import { HttpError, addDays, int, isDate, isZip, now, oneOf, safeJson, str, toda
 import { EVENT_TYPES, categoryOf, MAX_ADDONS, MAX_HOURS, POLICIES, buildQuote, refundForCancel, refundParts, balanceCents, balanceLeft, balancePaidInApp, refundPercent, isTime } from "../pricing.js";
 import { assertStart, checkStart, durationOf, packageMinutes } from "../schedule.js";
 import { extrasOf, extrasPaidCents, markExtraPaid } from "./extras.js";
+import { canTip, markTipPaid, tipsOf, tipsPaidCents } from "./tips.js";
 import { lookupZip, miles } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
@@ -54,6 +55,7 @@ export default function bookingRoutes(ctx, add) {
     return { group, pkg, date, time, event, guests, eventZip, quote, minutes };
   }
 
+  ctx.priceRequest = priceRequest; // weekly series price each date the same way
   const policyInfo = (key) => ({ key, text: POLICIES[key].text, rows: POLICIES[key].rows.map(([days, pct]) => ({ days, pct })) });
 
   add("POST", "/api/quote", ({ body, user }) => {
@@ -82,7 +84,7 @@ export default function bookingRoutes(ctx, add) {
     db.run("UPDATE bookings SET checkin_code = ? WHERE id = ? AND checkin_code = ''", code, b.id);
     return db.get("SELECT checkin_code c FROM bookings WHERE id = ?", b.id).c;
   };
-  const canNoShow = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && !b.noshow_status && b.date < today && daysBetween(b.date, today) <= NOSHOW_WINDOW_DAYS && !extrasPaidCents(db, b.id);
+  const canNoShow = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !b.checked_in_at && !b.noshow_status && b.date < today && daysBetween(b.date, today) <= NOSHOW_WINDOW_DAYS && !extrasPaidCents(db, b.id) && !tipsPaidCents(db, b.id);
   const canReschedule = (b, today) => b.status === "confirmed" && b.payment_status === "paid" && !reschedPending(b) && b.resched_count < RESCHED_MAX && daysBetween(today, b.date) >= RESCHED_MIN_DAYS;
   const clearResched = (id, extraSql = "") => db.run(`UPDATE bookings SET resched_status = '', resched_date = '', resched_time = '', resched_note = ''${extraSql}, updated_at = ? WHERE id = ?`, now(), id);
 
@@ -98,7 +100,7 @@ export default function bookingRoutes(ctx, add) {
       balance_status: b.balance_status, balance_refund_cents: b.balance_refund_cents,
       balance_paid_cents: balancePaidInApp(b), balance_left_cents: balanceLeft(b),
       parts: db.all("SELECT id, payer_id, payer_name, note, amount_cents, status, paid_at FROM balance_parts WHERE booking_id = ? AND status != 'pending' ORDER BY paid_at", b.id).map((p) => ({ payer_name: p.payer_name, note: p.note, amount_cents: p.amount_cents, status: p.status, paid_at: p.paid_at, by_customer: p.payer_id === b.customer_id })),
-      discount_cents: b.discount_cents, bundle_id: b.bundle_id, direct: Boolean(b.direct), extras: extrasOf(db, b.id), needs: safeJson(b.needs_json, []),
+      discount_cents: b.discount_cents, bundle_id: b.bundle_id, direct: Boolean(b.direct), extras: extrasOf(db, b.id), tips: tipsOf(db, b.id).map((x) => ({ amount_cents: x.amount_cents, note: x.note, paid_at: x.paid_at })), can_tip: role === "customer" && canTip(b, today), series_id: b.series_id || "", series: b.series_id ? (() => { const all = db.all("SELECT id FROM bookings WHERE series_id = ? AND status NOT IN ('expired') ORDER BY date", b.series_id).map((x) => x.id); return { n: all.indexOf(b.id) + 1, of: all.length, last: all[all.length - 1] === b.id }; })() : null, needs: safeJson(b.needs_json, []),
       can_extra: b.status === "confirmed" && b.payment_status !== "unpaid" && !b.noshow_status && today >= b.date && today <= addDays(b.date, 1),
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
       reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
@@ -489,6 +491,10 @@ export default function bookingRoutes(ctx, add) {
           const p = db.get("SELECT amount_cents FROM balance_parts WHERE id = ?", String(obj.metadata.part_id));
           if (p && obj.amount_total === p.amount_cents) await markPartPaid(ctx, String(obj.metadata.part_id), String(obj.payment_intent || ""));
           else console.error("webhook: amount mismatch or unknown balance part", obj.metadata?.part_id);
+        } else if (kind === "tip") {
+          const tp = db.get("SELECT amount_cents FROM tips WHERE id = ?", String(obj.metadata.tip_id));
+          if (tp && obj.amount_total === tp.amount_cents) await markTipPaid(ctx, String(obj.metadata.tip_id), String(obj.payment_intent || ""));
+          else console.error("webhook: amount mismatch or unknown tip", obj.metadata?.tip_id);
         } else if (kind === "extra") {
           const x = db.get("SELECT amount_cents FROM extras WHERE id = ?", String(obj.metadata.extra_id));
           if (x && obj.amount_total === x.amount_cents) await markExtraPaid(ctx, String(obj.metadata.extra_id), String(obj.payment_intent || ""));

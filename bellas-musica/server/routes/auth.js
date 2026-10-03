@@ -5,7 +5,7 @@ import { normalizePhone } from "../sms.js";
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
 
-export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), email_notify: Boolean(u.email_notify), email_verified: Boolean(u.email_verified), lang: u.lang, notify_channel: u.notify_channel || "sms", is_admin: admins.includes(String(u.email).toLowerCase()) };
+export const publicUser = (u, admins = []) => u && { id: u.id, email: u.email, name: u.name, phone: u.phone, sms_opt_in: Boolean(u.sms_opt_in), email_notify: Boolean(u.email_notify), email_verified: Boolean(u.email_verified), lang: u.lang, notify_channel: u.notify_channel || "sms", daily_text: u.daily_text !== 0, is_admin: admins.includes(String(u.email).toLowerCase()) };
 
 function phoneField(v) {
   const raw = str(v, "Phone", { max: 30 });
@@ -103,6 +103,7 @@ export default function authRoutes(ctx, add) {
     const emailNotify = body.email_notify !== undefined ? (body.email_notify === true ? 1 : 0) : undefined;
     const channel = body.notify_channel === "whatsapp" || body.notify_channel === "sms" ? body.notify_channel : user.notify_channel || "sms";
     db.run("UPDATE users SET name = ?, phone = ?, sms_opt_in = ?, lang = ?, email_notify = COALESCE(?, email_notify), notify_channel = ? WHERE id = ?", name, phone, sms, lang, emailNotify ?? null, channel, user.id);
+    if (body.daily_text !== undefined) db.run("UPDATE users SET daily_text = ? WHERE id = ?", body.daily_text === true ? 1 : 0, user.id); // vendors: the morning summary text
     return { user: pub(db.get("SELECT * FROM users WHERE id = ?", user.id)) };
   }, { auth: true });
 

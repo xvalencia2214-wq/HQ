@@ -243,6 +243,31 @@ CREATE TABLE IF NOT EXISTS extras (
   paid_at INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_extras_booking ON extras(booking_id);
+-- Propinas: a tip the family leaves after the party. It all goes to the vendor (only the card processing cost is kept).
+CREATE TABLE IF NOT EXISTS tips (
+  id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount_cents INTEGER NOT NULL,
+  fee_cents INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',          -- pending | paid
+  session_id TEXT NOT NULL DEFAULT '',
+  pi TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  paid_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_tips_booking ON tips(booking_id);
+-- Weekly gigs (a restaurant's mariachi every Friday): the bookings of one series, paid in one checkout.
+CREATE TABLE IF NOT EXISTS series (
+  id TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  weeks INTEGER NOT NULL,
+  discount_pct INTEGER NOT NULL DEFAULT 0,
+  cart_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
 -- Times blocked by a vendor's own calendar (imported from Google/Apple/Outlook through its private iCal link).
 CREATE TABLE IF NOT EXISTS ext_busy (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -549,6 +574,10 @@ export function openDb(config) {
   ensureColumn("bookings", "duration_min", "INTEGER NOT NULL DEFAULT 0"); // 0 = hours * 60 (older bookings)
   ensureColumn("bookings", "hold_until", "INTEGER NOT NULL DEFAULT 0");   // unpaid hold deadline for payment links (0 = 30 minutes)
   db.exec("DROP INDEX IF EXISTS uq_slot");
+  ensureColumn("bookings", "series_id", "TEXT NOT NULL DEFAULT ''");       // one of a weekly series
+  ensureColumn("groups", "weekly_discount_pct", "INTEGER NOT NULL DEFAULT 0"); // off each date when booked every week
+  ensureColumn("users", "daily_text", "INTEGER NOT NULL DEFAULT 1");        // vendors: the morning summary text
+  ensureColumn("users", "daily_text_on", "TEXT NOT NULL DEFAULT ''");       // ...last day it was sent
   ensureColumn("bookings", "direct", "INTEGER NOT NULL DEFAULT 0");        // booked through the vendor's own payment link
   ensureColumn("bookings", "link_id", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("groups", "needs_json", "TEXT NOT NULL DEFAULT '[]'");       // what the vendor needs from the family (power, parking...)

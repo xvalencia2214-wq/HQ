@@ -575,3 +575,5 @@ fieldset.chan { border: 1px solid var(--line); border-radius: 10px; padding: 6px
 details > summary.btn { display: inline-block; width: auto; list-style: none; cursor: pointer; }
 details > summary.btn::-webkit-details-marker { display: none; }
 details[open] > summary.btn { margin-bottom: 10px; }
+.tipbox { margin-top: 6px; }
+.tip-form { margin-top: 8px; padding: 10px; border: 1px dashed var(--line, #ccd6e6); border-radius: 10px; }

@@ -76,6 +76,21 @@ export const TEMPLATES = {
   "extra.paid.group": { transactional: true,
     en: (v) => ({ subject: `${v.customer} paid ${v.amount}: ${v.extra}`, lines: [`Hi ${v.name},`, `${v.customer} paid ${v.amount} for "${v.extra}" through the app. It goes to your account like the deposit.`], cta: { label: "See the booking", url: v.url }, sms: `${B}: ${v.customer} paid ${v.amount} for "${v.extra}".` }),
     es: (v) => ({ subject: `${v.customer} pagó ${v.amount}: ${v.extra}`, lines: [`Hola ${v.name},`, `${v.customer} pagó ${v.amount} por "${v.extra}" en la app. Llega a tu cuenta igual que el depósito.`], cta: { label: "Ver la reserva", url: v.url }, sms: `${B}: ${v.customer} pagó ${v.amount} por "${v.extra}".` }) },
+  "daily.vendor": { transactional: true,
+    en: (v) => {
+      const parts = [Number(v.gigs) ? `Today: ${v.gigs} gig${v.gigs === "1" ? "" : "s"} (${v.list})` : "No gigs today", Number(v.requests) ? `${v.requests} new request${v.requests === "1" ? "" : "s"} waiting` : "", v.collect ? `${v.collect} to collect today` : ""].filter(Boolean);
+      return { subject: "Your day", lines: [`Hi ${v.name},`, parts.join(". ") + "."], cta: { label: "Open my dashboard", url: v.url }, sms: `${B}: ${parts.join(". ")}. ${v.url}` };
+    },
+    es: (v) => {
+      const parts = [Number(v.gigs) ? `Hoy: ${v.gigs} evento${v.gigs === "1" ? "" : "s"} (${v.list})` : "Hoy no hay eventos", Number(v.requests) ? `${v.requests} solicitud${v.requests === "1" ? "" : "es"} nueva${v.requests === "1" ? "" : "s"} esperando` : "", v.collect ? `${v.collect} por cobrar hoy` : ""].filter(Boolean);
+      return { subject: "Tu día", lines: [`Hola ${v.name},`, parts.join(". ") + "."], cta: { label: "Abrir mi panel", url: v.url }, sms: `${B}: ${parts.join(". ")}. ${v.url}` };
+    } },
+  "tip.paid.group": { transactional: true,
+    en: (v) => ({ subject: `${v.customer} left you a ${v.amount} tip 🎉`, lines: [`Hi ${v.name},`, `${v.customer} left a ${v.amount} tip for the party on ${longDate(v.date, "en")}.`, ...(v.note ? [`Their note: "${v.note}"`] : []), "It goes to your account like a deposit. Bella's Música keeps no fee on tips."], cta: { label: "See the booking", url: v.url }, sms: `${B}: ${v.customer} left you a ${v.amount} tip! 🎉` }),
+    es: (v) => ({ subject: `${v.customer} te dejó una propina de ${v.amount} 🎉`, lines: [`Hola ${v.name},`, `${v.customer} te dejó una propina de ${v.amount} por la fiesta del ${longDate(v.date, "es")}.`, ...(v.note ? [`Su nota: "${v.note}"`] : []), "Llega a tu cuenta igual que un depósito. Bella's Música no cobra comisión de las propinas."], cta: { label: "Ver la reserva", url: v.url }, sms: `${B}: ¡${v.customer} te dejó una propina de ${v.amount}! 🎉` }) },
+  "tip.paid.customer": { transactional: true,
+    en: (v) => ({ subject: `Your ${v.amount} tip for ${v.group}`, lines: [`Hi ${v.name},`, `Thank you! Your ${v.amount} tip went to ${v.group}.`], cta: { label: "See my booking", url: v.url } }),
+    es: (v) => ({ subject: `Tu propina de ${v.amount} para ${v.group}`, lines: [`Hola ${v.name},`, `¡Gracias! Tu propina de ${v.amount} le llegó a ${v.group}.`], cta: { label: "Ver mi reserva", url: v.url } }) },
   "team.invite": { transactional: true,
     en: (v) => ({ subject: `${v.from} invited you to help run ${v.group}`, lines: [`Hi${v.name ? " " + v.name : ""},`, `${v.from} added you to the team of ${v.group} on Bella's Música. You'll be able to answer booking requests and messages, keep the calendar up to date and send the lineup for each gig.`, "The link works once and for 7 days."], cta: { label: "Join the team", url: v.url }, sms: `${B}: ${v.from} invited you to help run ${v.group}: ${v.url}` }),
     es: (v) => ({ subject: `${v.from} te invitó a ayudar con ${v.group}`, lines: [`Hola${v.name ? " " + v.name : ""},`, `${v.from} te agregó al equipo de ${v.group} en Bella's Música. Vas a poder contestar solicitudes y mensajes, mantener el calendario al día y mandar quién toca en cada evento.`, "El enlace sirve una sola vez y por 7 días."], cta: { label: "Unirme al equipo", url: v.url }, sms: `${B}: ${v.from} te invitó a ayudar con ${v.group}: ${v.url}` }) },

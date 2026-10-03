@@ -231,6 +231,10 @@ export async function simulatedPay(app, kind, id) {
     let c; try { c = (await api.get(`/api/carts/${encodeURIComponent(id)}`)).cart; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
     title = t("cart.payTitle"); amount = c.amount_cents;
     summary = c.items.map((x) => `${esc(x.group_name)} · ${esc(fmtDate(x.date))} · ${money(x.deposit_cents)}${x.discount_cents ? ` <span class="tag trust">${esc(t("bun.saved", { amount: money(x.discount_cents) }))}</span>` : ""}`).join("<br>");
+  } else if (kind === "tip") {
+    let x; try { x = (await api.get(`/api/tips/${encodeURIComponent(id)}`)).tip; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
+    if (x.status !== "pending") { app.innerHTML = `<div class="panel empty">${esc(t("ex.done"))}</div>`; return; }
+    title = t("tip.payTitle", { name: x.group_name }); amount = x.amount_cents; summary = esc(fmtDate(x.date));
   } else if (kind === "extra") {
     let x; try { x = (await api.get(`/api/extras/${encodeURIComponent(id)}`)).extra; } catch { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
     if (x.status !== "offered") { app.innerHTML = `<div class="panel empty">${esc(t("ex.done"))}</div>`; return; }
@@ -246,6 +250,7 @@ export async function simulatedPay(app, kind, id) {
       else if (kind === "balance") { await api.post(`/api/bookings/${encodeURIComponent(id)}/simulate-pay-balance`); location.hash = `#/booking/${id}?balance=1`; }
       else if (kind === "part") { const r = await api.post(`/api/parts/${encodeURIComponent(id)}/simulate-pay`); toast(t("plan.thanks")); location.hash = r.part.mine ? `#/booking/${r.part.booking_id}` : "#/bookings"; }
       else if (kind === "cart") { await api.post(`/api/carts/${encodeURIComponent(id)}/simulate-pay`); toast(t("cart.thanks")); location.hash = "#/bookings"; }
+      else if (kind === "tip") { const r = await api.post(`/api/tips/${encodeURIComponent(id)}/simulate-pay`); toast(t("tip.thanks")); location.hash = `#/booking/${r.booking_id}`; }
       else if (kind === "extra") { const x = (await api.get(`/api/extras/${encodeURIComponent(id)}`)).extra; await api.post(`/api/extras/${encodeURIComponent(id)}/simulate-pay`); toast(t("ex.paid")); location.hash = `#/booking/${x.booking_id}`; }
       else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t(kind === "pro" ? "pro.done" : "dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
     } catch (e) { document.getElementById("payerr").textContent = e.message; document.getElementById("paybtn").disabled = false; }

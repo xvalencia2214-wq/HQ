@@ -111,6 +111,8 @@ export async function group(app, id, params = new URLSearchParams()) {
       <div id="hrs-wrap"><label for="b-hrs">${esc(t(music ? "g.hoursLabel" : "g.hoursAny"))}</label><select id="b-hrs" name="hours">${hourChoices.map((h) => `<option value="${h}"${h === Number(prev.hours || Math.max(2, g.min_hours)) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
       ${g.addons.length ? `<fieldset class="addons"><legend>${esc(t("ao.pick"))}</legend>${g.addons.map((a) => `<label class="chk addon"><input type="checkbox" name="addon" value="${a.id}"${prevAddons.includes(String(a.id)) ? " checked" : ""}> <span>${esc(a.name)}</span><span class="addon-p">${a.price_cents ? "+" + money(a.price_cents) : esc(t("ao.included"))}</span></label>`).join("")}</fieldset>` : ""}
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
+      <label for="b-weeks">${esc(t("wk.repeat"))}</label><select id="b-weeks" name="weeks">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<option value="${n}"${String(n) === String(prev.weeks || params.get("repeat") || 1) ? " selected" : ""}>${esc(n === 1 ? t("wk.once") : t("wk.weeks", { n }))}</option>`).join("")}</select>
+      <div class="dim small" id="wk-hint"${Number(prev.weeks || params.get("repeat") || 1) > 1 ? "" : " hidden"}>${esc(t("wk.hint"))}${g.weekly_discount_pct ? ` <strong>${esc(t("wk.discount", { pct: g.weekly_discount_pct }))}</strong>` : ""}</div>
       <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
       <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
       <label for="b-name">${esc(t("g.yourName"))}</label><input id="b-name" name="name" required maxlength="80" autocomplete="name" value="${v("name", user.name)}">
@@ -123,7 +125,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       <div id="bookerr" class="err" role="alert"></div>
       <button class="btn wide" type="submit" id="bookbtn">${esc(t("g.pay"))}</button></form>`;
     const form = document.getElementById("bookform");
-    const syncHours = () => { const w = document.getElementById("hrs-wrap"); if (w) w.hidden = Boolean(form.packageId.value); };
+    const syncHours = () => { const w = document.getElementById("hrs-wrap"); if (w) w.hidden = Boolean(form.packageId.value); const h = document.getElementById("wk-hint"); if (h) h.hidden = Number(form.weeks.value) < 2; };
     syncHours();
     const refresh = debounce(async () => {
       if (!form.isConnected) return; // the page changed while we were waiting
@@ -158,7 +160,13 @@ export async function group(app, id, params = new URLSearchParams()) {
       if (needsBox && !needsBox.checked) { err.textContent = t("needs.must"); return; }
       btn.disabled = true;
       try {
-        const r = await api.post("/api/bookings", { acceptNeeds: Boolean(document.getElementById("b-needs")?.checked), groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true });
+        const bookBody = { acceptNeeds: Boolean(document.getElementById("b-needs")?.checked), groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true };
+        if (Number(f.weeks) > 1) {
+          const sr = await api.post("/api/series", { ...bookBody, weeks: Number(f.weeks) });
+          if (sr.skipped.length) toast(t("wk.skipped", { list: sr.skipped.map(fmtDate).join(", ") }));
+          goto(sr.cart.payment.url); return;
+        }
+        const r = await api.post("/api/bookings", bookBody);
         goto(r.payment.url);
       } catch (ex) {
         err.textContent = ex.message; btn.disabled = false;

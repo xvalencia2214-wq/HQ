@@ -86,7 +86,7 @@ export default function vendorRoutes(ctx, add) {
 
   // ---- earnings: what reached the vendor through the app, by month of the event (for taxes and planning) ----
   function earnings(g, year) {
-    const months = Array.from({ length: 12 }, (_, i) => ({ month: `${year}-${String(i + 1).padStart(2, "0")}`, events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 }));
+    const months = Array.from({ length: 12 }, (_, i) => ({ month: `${year}-${String(i + 1).padStart(2, "0")}`, events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, tips_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 }));
     for (const b of db.all("SELECT * FROM bookings WHERE group_id = ? AND date LIKE ? AND payment_status != 'unpaid'", g.id, `${year}-%`)) {
       const m = months[Number(b.date.slice(5, 7)) - 1];
       const kept = b.deposit_cents - b.refund_cents;
@@ -100,8 +100,9 @@ export default function vendorRoutes(ctx, add) {
       for (const x of db.all("SELECT status, amount_cents, fee_cents FROM extras WHERE booking_id = ? AND status IN ('paid','cash')", b.id)) {
         if (x.status === "paid") { m.extras_cents += x.amount_cents - x.fee_cents; m.fees_cents += x.fee_cents; } else m.offline_cents += x.amount_cents;
       }
+      for (const tp of db.all("SELECT amount_cents, fee_cents FROM tips WHERE booking_id = ? AND status = 'paid'", b.id)) m.tips_cents += tp.amount_cents - tp.fee_cents; // card processing isn't a platform fee
     }
-    const total = months.reduce((t, m) => { for (const k of Object.keys(t)) t[k] += m[k]; return t; }, { events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 });
+    const total = months.reduce((t, m) => { for (const k of Object.keys(t)) t[k] += m[k]; return t; }, { events: 0, deposits_cents: 0, balances_cents: 0, extras_cents: 0, tips_cents: 0, offline_cents: 0, fees_cents: 0, refunded_cents: 0 });
     return { year, months, total };
   }
   const yearOf = (q) => (q.year ? int(q.year, "Year", { min: 2024, max: 2100 }) : Number(todayStr().slice(0, 4)));
@@ -109,8 +110,8 @@ export default function vendorRoutes(ctx, add) {
   add("GET", "/api/groups/:id/earnings.csv", ({ params, query, user, res }) => {
     const g = requireOwner(db, user, params.id), e = earnings(g, yearOf(query));
     const d = (c) => (c / 100).toFixed(2);
-    const rows = [["month", "events", "deposits_to_you", "balances_paid_in_app", "extras_paid_in_app", "paid_outside_app", "platform_fees", "refunded_to_customers"], ...e.months.map((m) => [m.month, m.events, d(m.deposits_cents), d(m.balances_cents), d(m.extras_cents), d(m.offline_cents), d(m.fees_cents), d(m.refunded_cents)]),
-      ["total", e.total.events, d(e.total.deposits_cents), d(e.total.balances_cents), d(e.total.extras_cents), d(e.total.offline_cents), d(e.total.fees_cents), d(e.total.refunded_cents)]];
+    const rows = [["month", "events", "deposits_to_you", "balances_paid_in_app", "extras_paid_in_app", "tips", "paid_outside_app", "platform_fees", "refunded_to_customers"], ...e.months.map((m) => [m.month, m.events, d(m.deposits_cents), d(m.balances_cents), d(m.extras_cents), d(m.tips_cents), d(m.offline_cents), d(m.fees_cents), d(m.refunded_cents)]),
+      ["total", e.total.events, d(e.total.deposits_cents), d(e.total.balances_cents), d(e.total.extras_cents), d(e.total.tips_cents), d(e.total.offline_cents), d(e.total.fees_cents), d(e.total.refunded_cents)]];
     res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="earnings-${e.year}.csv"`, "Cache-Control": "no-store" });
     res.end(rows.map((r) => r.join(",")).join("\r\n") + "\r\n");
   }, { auth: true });
