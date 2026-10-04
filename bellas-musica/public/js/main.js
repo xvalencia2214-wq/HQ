@@ -180,4 +180,13 @@ window.addEventListener("hashchange", route);
 // the signal drops while using the app: say so (and say when it's back) instead of failing quietly
 window.addEventListener("offline", () => toast(t("app.offline"), "error"));
 window.addEventListener("online", () => toast(t("app.online")));
+// The soft light that follows the pointer over cards (same feel as the welcome page). Mouse only, one cheap listener.
+document.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const el = e.target instanceof Element && e.target.closest(".card, .tile");
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  el.style.setProperty("--my", `${e.clientY - r.top}px`);
+}, { passive: true });
 route();

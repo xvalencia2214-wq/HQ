@@ -28,14 +28,14 @@ export function renderVendorSite(ctx, id) {
 <meta property="og:type" content="website"><meta property="og:title" content="${h(g.name)}"><meta property="og:description" content="${h(desc)}"><meta property="og:image" content="${h(photo)}"><meta property="og:url" content="${h(url)}">
 <link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css">
 <style>
-.site{max-width:820px;margin:0 auto;padding:16px}.site-hero{position:relative;border-radius:18px;overflow:hidden;background:#0b1430;color:#fff;min-height:240px;display:flex;align-items:flex-end}
+.site{max-width:820px;margin:0 auto;padding:16px}.site-hero{position:relative;border-radius:18px;overflow:hidden;background:radial-gradient(ellipse at 15% 20%,#1c3a7a,transparent 55%),#0b1430;color:#fff;min-height:240px;border:1px solid rgba(127,176,255,.25);display:flex;align-items:flex-end}
 .site-hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}.site-hero .in{position:relative;padding:22px}.site-hero h1{color:#fff;font-size:clamp(1.8rem,5vw,2.6rem);margin:0 0 4px}
 .site .btns{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.site .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}.site .gal img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px}
-.site .row2{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed #d8dfec}.site .pill{display:inline-block;background:#e8f0ff;color:#0b1430;border-radius:999px;padding:3px 10px;margin:2px;font-size:.85rem}
-.site footer{color:#555;font-size:.85rem;text-align:center;margin:26px 0}
+.site .row2{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.14)}.site .pill{display:inline-block;background:rgba(47,107,255,.18);border:1px solid rgba(127,176,255,.4);color:#d6e4ff;backdrop-filter:none;border-radius:999px;padding:3px 10px;margin:2px;font-size:.85rem}
+.site footer{color:var(--ink-2);font-size:.85rem;text-align:center;margin:26px 0}
 </style></head><body><main class="site">
 <section class="site-hero">${d.photos[0] ? `<img class="bg" src="${h(d.photos[0].url)}" alt="">` : ""}<div class="in"><h1>${h(g.name)}</h1><div>${h(g.type)}${place ? " · " + h(place) : ""}${d.reviews ? ` · ★ ${d.rating.toFixed(1)} (${d.reviews})` : ""}</div>
-${badges.length ? `<div>${badges.map((b) => `<span class="pill" style="color:#0b1430">${h(b)}</span>`).join("")}</div>` : ""}</div></section>
+${badges.length ? `<div>${badges.map((b) => `<span class="pill">${h(b)}</span>`).join("")}</div>` : ""}</div></section>
 <div class="btns"><a class="btn" href="${h(book)}">See dates &amp; book</a><a class="btn ghost" href="${h(book)}?chat=1">Send a message</a><a class="btn ghost" href="${h(wa)}" target="_blank" rel="noopener noreferrer">Share on WhatsApp</a></div>
 ${g.story ? `<div class="panel"><h2 class="sec">About us</h2><p>${h(g.story)}</p>${d.events.length ? `<p>${d.events.map((e) => `<span class="pill">${h(e)}</span>`).join("")}</p>` : ""}</div>` : ""}
 ${d.photos.length > 1 ? `<div class="gal">${d.photos.slice(0, 9).map((p) => `<img src="${h(p.url)}" alt="${h(g.name)}" loading="lazy">`).join("")}</div>` : ""}

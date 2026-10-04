@@ -5,7 +5,7 @@
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
 Groups list themselves, set prices, packages, songs, photos, video and open dates, and accept or decline requests.
-English and Spanish. Blue / white / silver / dark navy theme with a silver-blue charro sombrero logo (brown embroidered band).
+English and Spanish. Night theme across the whole app (deep navy, glowing blue, silver, Bricolage Grotesque type), matching the 3D welcome page, with a silver-blue charro sombrero logo (brown embroidered band).
 
 **No dependencies.** Node 22.13+ only (built-in SQLite). Nothing to `npm install`.
 
