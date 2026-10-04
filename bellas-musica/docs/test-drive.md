@@ -9,7 +9,8 @@ pretend. It uses its own practice data (the `data-tryout` folder), so it never m
 2. Open the `bellas-musica` folder, click the address bar, type `cmd`, press Enter.
 3. If the app is already running in another black window, close that window first.
 4. Type `npm run tryout` and press Enter. Wait for "TEST DRIVE is running".
-5. Open **http://localhost:3000** in Chrome.
+5. Open **http://localhost:3000** in Chrome. Logged out, you land on the new **welcome page**: move the mouse,
+   tap the sombrero, press **Play la diana**, and scroll all the way down. (Any time: add `#/welcome` to the address.)
 
 To start over with fresh practice data: `npm run tryout -- --reset` (do this once after downloading a new version, so the
 practice data has the newest tools).

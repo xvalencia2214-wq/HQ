@@ -12,9 +12,14 @@
     "admin": "node --disable-warning=ExperimentalWarning server/admin.js",
     "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
     "spanish-sheet": "node --disable-warning=ExperimentalWarning server/i18n-sheet.js",
-    "stripe:expect": "node --disable-warning=ExperimentalWarning server/stripe-expect.js"
+    "stripe:expect": "node --disable-warning=ExperimentalWarning server/stripe-expect.js",
+    "build:landing": "esbuild tools/landing3d.js --bundle --format=esm --minify --target=es2020 --legal-comments=none --outfile=public/vendor/landing3d.js"
   },
   "engines": {
     "node": ">=22.13"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "0.186.1"
   }
 }

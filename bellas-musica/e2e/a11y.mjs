@@ -55,7 +55,7 @@ await oc.post(`/api/groups/${id}/specials`, { holiday: "mothers_day", minutes: 2
 await oc.post(`/api/groups/${id}/crew`, { name: "Juan Trompeta", role: "Trumpet", phone: "773-555-0101", pay: 150 });
 await oc.patch(`/api/groups/${id}`, { needs: ["A power outlet within 50 feet"] });
 const screens = [
-  [anon, "home", "#/", ".hero"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
+  [anon, "home", "#/", ".hero"], [anon, "welcome", "#/welcome", ".lp-carousel .lcard"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
   [anon, "map", "#/?zip=60608&view=map", ".leaflet-marker-icon"], [anon, "best", "#/best/60608", ".card"], [anon, "group", `#/group/${id}`, "#calbox .cal"],
   [anon, "chicago", "#/chicago", ".card"], [anon, "discover", "#/discover", ".reel"], [anon, "waitlist", "#/?zip=90210", ".waitlist"], [anon, "forgot", "#/forgot", "#fform"], [anon, "reset", "#/reset/abc", "#rform"], [anon, "login", "#/login", "#authform"], [anon, "signup", "#/signup", "#authform"],
   [cust, "bookings", "#/bookings", ".req"], [cust, "saved", "#/saved", ".panel"], [cust, "quotes", "#/quotes", "#wiz"], [cust, "messages", "#/messages", ".thread"], [cust, "account", "#/account", "#pform"], [cust, "get the app", "#/app", ".app-page"],

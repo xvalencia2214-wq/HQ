@@ -1,3 +1,4 @@
+import zlib from "node:zlib";
 import crypto from "node:crypto";
 import http from "node:http";
 import fs from "node:fs";
@@ -131,12 +132,28 @@ export function createApp(config) {
     res.end(body);
   }
 
-  function serveFile(res, file, { cache }) {
+  // Text files (scripts, styles, pages) go out gzipped when the browser accepts it: about a quarter of the size. Each
+  // file is compressed once and kept in memory until it changes on disk.
+  const gzCache = new Map(), GZ_TYPES = new Set([".js", ".css", ".html", ".svg", ".json", ".webmanifest", ".txt", ".xml"]);
+  function serveFile(res, file, { cache, req }) {
     fs.stat(file, (err, st) => {
       if (err || !st.isFile()) { sendJson(res, 404, { error: "Not found" }); return; }
       const ext = path.extname(file).toLowerCase();
       const type = TYPES[ext] || MIME_BY_EXT[ext.slice(1)] || "application/octet-stream";
-      res.writeHead(200, { "Content-Type": type, "Content-Length": st.size, "Cache-Control": cache });
+      if (req && GZ_TYPES.has(ext) && st.size > 1024 && st.size < 8_000_000 && /\bgzip\b/.test(String(req.headers["accept-encoding"] || ""))) {
+        const key = `${file}|${st.mtimeMs}|${st.size}`;
+        let gz = gzCache.get(file);
+        if (!gz || gz.key !== key) {
+          try { gz = { key, body: zlib.gzipSync(fs.readFileSync(file), { level: 9 }) }; } catch { gz = null; }
+          if (gz) { if (gzCache.size > 300) gzCache.clear(); gzCache.set(file, gz); }
+        }
+        if (gz) {
+          res.writeHead(200, { "Content-Type": type, "Content-Length": gz.body.length, "Content-Encoding": "gzip", Vary: "Accept-Encoding", "Cache-Control": cache });
+          res.end(req.method === "HEAD" ? undefined : gz.body);
+          return;
+        }
+      }
+      res.writeHead(200, { "Content-Type": type, "Content-Length": st.size, "Cache-Control": cache, ...(GZ_TYPES.has(ext) ? { Vary: "Accept-Encoding" } : {}) });
       fs.createReadStream(file).pipe(res);
     });
   }
@@ -181,7 +198,7 @@ export function createApp(config) {
     if (rel === "/") rel = "/index.html";
     const file = path.resolve(root, "." + rel);
     if (file !== root && !file.startsWith(root + path.sep)) { sendJson(res, 404, { error: "Not found" }); return; }
-    serveFile(res, file, { cache });
+    serveFile(res, file, { cache, req });
   }
 
   async function handleApi(req, res, url) {

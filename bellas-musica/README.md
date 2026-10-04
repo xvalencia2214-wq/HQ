@@ -1,6 +1,6 @@
 # Bella's Música
 
-**Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). **App stores: `docs/app-stores.md`.** Then `docs/go-live.md` and `docs/chicago-launch.md`.
+**Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). **App stores: `docs/app-stores.md`.** New visitors land on the welcome page (`#/welcome`); after editing `tools/landing3d.js` run `npm install && npm run build:landing`. Then `docs/go-live.md` and `docs/chicago-launch.md`.
 
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
@@ -12,7 +12,7 @@ English and Spanish. Blue / white / silver / dark navy theme with a silver-blue 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
 npm run tryout     # test drive: practice accounts and a party in progress, to try every feature (docs/test-drive.md)
-npm test           # 137 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, unanswered requests refunded after 3 days, an access audit of every route, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 138 tests: API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, unanswered requests refunded after 3 days, an access audit of every route, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
 # Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
 # events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
@@ -30,6 +30,7 @@ node e2e/e2e12.mjs [dir]                   # 18-step run of vendor tools: Pro, r
 node e2e/e2e13.mjs [dir]                   # 23-step run of the business tools: 5 AM start and a window, crews and travel time, needs, payment link, lineup on WhatsApp, team helper, one more hour, holiday serenatas
 node e2e/e2e14.mjs [dir]                   # 14-step run: weekly gigs with a discount, accept all, a tip after the party, morning text off, Spanish
 node e2e/e2e15.mjs [dir]                   # 17-step run of the phone app: service worker, offline page, Get the app, notifications switch and reminder, store version without in-app purchases, manifest and store files
+node e2e/e2e16.mjs [dir]                   # 18-step run of the welcome page: 3D sombrero, fanfare, budget with real prices, real groups, search into the app, cleanup, Spanish, reduce motion, phone
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/touch.mjs                         # iPad-style touch run: real finger swipes on Discover, and a tap-target size check on the main screens
 npm run spanish-sheet                      # writes docs/spanish-review.md: every screen string and email, English next to Spanish, for a native speaker to correct

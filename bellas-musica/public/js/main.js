@@ -23,7 +23,7 @@ import { messagesView } from "./views/messages.js";
 import { admin } from "./views/admin.js";
 import { teamInvitePage, payLinkPage, specialsPage } from "./views/business.js";
 import { appPage, appLink } from "./views/app.js";
-import { syncPush, onInstallChange } from "./appmode.js";
+import { syncPush, onInstallChange, isStandalone } from "./appmode.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
@@ -60,6 +60,7 @@ const app = document.getElementById("app");
 const ensureH1 = () => { if (!app.querySelector("h1")) { const h = app.querySelector("h2"); if (h && h.getAttribute("aria-level") !== "1") { h.setAttribute("role", "heading"); h.setAttribute("aria-level", "1"); } } };
 new MutationObserver(ensureH1).observe(app, { childList: true, subtree: true });
 let routeToken = 0;
+let viewCleanup = null; // a view that runs animations (the welcome page) leaves a function that stops them
 
 function renderChrome() {
   const u = state.user;
@@ -93,6 +94,7 @@ const needsLogin = new Set(["my-party", "bookings", "booking", "agreement", "sav
 async function route() {
   const token = ++routeToken;
   killMap();
+  if (viewCleanup) { const stop = viewCleanup; viewCleanup = null; stop(); }
   document.title = "Bella's Música";
   const raw = location.hash.replace(/^#/, "") || "/";
   const qi = raw.indexOf("?");
@@ -108,7 +110,13 @@ async function route() {
   const box = document.createElement("div");
   app.replaceChildren(box);
   try {
-    if (seg[0] === "group" && seg[1]) await group(box, seg[1], params);
+    // the welcome page: #/welcome, and the bare address for a new visitor (not logged in, not the installed app)
+    if (seg[0] === "welcome" || ((location.hash === "" || location.hash === "#") && !state.user && !isStandalone())) {
+      const { landing } = await import("./views/landing.js");
+      const stop = await landing(box);
+      if (token !== routeToken) stop?.(); else viewCleanup = stop;
+    }
+    else if (seg[0] === "group" && seg[1]) await group(box, seg[1], params);
     else if (seg[0] === "best" && seg[1]) await best(box, seg[1]);
     else if (seg[0] === "login" || seg[0] === "signup") authView(box, seg[0], params);
     else if (seg[0] === "forgot") forgotView(box);

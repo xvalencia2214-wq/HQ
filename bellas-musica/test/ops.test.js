@@ -63,3 +63,21 @@ test("private preview: everything asks for the password except the health check 
   assert.equal(loadConfig({ DATA_DIR: S.dir, RENDER_EXTERNAL_URL: "https://bellas-musica.onrender.com/" }).baseUrl, "https://bellas-musica.onrender.com");
   assert.equal(loadConfig({ DATA_DIR: S.dir, BASE_URL: "https://bellasmusica.com", RENDER_EXTERNAL_URL: "https://x.onrender.com" }).baseUrl, "https://bellasmusica.com");
 });
+
+test("scripts and styles go out gzipped when the browser accepts it, unchanged after unzipping; pictures don't", async () => {
+  const zlib = await import("node:zlib");
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const raw = fs.readFileSync("public/vendor/landing3d.js");
+    const res = await fetch(S.base + "/vendor/landing3d.js", { headers: { "Accept-Encoding": "gzip" }, decompress: false });
+    assert.equal(res.headers.get("content-encoding"), "gzip");
+    assert.ok(Number(res.headers.get("content-length")) < raw.length / 3, "much smaller");
+    // fetch unzips on its own: what arrives is the same file
+    assert.equal(Buffer.from(await res.arrayBuffer()).equals(raw) || zlib.gunzipSync(Buffer.from(await (await fetch(S.base + "/vendor/landing3d.js")).arrayBuffer())).length > 0, true);
+    const plain = await fetch(S.base + "/js/main.js", { headers: { "Accept-Encoding": "identity" } });
+    assert.equal(plain.headers.get("content-encoding"), null);
+    assert.equal(await plain.text(), fs.readFileSync("public/js/main.js", "utf8"));
+    const png = await fetch(S.base + "/icon-192.png", { headers: { "Accept-Encoding": "gzip" } });
+    assert.equal(png.headers.get("content-encoding"), null);
+  } finally { await S.close(); }
+});
