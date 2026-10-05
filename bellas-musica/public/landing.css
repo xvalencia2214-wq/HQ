@@ -164,6 +164,10 @@ body.lp-intro { overflow: hidden; }
 .lp-phone .notch { position: absolute; z-index: 2; top: 20px; left: 50%; transform: translateX(-50%); width: 34%; height: 26px; border-radius: 20px; background: #000; }
 .lp-phone img { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); object-fit: cover; object-position: top; border-radius: 36px; opacity: 0; transform: scale(1.06); transition: opacity .6s, transform .9s var(--ease); }
 .lp-phone img.on { opacity: 1; transform: none; }
+.lp-phone img.gone { display: none; }
+.lp-phone::after { content: ""; position: absolute; inset: 12px; border-radius: 36px; z-index: -1;
+  background: radial-gradient(circle at 50% 38%, rgba(47,107,255,.35), transparent 60%), url(logo.svg) center 38% / 34% no-repeat, linear-gradient(170deg, #121b3f, #070b1a); }
+.lp-phone { isolation: isolate; }
 
 /* ---- bento with spotlight ---- */
 .lp-bento-sec { padding: 120px 24px; }

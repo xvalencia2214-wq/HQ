@@ -114,7 +114,7 @@ export async function landing(app) {
       <div class="lp-sec-head center"><p class="lp-k">${esc(t("land.story.k"))}</p><h2 class="scr">${esc(t("land.story.h"))}</h2></div>
       <div class="lp-story-grid">
         <ol class="lp-steps">${[1, 2, 3, 4].map((i) => `<li class="step" data-i="${i}"><span class="num">0${i}</span><h3>${esc(t(`land.step${i}`))}</h3><p>${esc(t(`land.step${i}t`))}</p></li>`).join("")}</ol>
-        <div class="lp-phone-wrap"><div class="lp-phone" aria-hidden="true"><div class="notch"></div>${["1-find", "2-group", "3-bookings", "4-vendor-es"].map((s, i) => `<img src="screens/${s}.png" alt="" loading="lazy" data-i="${i + 1}"${i ? "" : ' class="on"'}>`).join("")}</div></div>
+        <div class="lp-phone-wrap"><div class="lp-phone" aria-hidden="true"><div class="notch"></div>${["1-find", "2-group", "3-bookings", "4-vendor-es"].map((s, i) => `<img src="screens/${s}.webp" alt="" decoding="async" data-i="${i + 1}"${i ? "" : ' class="on"'}>`).join("")}</div></div>
       </div>
     </section>
 
@@ -306,6 +306,15 @@ export async function landing(app) {
 
   // ---- how it works: the phone shows the step you're reading ----
   const shots = $$(".lp-phone img"), steps = $$(".step");
+  // A picture that doesn't load tries once more (the full-size one), then the phone shows a plain screen, never a broken icon.
+  for (const im of shots) {
+    const fail = () => {
+      if (!im.dataset.retry) { im.dataset.retry = "1"; im.src = im.getAttribute("src").replace(/\.webp$/, ".png"); return; }
+      im.classList.add("gone");
+    };
+    im.addEventListener("error", fail);
+    if (im.complete && !im.naturalWidth && im.getAttribute("src")) fail();
+  }
   const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { const i = e.target.dataset.i; steps.forEach((s) => s.classList.toggle("on", s.dataset.i === i)); shots.forEach((im) => im.classList.toggle("on", im.dataset.i === i)); } }, { rootMargin: "-45% 0px -45% 0px" });
   steps.forEach((s) => io.observe(s)); bag.push(() => io.disconnect());
 

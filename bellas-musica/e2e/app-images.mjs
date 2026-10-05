@@ -59,4 +59,15 @@ await login("mariachi@prueba.com");
 await p.evaluate(() => { localStorage.setItem("bm_lang", "es"); localStorage.setItem("bm_push_later", String(Date.now())); });
 await p.goto(base + "/#/dashboard?tab=requests"); await p.reload(); await p.waitForSelector(".req"); await p.evaluate(() => { document.querySelector(".req").scrollIntoView({ block: "start" }); window.scrollBy(0, -90); }); await shot("4-vendor-es.png");
 await p.evaluate(() => { localStorage.removeItem("bm_lang"); });
+// small copies for the welcome page's phone (600 px wide, ~45 KB instead of ~700 KB)
+for (const n of ["1-find", "2-group", "3-bookings", "4-vendor-es"]) {
+  const src = "data:image/png;base64," + fs.readFileSync(path.join(pub, "screens", n + ".png")).toString("base64");
+  const out = await p.evaluate(async (src) => {
+    const im = new Image(); im.src = src; await im.decode();
+    const c = document.createElement("canvas"); c.width = 600; c.height = Math.round(im.naturalHeight * 600 / im.naturalWidth);
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(im, 0, 0, c.width, c.height);
+    return c.toDataURL("image/webp", 0.82);
+  }, src);
+  fs.writeFileSync(path.join(pub, "screens", n + ".webp"), Buffer.from(out.split(",")[1], "base64")); console.log("made screens/" + n + ".webp");
+}
 await browser.close();
