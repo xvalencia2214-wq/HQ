@@ -22,9 +22,18 @@ const { categoryOf } = await import("./pricing.js");
 
 const config = loadConfig();
 const app = createApp(config);
-const busy = (e) => {
+const VERSION = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+const busy = async (e) => {
   if (e && e.code !== "EADDRINUSE") throw e;
-  console.error(`\nPort ${config.port} is already in use: Bella's Música (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\n`);
+  // Say whether the thing already running is an OLDER copy: then the browser keeps showing the old version.
+  let older = false;
+  try {
+    const at = (u) => fetch(`http://127.0.0.1:${config.port}${u}`, { signal: AbortSignal.timeout(2000) });
+    older = (await at("/api/health")).ok && (await at("/js/views/landing.js")).status === 404;
+  } catch { /* not ours */ }
+  console.error(older
+    ? `\n*** An OLDER copy of Bella's Música is still running (in another black window, or in the background). ***\nThe browser is showing that old copy, not this one.\nClose every black window. If it still says this: press Ctrl+Shift+Esc (Task Manager), find "Node.js JavaScript Runtime",\nclick it, press "End task", then type npm run tryout again in THIS window.\n`
+    : `\nPort ${config.port} is already in use: Bella's Música (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\nStill stuck? Press Ctrl+Shift+Esc (Task Manager), end "Node.js JavaScript Runtime", and try again.\n`);
   process.exit(1);
 };
 const port = await app.listen().catch(busy);
@@ -193,7 +202,8 @@ sendDailyTexts(app.ctx, { hour: 8 });
 const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
 const url = config.baseUrl;
-console.log(`Bella's Música TEST DRIVE is running: open ${url}
+console.log(`Bella's Música TEST DRIVE is running (version ${VERSION}): open ${url}
+Opening the welcome page in your browser: ${url}/#/welcome
 (practice money only; nothing here is real. Stop with Ctrl+C. Start over with: npm run tryout -- --reset)
 
 Every password: ${PASSWORD}
@@ -207,4 +217,11 @@ Every password: ${PASSWORD}
   restaurante@prueba.com  Restaurante El Sol: books the mariachi every Friday (weekly gigs, tips)
   ${OWNER.padEnd(21)} you, the owner (Admin page)
 ${morning.length ? `\nThe morning text vendors get (pretend texts; turn it off in Account):\n${morning.join("\n")}\n` : ""}${payLinkUrl ? `\nThe DJ's payment link for a client (open it as familia@ or padrino@ to pay it):\n  ${payLinkUrl.replace(/^https?:\/\/[^/]+/, url)}\n` : ""}`);
+// Open the welcome page in the browser (only when started by a person in a window, not by a script).
+if (process.stdout.isTTY && !process.env.NO_BROWSER) {
+  const { spawn } = await import("node:child_process");
+  const target = `${url}/#/welcome`;
+  const [cmd, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", target]] : process.platform === "darwin" ? ["open", [target]] : ["xdg-open", [target]];
+  try { spawn(cmd, args, { stdio: "ignore", detached: true, windowsHide: true }).on("error", () => {}).unref(); } catch { /* no browser: the address above still works */ }
+}
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => app.close().then(() => process.exit(0)));

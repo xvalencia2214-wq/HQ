@@ -5,12 +5,15 @@ pretend. It uses its own practice data (the `data-tryout` folder), so it never m
 
 ## Start it
 
-1. Download the newest ZIP of the branch and unzip it (replace the old folder).
-2. Open the `bellas-musica` folder, click the address bar, type `cmd`, press Enter.
-3. If the app is already running in another black window, close that window first.
-4. Type `npm run tryout` and press Enter. Wait for "TEST DRIVE is running".
-5. Open **http://localhost:3000** in Chrome. Logged out, you land on the new **welcome page**: move the mouse,
-   tap the sombrero, press **Play la diana**, and scroll all the way down. (Any time: add `#/welcome` to the address.)
+1. Close every black window where the app is running.
+2. Download the newest ZIP of the branch and unzip it. **Delete the old folder first**: if the old one is still there,
+   Windows names the new one with **(1)** at the end, and it's easy to open the old one by mistake.
+3. Open the `bellas-musica` folder, click the address bar, type `cmd`, press Enter.
+4. Type `npm run tryout` and press Enter. Wait for "TEST DRIVE is running". The first line shows the **version**
+   (for example `version 2026.10.5`): if it's older than the one in the newest message, you opened an old folder.
+5. Your browser opens the **welcome page** by itself (or open **http://localhost:3000/#/welcome**): move the mouse,
+   tap the sombrero, press **Play la diana**, and scroll all the way down. **Find music** or **Log in** takes you into the app.
+   If the black window says an **older copy is still running**, do what it says (close it in Task Manager) and try again.
 
 To start over with fresh practice data: `npm run tryout -- --reset` (do this once after downloading a new version, so the
 practice data has the newest tools).
