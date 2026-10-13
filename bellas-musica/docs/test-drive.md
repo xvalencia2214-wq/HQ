@@ -29,6 +29,24 @@ The test drive runs on your computer, and an iPad or phone on the **same Wi-Fi**
 
 Phone notifications and "Add to Home Screen" need the published site (https), not the test drive.
 
+### No computer? A practice copy online (free, from an iPad or phone)
+
+This puts the same test drive (practice accounts, Rosa's party, every feature) on the internet for free, so you can
+open it in Safari anywhere. Money and texts are pretend.
+
+1. In Safari go to **render.com** and log in (or **Get Started → GitHub** with the GitHub account that has **HQ**).
+2. Press **New +** → **Blueprint**. Pick the **HQ** repository and the branch **`claude/gallant-turing-ycaabs`**.
+3. Where it asks for the **Blueprint path** (the file name; it says `render.yaml`), type **`render-tryout.yaml`**.
+4. It shows one service, **bellas-musica-test-drive**, on the **Free** plan. For **PREVIEW_PASSWORD** make up a
+   password (for example `fiesta-ipad`). Press **Apply** and wait until it says **Live** (about 5 minutes).
+5. Tap the address that ends in **.onrender.com**. Safari asks for a user name and password: type anything as the name
+   and your **PREVIEW_PASSWORD**.
+6. Log in with the practice accounts below (password `fiesta2026`).
+
+Good to know: the free copy goes to sleep after 15 minutes without visits; the next visit takes about a minute to wake
+up, and it **starts over with fresh practice data** each time. It never touches your real site. Render may ask for a
+card even for the free plan.
+
 To start over with fresh practice data: `npm run tryout -- --reset` (do this once after downloading a new version, so the
 practice data has the newest tools).
 

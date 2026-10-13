@@ -26,7 +26,14 @@ function wifiAddress() {
   }
   return found.find((a) => a.startsWith("192.168.")) || found.find((a) => a.startsWith("10.")) || found[0] || "";
 }
-const LAN = wifiAddress();
+// Online (the free practice copy on Render, render-tryout.yaml): its own web address is used, and it must be private,
+// because every practice account (one of them with the Admin page) has the same well-known password.
+const ONLINE = Boolean(process.env.RENDER_EXTERNAL_URL || process.env.NODE_ENV === "production");
+if (ONLINE && !process.env.PREVIEW_PASSWORD) {
+  console.error("This practice copy is on the internet: set PREVIEW_PASSWORD (Render → Environment) so only you can open it.");
+  process.exit(1);
+}
+const LAN = ONLINE ? "" : wifiAddress();
 if (LAN && !process.env.BASE_URL) process.env.BASE_URL = `http://${LAN}:${process.env.PORT || 3000}`;
 
 const { loadConfig } = await import("./config.js");
@@ -232,7 +239,7 @@ const since = Math.floor(Date.now() / 1000) - 5;
 sendDailyTexts(app.ctx, { hour: 8 });
 const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
-const url = config.baseUrl, here = `http://localhost:${port}`;
+const url = config.baseUrl, here = ONLINE ? url : `http://localhost:${port}`;
 console.log(`Bella's Música TEST DRIVE is running (version ${VERSION}): open ${here}
 Opening the welcome page in your browser: ${here}/#/welcome
 ${LAN ? `
