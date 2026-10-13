@@ -5,7 +5,7 @@ import { hashPassword } from "../auth.js";
 import { backupStatus } from "../backups.js";
 import { hashClaim } from "./claim.js";
 import { GROUP_TYPES, balanceCents, balancePaidInApp } from "../pricing.js";
-import { refundBooking, refundBalance } from "../shared.js";
+import { refundBooking, refundBalance, releasePayoutLocked } from "../shared.js";
 import { usd } from "../emails.js";
 
 // Owner-only tools. Anyone else gets a 404 so the page's existence isn't advertised.
@@ -30,7 +30,8 @@ export default function adminRoutes(ctx, add) {
       users: { total: one("SELECT COUNT(*) c FROM users").c, last7: one("SELECT COUNT(*) c FROM users WHERE created_at > ?", d7).c, last30: one("SELECT COUNT(*) c FROM users WHERE created_at > ?", d30).c },
       groups: {
         real: one("SELECT COUNT(*) c FROM groups WHERE demo = 0").c, sample: one("SELECT COUNT(*) c FROM groups WHERE demo = 1").c, hidden: one("SELECT COUNT(*) c FROM groups WHERE hidden = 1").c,
-        featured_now: one("SELECT COUNT(*) c FROM groups WHERE promoted_until > ?", now()).c, payouts_ready: one("SELECT COUNT(*) c FROM groups WHERE demo = 0 AND stripe_ready = 1").c
+        featured_now: one("SELECT COUNT(*) c FROM groups WHERE promoted_until > ?", now()).c, payouts_ready: one("SELECT COUNT(*) c FROM groups WHERE demo = 0 AND stripe_ready = 1").c,
+        founding: one("SELECT COUNT(*) c FROM groups WHERE founding_no > 0").c, founding_slots: config.foundingSlots, founding_fee_pct: config.foundingFeePct
       },
       bookings: {
         by_status: Object.fromEntries(db.all("SELECT status, COUNT(*) c FROM bookings GROUP BY status").map((r) => [r.status, r.c])),
@@ -60,7 +61,7 @@ export default function adminRoutes(ctx, add) {
       ).map((r) => ({ ...r, paid_cents: (r.deposit_cents - r.refund_cents) + (balancePaidInApp(r) - r.balance_refund_cents) })),
       invites: db.all("SELECT id, name, type, zip, created_at FROM groups WHERE invited = 1 AND owner_id IS NULL ORDER BY created_at DESC").map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "" })),
       groups_list: db.all(
-        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
+        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.id_checked, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
                 (SELECT COUNT(*) FROM bookings b WHERE b.group_id = g.id AND b.status IN ('requested','confirmed')) AS active_bookings
          FROM groups g LEFT JOIN users u ON u.id = g.owner_id ORDER BY g.demo, g.created_at DESC LIMIT 200`).map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "", demo: Boolean(g.demo), hidden: Boolean(g.hidden), verified: Boolean(g.verified), insured: Boolean(g.insured), status: g.hidden ? "hidden" : g.demo ? "live" : g.published_at === 0 ? "draft" : g.paused ? "paused" : "live", stripe_ready: Boolean(g.stripe_ready) })),
       recent_bookings: db.all(`SELECT b.id, g.name AS group_name, b.status, b.payment_status, b.date, b.total_cents, b.deposit_cents, b.created_at FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status != 'expired' ORDER BY b.created_at DESC LIMIT 15`),
@@ -68,6 +69,10 @@ export default function adminRoutes(ctx, add) {
       // partner links (?src=...): sign-ups in the last 90 days by where they came from
       signup_sources: db.all("SELECT signup_source AS source, COUNT(*) AS n FROM users WHERE signup_source != '' AND created_at > ? GROUP BY signup_source ORDER BY n DESC LIMIT 30", now() - 90 * 86400),
       pending_documents: db.get("SELECT COUNT(*) c FROM documents WHERE status = 'pending'").c,
+      // reviews from vendors' past clients: look them over and remove anything that isn't real
+      past_reviews: db.all(`SELECT c.id, g.name AS group_name, c.group_id, c.client_name, c.event_type, c.event_month, c.rating, c.text, c.reviewed_at, u.name AS reviewer, u.email AS reviewer_email,
+          (c.reviewer_ip_hash != '' AND c.reviewer_ip_hash = c.creator_ip_hash) AS same_connection
+        FROM client_reviews c JOIN groups g ON g.id = c.group_id JOIN users u ON u.id = c.reviewer_id WHERE c.status = 'done' ORDER BY c.reviewed_at DESC LIMIT 30`),
       log: db.all("SELECT admin_email, action, target, details, created_at FROM admin_log ORDER BY id DESC LIMIT 25")
     };
   });
@@ -124,16 +129,27 @@ export default function adminRoutes(ctx, add) {
       cur = await refundBalance(ctx, cur, balanceCents(cur) - cur.balance_refund_cents);
       // The event did not happen, so the booking ends as cancelled (otherwise a past, fully refunded booking would read "Completed").
       db.run("UPDATE bookings SET noshow_status = 'refunded', status = 'cancelled', updated_at = ? WHERE id = ?", now(), b.id);
+      await releasePayoutLocked(ctx, b.id); // a held deposit: nothing is left for the vendor; this closes it
       const total = cur.refund_cents + cur.balance_refund_cents;
       ctx.notify.to(b.customer_id, "noshow.refunded.customer", { ...ctx.notify.bookingVars(b, g), refund: usd(total), url });
       log(user, "no-show refund", b.id, `${usd(total)} refunded, group ${b.group_name}`);
       return { ok: true, status: "refunded", refunded_cents: total };
     }
     db.run("UPDATE bookings SET noshow_status = 'rejected', updated_at = ? WHERE id = ?", now(), b.id);
+    await releasePayoutLocked(ctx, b.id); // a held deposit goes to the vendor now
     ctx.notify.to(b.customer_id, "noshow.rejected.customer", { ...ctx.notify.bookingVars(b, g), url });
     log(user, "no-show rejected", b.id, b.group_name);
     return { ok: true, status: "rejected" };
   }), {});
+
+  add("POST", "/api/admin/past-reviews/:id/remove", ({ params, user }) => {
+    admin(user);
+    const r = db.get("SELECT id, group_id FROM client_reviews WHERE id = ? AND status = 'done'", params.id);
+    if (!r) throw new HttpError(404, "Review not found");
+    db.run("UPDATE client_reviews SET status = 'removed' WHERE id = ?", r.id);
+    log(user, "remove past-client review", r.group_id, r.id);
+    return { ok: true };
+  });
 
   add("POST", "/api/admin/groups/:id/hide", ({ params, body, user }) => {
     admin(user);

@@ -17,10 +17,10 @@ function card(b) {
   return `<div class="req" data-id="${esc(b.id)}"><div><strong><a href="#/group/${esc(b.group_id)}">${esc(b.group_name)}</a></strong> ${statusBadge(b.status)} ${payBadge(b)}<br>
     ${esc(t("event." + b.event_type))} · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))}${b.package_name ? ` · ${esc(b.package_name)}` : ""}${b.addons && b.addons.length ? `<br><span class="dim small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</span>` : ""}<br>
     <span class="dim">${esc(b.address)}</span>${cancelNote}${balanceLine}${customerBizBox(b)}</div>
-    <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("bk.deposit"))} ${money(b.deposit_cents)}${b.refund_cents ? ` · ${esc(t("bk.refunded", { amount: money(b.refund_cents) }))}` : ""}</span><br>
+    <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("bk.deposit"))} ${money(b.deposit_cents)}${b.refund_cents ? ` · ${esc(t("bk.refunded", { amount: money(b.refund_cents) }))}` : ""}</span><br>${b.payout_held ? `<span class="small hold">${esc(t("hold.family"))}</span><br>` : ""}
       ${b.status === "pending_payment" ? `<a class="btn small" href="#/booking/${esc(b.id)}">${esc(t("bk.payNow"))}</a> ` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
-      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}">${esc(t("agr.link"))}</a> ` : ""}
+      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}">${esc(t(b.signed && b.signed.customer ? "agr.linkDone" : "agr.linkSign"))}</a> ` : ""}
       ${b.can_pay_balance ? `<button class="btn small" data-balance="${esc(b.id)}">${esc(t("bal.payNow", { amount: money(b.balance_cents) }))}</button> ` : ""}
       ${b.can_pay_part ? `<button class="btn ghost small" data-part="${esc(b.id)}" data-left="${b.balance_left_cents}">${esc(t("plan.payPart"))}</button> ` : ""}
       ${b.reschedule ? `<button class="btn ghost small" data-unresched="${esc(b.id)}">${esc(t("rs.withdraw"))}</button> ` : b.can_reschedule ? `<button class="btn ghost small" data-resched="${esc(b.id)}" data-group="${esc(b.group_id)}" data-min="${minutesOf(b)}" data-date="${esc(b.date)}">${esc(t("rs.request"))}</button> ` : ""}

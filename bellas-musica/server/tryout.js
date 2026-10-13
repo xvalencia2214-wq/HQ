@@ -14,6 +14,7 @@ const OWNER = "dueno@prueba.com";
 process.env.DATA_DIR = dataDir;
 process.env.ADMIN_EMAILS = [process.env.ADMIN_EMAILS, OWNER].filter(Boolean).join(",");
 for (const k of ["STRIPE_SECRET_KEY", "TWILIO_ACCOUNT_SID", "RESEND_API_KEY"]) delete process.env[k]; // practice money and messages only
+process.env.PAST_REVIEW_IP_CHECK = "0"; // everyone is on this one computer here
 
 const { loadConfig } = await import("./config.js");
 const { createApp } = await import("./app.js");
@@ -135,6 +136,9 @@ async function setUp() {
   const b1 = (await familia.post("/api/bookings", booking(djId, day, "6:00 PM", { hours: 5, addonIds, message: "Sofía's vals at 8:30, please!" }))).booking;
   await familia.post(`/api/bookings/${b1.id}/simulate-pay`);
   await dj.patch(`/api/bookings/${b1.id}`, { action: "accept" });
+  // Rosa already signed the booking agreement in the app; the DJ hasn't yet
+  const agr = await familia.get(`/api/bookings/${b1.id}/agreement`);
+  await familia.post(`/api/bookings/${b1.id}/agreement/sign`, { name: "Rosa Martínez", agree: true, terms_hash: agr.terms_hash });
   // the DJ's lineup for Sofía's party
   const djCrew = (await dj.get(`/api/groups/${djId}/crew`)).crew;
   await dj.put(`/api/bookings/${b1.id}/lineup`, { members: djCrew.map((c) => ({ crewId: c.id })) });
@@ -154,6 +158,13 @@ async function setUp() {
   await prima.post(`/api/fp/${token}/vote`, { groupId: "tacos-el-guero-food-truck", voter: "prima-daniela-voter-1" });
   await prima.post(`/api/fp/${token}/comments`, { name: "Tía Carmen", text: "¡Los tacos de El Güero son los mejores! Yo voto por ellos." });
   await familia.post(`/api/groups/${carpasId}/messages`, { text: "Hola, ¿la carpa de 40x60 trae luces?" });
+  // the guest list: some invited by WhatsApp have answered; a cousin answered from the family group chat link
+  await familia.patch(`/api/parties/${party.id}/rsvp`, { note: "Misa a las 3 PM en San Pío, fiesta a las 6 PM en el Salón Los Arcos (2500 S Laramie Ave, Cicero). ¡Vengan de blanco y azul!", by: addDays(day, -7) });
+  const gl = await familia.post(`/api/parties/${party.id}/guests`, { lines: "Tía Carmen, 4, Familia de mamá, 773-555-0101\nTío Juan y Lupe, 2, Familia de papá\nFamilia Soto, 5, Vecinos\nPadrino Ramón, 2, Padrinos, 312-555-0177\nAbuelita Chela, 1, Familia de mamá\nLos primos de Texas, 6, Familia de papá" });
+  const ans = { "Tía Carmen": ["yes", 4, "Sin cebolla para mí 🙏"], "Familia Soto": ["yes", 3, ""], "Abuelita Chela": ["yes", 1, "Necesito silla cerca de la pista"], "Los primos de Texas": ["maybe", 0, "Depende del vuelo"] };
+  for (const g of gl.guests) if (ans[g.name]) await person().post(`/api/rsvp/${g.url.split("#/rsvp/")[1]}`, { rsvp: ans[g.name][0], coming: ans[g.name][1] || 1, note: ans[g.name][2] });
+  await person().post(`/api/rsvp/${gl.rsvp_url.split("#/rsvp/")[1]}`, { rsvp: "yes", coming: 2, name: "Prima Daniela", note: "¡Ahí estaremos!" });
+  await familia.put(`/api/parties/${party.id}/court`, { items: [["Chambelán de honor", "Diego Martínez"], ["Dama", "Valeria"], ["Dama", "Ximena"], ["Chambelán", "Andrés"], ["Chambelán", "Kevin"], ["Padrino de velación", "Ramón y Alicia Soto"], ["Madrina de última muñeca", "Tía Carmen"], ["Padrino de pastel", "Tío Juan"]].map(([role, name]) => ({ role, name })) });
 
   // ---- a party that already happened (the DJ played Rosa's birthday last week): ready for a review with photos ----
   const past = (await familia.post("/api/bookings", booking(djId, addDays(todayStr(), 30), "8:00 PM", { hours: 3, event: "Birthday", guests: 60 }))).booking;
@@ -180,6 +191,12 @@ async function setUp() {
   const tip = await restaurante.post(`/api/bookings/${firstFriday.id}/tips`, { amount: 50, note: "¡Los clientes los aman! Gracias." });
   await restaurante.post(`/api/tips/${tip.tip_id}/simulate-pay`);
 
+  // ---- reviews from the mariachi's clients from before it joined: one written, one link waiting ----
+  const pr = await mariachi.post(`/api/groups/${mariachiId}/client-reviews`, { name: "Lucía Herrera", event: "Wedding", when: addDays(todayStr(), -120).slice(0, 7) });
+  const lucia = await signup("lucia@prueba.com", "Lucía Herrera");
+  await lucia.post(`/api/past-review/${pr.url.split("#/review/")[1]}`, { rating: 5, text: "Tocaron en nuestra boda en el verano y todos lloraron con el Son de la Negra. ¡Puntuales y muy profesionales!" });
+  await mariachi.post(`/api/groups/${mariachiId}/client-reviews`, { name: "Familia Ortega", event: "Quinceañera", when: addDays(todayStr(), -60).slice(0, 7) });
+
   // ---- a new request waiting for the DJ to accept or decline ----
   const req = (await padrino.post("/api/bookings", booking(djId, addDays(todayStr(), 35), "8:00 PM", { hours: 4, event: "Anniversary", guests: 90, name: "Juan Martínez", address: "Casa de Juan, Berwyn" }))).booking;
   await padrino.post(`/api/bookings/${req.id}/simulate-pay`);
@@ -189,13 +206,14 @@ async function setUp() {
 if (!db.get("SELECT 1 AS x FROM users WHERE email = ?", OWNER)) {
   try { await setUp(); }
   catch (e) { console.error("Setting up the practice data failed:", e.message, "\nTry: npm run tryout -- --reset"); }
-} else if (!db.get("SELECT 1 AS x FROM users WHERE email = 'restaurante@prueba.com'")) {
+} else if (!db.get("SELECT 1 AS x FROM users WHERE email = 'lucia@prueba.com'")) {
   console.log("\nThis practice data is from an earlier version. To see the newest tools, start over with:  npm run tryout -- --reset\n");
 }
 if (!payLinkUrl) { const l = db.get("SELECT 1 AS x FROM pay_links WHERE status = 'open'"); payLinkUrl = l ? "(open My business as dj@prueba.com to copy it)" : ""; }
 
 // the vendors' morning text (texts are pretend here, so show what it says)
-const { sendDailyTexts } = await import("./jobs.js");
+const { sendDailyTexts, releaseHeldPayouts } = await import("./jobs.js");
+await releaseHeldPayouts(app.ctx); // new vendors' held deposits for parties that already happened
 db.run("UPDATE users SET daily_text_on = '' WHERE email IN ('dj@prueba.com', 'mariachi@prueba.com')");
 const since = Math.floor(Date.now() / 1000) - 5;
 sendDailyTexts(app.ctx, { hour: 8 });

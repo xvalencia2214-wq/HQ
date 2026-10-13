@@ -153,7 +153,7 @@ export async function landing(app) {
     <section class="lp-vendors">
       <div class="lp-vendors-l">
         <p class="lp-k">${esc(t("land.vendors.k"))}</p><h2 class="scr">${esc(t("land.vendors.h"))}</h2><p>${esc(t("land.vendors.t"))}</p>
-        <ul class="ticks"><li>${esc(t("land.vendors.p1", { pct: m.fee_pct ?? 10 }))}</li><li>${esc(t("land.vendors.p2"))}</li><li>${esc(t("land.vendors.p3"))}</li></ul>
+        <ul class="ticks"><li>${esc(t("land.vendors.p1", { pct: m.fee_pct ?? 10 }))}</li><li>${esc(t("land.vendors.p2"))}</li><li>${esc(t("land.vendors.p3"))}</li>${m.founding && m.founding.left > 0 ? `<li>${esc(t("fd.tick", { pct: m.founding.fee_pct, months: Math.round(m.founding.days / 30), left: m.founding.left }))}</li>` : ""}</ul>
         <a class="lp-btn mag" href="${groupsHref}">${esc(t("land.vendors.cta"))} →</a>
       </div>
       <div class="lp-vendors-r" aria-hidden="true"><div class="stack">

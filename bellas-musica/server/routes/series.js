@@ -3,7 +3,7 @@
 // isn't open are skipped. A group can give a discount on each date booked this way.
 import { HttpError, addDays, int, isDate, now, safeJson, str, todayStr, withLock } from "../util.js";
 import { normalizePhone } from "../sms.js";
-import { expirePending, feePctFor, getGroup, getVisibleGroup, isBookable, isTeam, newId } from "../shared.js";
+import { expirePending, holdsPayout, feePctFor, getGroup, getVisibleGroup, isBookable, isTeam, newId } from "../shared.js";
 import { checkStart } from "../schedule.js";
 import { MAX_SERIES } from "./payplus.js";
 
@@ -54,6 +54,7 @@ export default function seriesRoutes(ctx, add) {
           q.subtotal_cents, q.travel_fee_cents, JSON.stringify(q.addons.map((a) => ({ name: a.name, price_cents: a.price_cents }))), q.addons_cents, total, deposit, fee, discount, q.policy, sid, t, t);
         ids.push(id);
       }
+      if (holdsPayout(ctx, g)) db.run(`UPDATE bookings SET payout_hold = 1 WHERE id IN (${ids.map(() => "?").join(",")})`, ...ids); // a new vendor: each date is paid at its check-in
     });
     const cart = await ctx.createCart(ids, user);
     db.run("UPDATE series SET cart_id = ? WHERE id = ?", cart.cart_id, sid);

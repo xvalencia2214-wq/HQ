@@ -54,6 +54,12 @@ const teamTok = (await oc.post(`/api/groups/${id}/team/invite`, {})).json.url.sp
 await oc.post(`/api/groups/${id}/specials`, { holiday: "mothers_day", minutes: 20, price: 200, from: "12:00 AM", to: "2:00 AM" });
 await oc.post(`/api/groups/${id}/crew`, { name: "Juan Trompeta", role: "Trumpet", phone: "773-555-0101", pay: 150 });
 await oc.patch(`/api/groups/${id}`, { needs: ["A power outlet within 50 feet"] });
+// the guest list and court, an RSVP link, the agreement, and a past-client review link
+await ana.post(`/api/parties/${party.id}/guests`, { lines: "Tía Carmen, 4, Familia de mamá, 773-555-0101\nPadrino Juan, 2" });
+await ana.put(`/api/parties/${party.id}/court`, { items: [{ role: "Dama", name: "Valeria" }] });
+const rsvpTok = (await ana.get(`/api/parties/${party.id}/guests`)).json.guests[0].url.split("#/rsvp/")[1];
+const confirmedId = (await ana.get("/api/my/bookings")).json.bookings.find((b) => b.status === "confirmed")?.id || "none";
+const reviewTok = (await oc.post(`/api/groups/${id}/client-reviews`, { name: "Lucía", event: "Wedding", when: "2026-01" })).json.url.split("#/review/")[1];
 const screens = [
   [anon, "home", "#/", ".hero"], [anon, "welcome", "#/welcome", ".lp-carousel .lcard"], [anon, "results", "#/?zip=60608&event=Quincea%C3%B1era&guests=150&more=1&song=cielito", ".card"],
   [anon, "map", "#/?zip=60608&view=map", ".leaflet-marker-icon"], [anon, "best", "#/best/60608", ".card"], [anon, "group", `#/group/${id}`, "#calbox .cal"],
@@ -65,7 +71,8 @@ const screens = [
   [anon, "results-rentals", "#/?zip=60608&category=rentals", ".catrow"], [cust, "plan-party", `#/party?zip=60608&date=${inDays(30)}&tpl=quince`, ".party-cat"],
   [cust, "my-party", `#/my-party/${party.id}`, "#pp-picks"], [cust, "party-sign", `#/my-party/${party.id}/sign`, "#qr svg"], [anon, "family-link", `#/fp/${famToken}`, ".pick"], [anon, "thanks", `#/thanks/${party.id}`, ".panel"],
   [own, "dash-business", `#/dashboard?g=${id}&tab=business`, "#biz-team .plist"], [anon, "pay-link", `#/pay-link/${payTok}`, ".pl-head"], [cust, "pay-link-in", `#/pay-link/${payTok}`, "#plpay"],
-  [anon, "team-invite", `#/team/${teamTok}`, ".panel"], [anon, "specials", "#/specials/mothers_day", ".sp-card"]
+  [anon, "team-invite", `#/team/${teamTok}`, ".panel"], [anon, "specials", "#/specials/mothers_day", ".sp-card"],
+  [anon, "rsvp", `#/rsvp/${rsvpTok}`, "#rsvpform"], [cust, "agreement", `#/agreement/${confirmedId}`, "#agr-sign table"], [anon, "past-review-out", `#/review/${reviewTok}`, ".panel"], [cust, "past-review-form", `#/review/${reviewTok}`, "#prform"]
 ];
 for (const [p, name, hash, ready] of screens) console.log(String(await audit(p, name, hash, ready)).padStart(2), "violation types on", name);
 // same screens in Spanish and on a phone

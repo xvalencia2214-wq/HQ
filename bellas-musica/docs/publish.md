@@ -69,6 +69,14 @@ Variable** → **Save Changes**. The details for each are in `docs/go-live.md`:
 | Being told when something breaks | `ALERT_WEBHOOK_URL` (a Discord or Slack link) | go-live.md, step 1 |
 | Texts (do last; approval takes weeks) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | `docs/twilio-a2p.md` |
 
+Three choices you can change any time in Render → **Environment** (the defaults are already on):
+
+| Setting | Default | What it does |
+|---|---|---|
+| `FOUNDING_SLOTS` / `FOUNDING_FEE_PCT` / `FOUNDING_DAYS` | 25 / 5 / 180 | The first 25 businesses to go live pay 5% instead of 10% for 180 days. `FOUNDING_SLOTS` = `0` turns the offer off. |
+| `HOLD_NEW_VENDOR_EVENTS` | 3 | A new business's deposits wait until it checks in at the party, for its first 3 events. `0` pays every vendor as soon as the family pays. |
+| `PLATFORM_FEE_PCT` | 10 | Your normal fee. |
+
 To check everything at once: Render → service → **Shell**, type `npm run preflight` and press Enter. Fix anything
 that says FAIL.
 

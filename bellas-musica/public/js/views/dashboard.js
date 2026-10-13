@@ -47,7 +47,9 @@ function statusBanner(g) {
   const outside = g.outside_market ? `<div class="note">${esc(t("pub.outside", { market: state.meta.market.name }))}</div>` : "";
   if (g.status === "hidden") return `<div class="note warn" role="alert">${esc(t("pub.hidden"))}</div>`;
   if (g.status === "draft") {
+    const fd = state.meta.founding;
     return `<div class="note warn draft"><strong>${esc(t("pub.draftTitle"))}</strong> ${esc(t("pub.draftText"))}
+      ${fd && fd.left > 0 ? `<p class="small"><strong>🌟 ${esc(t("fd.draft", { pct: fd.fee_pct, months: Math.round(fd.days / 30), left: fd.left }))}</strong></p>` : ""}
       ${g.publish_missing.length ? `<ul>${g.publish_missing.map((k) => `<li><a href="${esc(link(PUB_TAB[k]))}">${esc(t("pub." + k))}</a></li>`).join("")}</ul>` : ""}
       <button type="button" class="btn small" id="publish"${g.publish_missing.length ? " disabled" : ""}>${esc(t("pub.publish"))}</button></div>${outside}`;
   }
@@ -75,7 +77,9 @@ export function newGroup(app) { createForm(app); }
 
 function createForm(app) {
   const meta = state.meta;
-  app.innerHTML = `<h1 class="sec">${esc(t("dash.create"))}</h1><p class="dim">${esc(t("dash.createSub"))}</p><div class="panel narrow"><form id="cform">
+  const fd = meta.founding;
+  app.innerHTML = `<h1 class="sec">${esc(t("dash.create"))}</h1><p class="dim">${esc(t("dash.createSub"))}</p>
+    ${fd && fd.left > 0 ? `<div class="note ok narrow">🌟 ${esc(t("fd.offer", { pct: fd.fee_pct, months: Math.round(fd.days / 30), left: fd.left, slots: fd.slots }))}</div>` : ""}<div class="panel narrow"><form id="cform">
     <label for="c-name">${esc(t("dash.name"))}</label><input id="c-name" name="name" required minlength="2" maxlength="80">
     <label for="c-type">${esc(t("f.type"))}</label><select id="c-type" name="type">${typeOptions(meta, "Mariachi")}</select><div class="dim small">${esc(t("dash.typeHint"))}</div>
     <div class="row"><div><label for="c-zip">${esc(t("dash.zip"))}</label><input id="c-zip" name="zip" inputmode="numeric" maxlength="5" required></div>
@@ -125,11 +129,11 @@ async function requests({ g, body, refresh }) {
   const row = (b) => `<div class="req"><div><strong>${esc(t("event." + b.event_type))}</strong> · ${esc(fmtDate(b.date))} · ${esc(b.time)} · ${esc(lenLabel(minutesOf(b)))} ${statusBadge(b.status)}<br>
       ${esc(b.customer_name)} · ${esc(b.address)} · ${esc(t("dash.guests", { n: b.guests }))}${phone(b)}
       ${(b.parts || []).filter((p) => p.status !== "stray").length ? `<br><span class="small">💵 ${(b.parts || []).filter((p) => p.status !== "stray").map((p) => esc(t("plan.padrinoPaid", { name: p.payer_name, amount: money(p.amount_cents) }))).join(" · ")}</span>` : ""}${b.discount_cents ? `<br><span class="small">🤝 ${esc(t(b.series_id && !b.bundle_id ? "wk.discounted" : "bun.discounted", { amount: money(b.discount_cents) }))}</span>` : ""}${b.arrival ? `<br><strong class="small">🕒 ${esc(t("dash.arrive", { time: b.arrival.at, label: b.arrival.label }))}</strong>` : ""}${b.addons && b.addons.length ? `<br><strong class="small">${esc(t("ao.line", { list: b.addons.map((a) => a.name).join(", ") }))}</strong>` : ""}${b.message ? `<br><span class="dim">“${esc(b.message)}”</span>` : ""}${balLine(b)}${showBox(b)}${rsBox(b)}${bizBox(b)}</div>
-      <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>
+      <div class="req-r"><strong>${money(b.total_cents)}</strong><br><span class="dim small">${esc(t("dash.money", { deposit: money(b.deposit_cents), fee: money(b.platform_fee_cents), payout: money(b.payout_cents), balance: money(b.balance_cents) }))}</span><br>${b.payout_held ? `<span class="small hold">${esc(t("hold.vendor", { amount: money(b.payout_cents), n: state.meta.hold_events || 3 }))}</span><br>` : ""}
       ${b.can_respond && b.answer_by ? `<div class="dim small">⏳ ${esc(t("dash.answerBy", { when: new Date(b.answer_by * 1000).toLocaleString(lang() === "es" ? "es-US" : "en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }) }))}</div>` : ""}
       ${b.can_respond ? `<button class="btn small" data-act="accept" data-id="${esc(b.id)}">${esc(t("dash.accept"))}</button> <button class="btn ghost small" data-act="decline" data-id="${esc(b.id)}">${esc(t("dash.decline"))}</button>` : ""}
       ${["requested", "confirmed"].includes(b.status) ? `<a class="btn ghost small" href="/api/bookings/${esc(b.id)}/ics" download>${esc(t("bk.ics"))}</a> ` : ""}
-      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}?g=${esc(g.id)}">${esc(t("agr.link"))}</a> ` : ""}
+      ${b.status === "confirmed" ? `<a class="btn ghost small" href="#/agreement/${esc(b.id)}?g=${esc(g.id)}">${esc(t(b.signed && b.signed.group ? "agr.linkDone" : "agr.linkSign"))}</a> ` : ""}
       ${b.can_checkin ? `<button class="btn small" data-checkin="${esc(b.id)}">${esc(t("show.checkin"))}</button> ` : ""}
       ${b.can_mark_balance_offline && b.date >= dkey(today()) ? `<button class="btn ghost small" data-off="${b.balance_status === "offline" ? "undo" : "mark"}" data-id="${esc(b.id)}" data-amount="${b.balance_cents}">${esc(t(b.balance_status === "offline" ? "bal.undoOffline" : "bal.markOffline"))}</button> ` : ""}
       ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div><div class="biz-slot"></div></div>`;
@@ -416,10 +420,11 @@ function media({ g, body, refresh }) {
 }
 
 // ---- reviews: answer them in public ----
-function reviews({ g, body, refresh }) {
+async function reviews({ g, body, refresh }) {
   const list = g.recent_reviews;
+  const replyUrl = (id) => (String(id).startsWith("c") ? `/api/client-reviews/${encodeURIComponent(String(id).slice(1))}/reply` : `/api/reviews/${id}/reply`);
   const when = (ts) => new Date(ts * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US");
-  body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.reviews"))}</h2><p class="dim small">${esc(t("rv.noContact"))}</p>${list.length ? list.map((r) => `<div class="review" data-id="${r.id}">${stars(r.rating)} <strong>${esc(r.name)}</strong> <span class="dim">${esc(when(r.created_at))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}
+  body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.reviews"))}</h2><p class="dim small">${esc(t("rv.noContact"))}</p>${list.length ? list.map((r) => `<div class="review" data-id="${r.id}">${stars(r.rating)} <strong>${esc(r.name)}</strong> ${r.past_client ? `<span class="tag past">${esc(t("pr.label"))}</span> ` : ""}<span class="dim">${esc(when(r.created_at))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}
     ${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}
     <div class="rv-actions"><button type="button" class="btn ghost small" data-edit="${r.id}">${esc(r.reply ? t("rv.edit") : t("rv.reply"))}</button>${r.reply ? ` <button type="button" class="btn ghost small" data-rm="${r.id}">${esc(t("rv.remove"))}</button>` : ""}</div><div class="rv-form"></div></div>`).join("") : `<div class="empty">${esc(t("rv.none"))}</div>`}</div>`;
   body.querySelectorAll("[data-edit]").forEach((b) => {
@@ -428,12 +433,48 @@ function reviews({ g, body, refresh }) {
       holder.innerHTML = `<form><label for="rv-${id}">${esc(t("rv.replyTitle"))}</label><textarea id="rv-${id}" name="text" maxlength="500" required>${esc(r.reply ? r.reply.text : "")}</textarea><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("rv.replyBtn"))}</button></form>`;
       holder.querySelector("form").onsubmit = async (e) => {
         e.preventDefault();
-        try { await api.post(`/api/reviews/${id}/reply`, { text: new FormData(e.target).get("text") }); toast(t("rv.saved")); refresh(); }
+        try { await api.post(replyUrl(id), { text: new FormData(e.target).get("text") }); toast(t("rv.saved")); refresh(); }
         catch (ex) { holder.querySelector(".err").textContent = ex.message; }
       };
     };
   });
-  body.querySelectorAll("[data-rm]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del(`/api/reviews/${b.dataset.rm}/reply`); toast(t("rv.removed")); refresh(); } catch (e) { toast(e.message, "error"); } }; });
+  body.querySelectorAll("[data-rm]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del(replyUrl(b.dataset.rm)); toast(t("rv.removed")); refresh(); } catch (e) { toast(e.message, "error"); } }; });
+  if (!g.demo) await pastClientPanel({ g, body });
+}
+
+// Ask clients from before Bella's Música for a review: a one-time link by email or WhatsApp.
+async function pastClientPanel({ g, body }) {
+  const gid = encodeURIComponent(g.id);
+  let data;
+  try { data = await api.get(`/api/groups/${gid}/client-reviews`); } catch { return; }
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const st = (i) => (i.status === "done" ? `${t("pr.st.done")} ${"★".repeat(i.rating)}` : t("pr.st." + i.status));
+  const box = document.createElement("div"); box.className = "panel"; box.id = "pastrev";
+  box.innerHTML = `<h2 class="sec">💬 ${esc(t("pr.title"))}</h2><p>${esc(t("pr.text", { max: data.max }))}</p><p class="dim small">${esc(t("pr.count", { done: data.done, max: data.max }))}</p>
+    ${data.done >= data.max ? `<p class="note">${esc(t("pr.max", { max: data.max }))}</p>` : `<form id="prinv"><div class="row"><div><label for="pi-name">${esc(t("pr.name"))}</label><input id="pi-name" name="name" required minlength="2" maxlength="60"></div>
+      <div><label for="pi-email">${esc(t("pr.email"))}</label><input id="pi-email" name="email" type="email" maxlength="120"></div></div><div class="dim small">${esc(t("pr.emailHint"))}</div>
+      <div class="row"><div><label for="pi-event">${esc(t("pr.event"))}</label><select id="pi-event" name="event">${state.meta.events.map((x) => `<option value="${esc(x)}">${esc(t("event." + x))}</option>`).join("")}</select></div>
+      <div><label for="pi-when">${esc(t("pr.when"))}</label><input id="pi-when" name="when" type="month" max="${thisMonth}" value="${thisMonth}" required></div></div>
+      <div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("pr.create"))}</button></form>`}
+    <div id="prlink"></div>
+    ${data.invites.length ? `<div class="plist">${data.invites.map((i) => `<div class="req"><div><strong>${esc(i.client_name)}</strong> <span class="dim small">${esc(t("event." + i.event))} · ${esc(i.when)}${i.email ? ` · ${esc(i.email)}` : ""}</span></div>
+      <div><span class="tag${i.status === "done" ? " trust" : ""}">${esc(st(i))}</span>${i.status !== "done" ? ` <button type="button" class="btn ghost small" data-prnew="${esc(i.id)}" data-name="${esc(i.client_name)}" data-event="${esc(i.event)}">${esc(t("pr.newLink"))}</button> <button type="button" class="linkbtn" data-prdel="${esc(i.id)}">${esc(t("pr.cancel"))}</button>` : ""}</div></div>`).join("")}</div>` : ""}`;
+  body.appendChild(box);
+  const show = (url, name, event, emailed) => {
+    const msg = `${t("pr.wa", { name, event: t("event." + event).toLowerCase() })} ${url}`;
+    box.querySelector("#prlink").innerHTML = `<div class="note ok">${esc(t("pr.made", { name }))}<div class="copyrow"><input readonly value="${esc(url)}" id="prurl" aria-label="${esc(t("pr.title"))}"><button type="button" class="btn small" id="prcopy">${esc(t("pp.copy"))}</button><a class="btn ghost small" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(msg)}">WhatsApp</a></div>${emailed ? `<p class="small">${esc(t("pr.emailed"))}</p>` : ""}</div>`;
+    box.querySelector("#prcopy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast(t("share.copied")); } catch { window.prompt(t("pp.copy"), url); } };
+  };
+  const f = box.querySelector("#prinv");
+  if (f) f.onsubmit = async (e) => {
+    e.preventDefault();
+    const v = Object.fromEntries(new FormData(e.target)), err = f.querySelector(".err"); err.textContent = "";
+    try { const r = await api.post(`/api/groups/${gid}/client-reviews`, { ...v, lang: lang() }); box.remove(); const fresh = await pastClientPanel({ g, body }); if (fresh) fresh.show(r.url, v.name, v.event, r.emailed); document.getElementById("pastrev").scrollIntoView({ block: "nearest" }); }
+    catch (ex) { err.textContent = ex.message; }
+  };
+  box.querySelectorAll("[data-prnew]").forEach((b) => { b.onclick = async () => { try { show((await api.post(`/api/client-reviews/${encodeURIComponent(b.dataset.prnew)}/link`)).url, b.dataset.name, b.dataset.event, false); } catch (e) { toast(e.message, "error"); } }; });
+  box.querySelectorAll("[data-prdel]").forEach((b) => { b.onclick = async () => { if (!confirm(t("common.confirmDelete"))) return; try { await api.del(`/api/client-reviews/${encodeURIComponent(b.dataset.prdel)}`); box.remove(); await pastClientPanel({ g, body }); } catch (e) { toast(e.message, "error"); } }; });
+  return { show };
 }
 
 // ---- payouts + featured ----
@@ -446,7 +487,7 @@ async function payments({ g, body, refresh }) {
   const until = cur.promoted_until * 1000;
   body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("dash.payouts"))}</h2>
     ${cur.stripe.mode === "simulated" ? `<div class="note">${esc(t("dash.payTest"))}</div>` : cur.stripe.ready ? `<div class="note ok">✓ ${esc(t("dash.payReady"))}</div>` : `<div class="note warn">${esc(t("dash.payNeeded"))}</div><button class="btn" id="onboard">${esc(cur.stripe.connected ? t("dash.payContinue") : t("dash.payStart"))}</button>`}
-    <p class="dim small">${esc(t("dash.feeExplain"))}</p></div>
+    <p class="dim small">${esc(t("dash.feeExplain"))}</p>${state.meta.hold_events && !g.demo && (g.events_done || 0) < state.meta.hold_events ? `<p class="note small">🔒 ${esc(t("hold.payTab", { n: state.meta.hold_events }))}</p>` : ""}</div>
     <div class="panel"><h2 class="sec">⭐ ${esc(t("dash.featureTitle"))}</h2><p>${esc(t("dash.featureText"))}</p>
     ${until > Date.now() ? `<div class="note ok">${esc(t("dash.featuredUntil", { date: new Date(until).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</div>` : ""}
     ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : `<button class="btn" id="feature">${esc(t("dash.buyFeature", { price: money(state.meta.feature_price_cents) }))}</button>`}</div></div>`;
@@ -467,6 +508,7 @@ async function growPanels({ g, body, refresh }) {
   body.insertAdjacentHTML("beforeend", `<div class="two">
     <div class="panel"><h2 class="sec">★ ${esc(t("pro.title"))}</h2><p>${esc(t("pro.text", { fee: meta.pro_fee_pct, base: meta.fee_pct }))}</p>
       <p class="small">${esc(t("pro.feeNow", { pct: g.fee_pct }))}${discountUntil > Date.now() ? ` · ${esc(t("ref.activeUntil", { date: new Date(discountUntil).toLocaleDateString(loc) }))}` : ""}</p>
+      ${g.founding_until * 1000 > Date.now() ? `<div class="note ok">${esc(t("fd.you", { n: g.founding_no, pct: meta.founding ? meta.founding.fee_pct : g.fee_pct, date: new Date(g.founding_until * 1000).toLocaleDateString(loc) }))}</div>` : ""}
       ${proUntil > Date.now() ? `<div class="note ok">${esc(t("pro.until", { date: new Date(proUntil).toLocaleDateString(loc) }))}</div>` : ""}
       ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : `<button class="btn" id="buypro">${esc(t("pro.buy", { price: money(meta.pro_price_cents) }))}</button>`}</div>
     <div class="panel"><h2 class="sec">🤝 ${esc(t("ref.title"))}</h2><p>${esc(t("ref.text", { days: ref ? ref.days : 30 }))}</p>

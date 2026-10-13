@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { startApp, client, fakeStripe, postWebhook } from "./helpers.js";
 import { checkInvariants } from "./invariants.js";
-import { sendReviewReminders, sendEventReminders, sendDailyTexts, housekeeping, expireUnansweredRequests } from "../server/jobs.js";
+import { sendReviewReminders, sendEventReminders, sendDailyTexts, housekeeping, expireUnansweredRequests, releaseHeldPayouts } from "../server/jobs.js";
 import { expandSilentRequests } from "../server/routes/requests.js";
 import { transferCart } from "../server/shared.js";
 
@@ -39,7 +39,7 @@ async function simulate({ mode, seed, steps }) {
   const sideBase = `http://127.0.0.1:${side.address().port}`;
   const fake = mode === "live" ? await fakeStripe() : null;
   const S = await startApp({
-    DEMO_SEED: "0", ADMIN_EMAILS: "owner@sim.test", ICS_ALLOW_HTTP: "1", WEATHER_API_BASE: sideBase, RATE_FEEDEVENT: "100000", RATE_CHAT: "100000", RATE_AUTH: "100000",
+    DEMO_SEED: "0", ADMIN_EMAILS: "owner@sim.test", ICS_ALLOW_HTTP: "1", HOLD_NEW_VENDOR_EVENTS: "3", FOUNDING_SLOTS: "3", WEATHER_API_BASE: sideBase, RATE_FEEDEVENT: "100000", RATE_CHAT: "100000", RATE_AUTH: "100000",
     ...(fake ? { STRIPE_SECRET_KEY: "sk_test_sim", STRIPE_WEBHOOK_SECRET: "whsec_sim", STRIPE_API_BASE: fake.url } : {})
   });
   const log = [], tally = new Map(), errs = new Map();
@@ -141,6 +141,7 @@ async function simulate({ mode, seed, steps }) {
       housekeeping(S.ctx); sendReviewReminders(S.ctx); sendEventReminders(S.ctx, { hour: 12 }); sendDailyTexts(S.ctx, { hour: 8 }); expandSilentRequests(S.ctx); await expireUnansweredRequests(S.ctx);
       S.ctx.expireDocuments(); await S.ctx.syncCalendars();
       if (fake) for (const c of q("SELECT DISTINCT cart_id FROM bookings WHERE cart_id != '' AND stripe_transfer_id = ''")) await transferCart(S.ctx, c.cart_id);
+      await releaseHeldPayouts(S.ctx);
     };
     const extraChecks = () => {
       checkInvariants(S.db, fake, log);
@@ -454,7 +455,8 @@ async function simulate({ mode, seed, steps }) {
       (SELECT COUNT(*) FROM bookings WHERE discount_cents > 0) bundled, (SELECT COUNT(*) FROM bookings WHERE checked_in_at > 0) checkins, (SELECT COUNT(*) FROM documents) docs, (SELECT COUNT(*) FROM ext_busy) busy,
       (SELECT COUNT(*) FROM email_log) emails, (SELECT COUNT(*) FROM bookings WHERE direct = 1 AND payment_status != 'unpaid') links_paid,
       (SELECT COUNT(*) FROM extras WHERE status IN ('paid','cash')) extras_paid, (SELECT COUNT(*) FROM booking_crew) lineup, (SELECT COUNT(*) FROM bookings b JOIN packages p ON p.id = b.package_id WHERE p.holiday != '') holiday,
-      (SELECT COUNT(*) FROM group_team) helpers, (SELECT COUNT(*) FROM bookings WHERE duration_min < 60) short, (SELECT COUNT(*) FROM bookings WHERE time IN ('5:00 AM','10:00 PM','10:30 PM','11:00 PM','11:30 PM')) late_early`);
+      (SELECT COUNT(*) FROM group_team) helpers, (SELECT COUNT(*) FROM bookings WHERE duration_min < 60) short, (SELECT COUNT(*) FROM bookings WHERE time IN ('5:00 AM','10:00 PM','10:30 PM','11:00 PM','11:30 PM')) late_early,
+      (SELECT COUNT(*) FROM bookings WHERE payout_hold = 1 AND payment_status != 'unpaid') held, (SELECT COUNT(*) FROM bookings WHERE payout_hold = 1 AND payout_released_at > 0) released, (SELECT COUNT(*) FROM groups WHERE founding_no > 0) founding`);
     if (process.env.SIM_TALLY) console.log([...tally].sort().map(([k, n]) => `${n}\t${k}\t${errs.get(k) || ""}`).join("\n"));
     return `${Math.round((clock - started) / 86400000)} days simulated | ` + Object.entries(stats).map(([k, v]) => `${k}:${v}`).join(" ");
   } finally { await S.close(); side.close(); if (fake) await fake.close(); mock.timers.reset(); }

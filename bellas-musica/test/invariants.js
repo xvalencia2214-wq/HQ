@@ -6,6 +6,9 @@ export function checkInvariants(db, fake, log) {
   const fail = (msg, extra) => assert.fail(`${msg} ${JSON.stringify(extra)}\nlast actions:\n  ${log.slice(-12).join("\n  ")}`);
   for (const b of db.all("SELECT * FROM bookings")) {
     if (b.refund_cents < 0 || b.refund_cents > b.deposit_cents) fail("refund out of range", b);
+    // a new vendor's held deposit goes out only after check-in, after the no-show window, or once the booking ended
+    if (b.payout_hold && b.stripe_transfer_id && b.status === "confirmed" && !b.checked_in_at && addDays(b.date, 4) > todayStr() && !["refunded", "rejected"].includes(b.noshow_status)) fail("a held deposit was sent before the vendor checked in", b);
+    if (b.payout_hold && b.direct) fail("a vendor's own client (payment link) was held", b);
     if (b.payment_status === "unpaid" && b.refund_cents !== 0) fail("unpaid but refunded", b);
     if (b.payment_status === "paid" && b.refund_cents !== 0) fail("paid but has refund", b);
     if (b.payment_status === "partial_refund" && !(b.refund_cents > 0 && b.refund_cents < b.deposit_cents)) fail("bad partial refund", b);

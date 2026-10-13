@@ -30,6 +30,7 @@ else. Or use a private (incognito) window for a second person at the same time.
 | carpas@prueba.com | Carpas Lupe (tents, in a bundle with the mariachi) |
 | mariachi@prueba.com | Mariachi Sol de Jalisco (2-hour minimum, plays every Friday at a restaurant) |
 | restaurante@prueba.com | Restaurante El Sol (books the mariachi every Friday) |
+| lucia@prueba.com | Lucía, a past client of the mariachi (she already wrote a review) |
 | dueno@prueba.com | You, the owner (Admin page) |
 
 ## 1. Rosa, the mom (familia@prueba.com)
@@ -118,6 +119,28 @@ else. Or use a private (incognito) window for a second person at the same time.
 
 - **Admin:** money totals (practice), bookings, **licenses and insurance to check** (approve Carpas Lupe's
   insurance), no-show reports, partner links (`?src=iglesia-san-pio`) and where sign-ups came from.
+
+## 6. New: what beats the big booking sites
+
+- **Guest list and RSVPs (Rosa → Plan a party → Quinceañera de Sofía, scroll down):** 6 groups of guests, 4 answered,
+  Prima Daniela answered from the family chat link. Add a guest, paste a list, press **WhatsApp** next to a guest to
+  send their own invitation, or **Copy** and open it in a private window: that's what the guest sees (no account).
+  Answer it, then come back and see the totals change; press **Use … as the guest count**. Open **🔗 One link for
+  everyone** to change the message on the invitation and the answer-by date. Below it: the **court of honor and
+  padrinos** (damas, chambelanes, madrina de última muñeca…).
+- **Sign the agreement:** Rosa already signed the DJ's agreement (**My bookings → Agreement ✓**). Log in as the DJ →
+  Requests → **✍️ Sign the agreement** on Sofía's party: type your name, tick the box, sign. Both names show.
+- **Reviews from past clients (mariachi → Reviews):** Lucía's review shows with a **Past client** label (also on the
+  mariachi's page). "Familia Ortega" is waiting: press **New link**, copy it, and open it in a private window logged in
+  as someone else (for example padrino@prueba.com) to write the review.
+- **Founding vendors:** the DJ, the tents and the mariachi were the first three to go live, so their fee is 5% for 6
+  months (**Payments** says "Founding vendor #1"). Make a new listing to see "22 of 25 spots left".
+- **Held deposits for new vendors:** these vendors are new, so families see "🔒 Bella's Música keeps your deposit safe
+  until the group checks in", and the DJ sees "Your share is sent when you check in". Check in at Mateo's baptism
+  (today) with Rosa's code and the note disappears (the money moves for real only with live Stripe).
+- **Spanish search page:** open **http://localhost:3000/es/chicago/pilsen/quinceanera** (Google shows this one to
+  people searching in Spanish).
+- **You (dueno@prueba.com) → Admin:** reviews from past clients, with a **Remove** button; founding spots used.
 
 ## Switch to Spanish
 

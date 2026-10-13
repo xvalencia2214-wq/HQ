@@ -45,12 +45,27 @@ Research date: September 2026. Sources are web-search results (linked at the bot
 
 - **GigSalad's quote flow, studied from a real run** (12 screens, one question each with a progress ring: category, group size, ZIP, date, start time, length, budget range, planning stage, name, phone, email, password). What we took: one question per screen, the account created last, and the four details groups need to quote (start time, budget, group size, planning stage). What we did differently: their phone step tells you providers will *call* you; ours promises your phone and email are never shared with groups, and the account step is one screen instead of four.
 
+## Built in October 2026, after a second look at the competition
+
+Second research pass (October 2026; search excerpts and review sites, check before quoting): GigSalad takes about **4%** per booking plus optional paid plans of about $25-50 a month and reported 25,000+ music bookings in 2025; The Bash takes **5%** ($20 minimum) plus a reported $99-199 yearly membership; Thumbtack charges per lead; The Knot and Zola give free planning tools (budget, checklist, guest list with RSVPs, a website) but only for weddings and in English; the Quinceanera.com app is rated 2.1★ and Quincy is planning only; HoneyBook sells contracts and invoices to vendors for about $29-129 a month. Our 10% looked like double their headline fee, we started at zero reviews, and families had no guest list. What we built:
+
+| Gap | What we built | Where |
+| --- | --- | --- |
+| **Our fee looked twice theirs** | **Founding vendors**: the first 25 listings to go live pay 5% for 6 months (lower than GigSalad and The Bash, no membership, no lead fees). Shown on the new-listing form, the draft banner, the welcome page and the Payments tab | `FOUNDING_SLOTS`, `FOUNDING_FEE_PCT`, `FOUNDING_DAYS` |
+| **Zero reviews against years of reviews** | **Past-client reviews**: up to 10 per listing, by a one-time link the vendor sends by email or WhatsApp; labelled "Past client", never counted as booked here, guarded against self-reviews, removable by you | Dashboard → Reviews; Admin |
+| **Contracts are a paid tool elsewhere (HoneyBook)** | **The agreement is signed in the app** by both sides, with the terms fingerprinted so a changed booking needs new signatures | Booking → Agreement |
+| **Guest list and RSVPs (The Knot, Zola)** | **Guest list with WhatsApp invitations and RSVPs**, an open link for the family chat, totals feeding the guest count, and the **court of honor and padrinos**: built for quinceañeras, in both languages | Saved party |
+| **A guarantee backed by real money (The Bash)** | **New vendors' deposits are held** until they check in at the party (first 3 events), so a no-show refund never has to be clawed back; established vendors are paid at booking like before | `HOLD_NEW_VENDOR_EVENTS` |
+| **"Verified" meant only our own check** | **ID checked** badge from Stripe's identity check for payouts (we never see the ID) | Cards, group page, Discover |
+| **Spanish searches find nothing** | **Spanish neighborhood/event pages** (`/es/chicago/pilsen/quinceanera`, `/boda`, `/cumpleanos`…) linked to the English ones | Sitemap |
+
+Sources for this pass: [GigSalad on Hypebot](https://www.hypebot.com/gigsalad-booked-live-gigs-worth-113-million-for-indie-artists.md), [Music Gateway on GigSalad](https://www.musicgateway.com/blog/how-to/gigsalad-review-is-gigsalad-worth-it-for-creatives), [The Bash pricing](https://thebash.com/pricing-payments), [The Bash membership (sidehusl)](https://sidehusl.com/?p=7366), [Thumbtack pro page](https://thumbtack.com/pro/referral/NqHJPyc6xgwzwI0), [Quinceanera.com app](https://apps.apple.com/us/app/id1084512701), [Quincy](https://apps.apple.com/app/id1491304785), [The Knot vs Zola](https://guestcam.co/blog/the-knot-vs-zola), [HoneyBook pricing 2026](https://assembly.com/blog/honeybook-pricing).
+
 ## Ideas not built yet, in the order I would do them
 
 1. **Serenata-now:** a same-day, short "surprise serenata" flow (Mother's Day is the peak). Serenattia's whole product is this. It needs same-day booking (today a booking must be for a future date) and time-of-day rules for groups.
-2. **ID verification for groups** (Stripe Identity or a manual check of a photo ID): upgrades the Verified badge into something GigSalad doesn't have.
-3. **Holding payouts until check-in** (Stripe manual transfers) instead of paying groups immediately, so a no-show refund never has to claw money back. More moving parts; do it once volume justifies it.
-4. **Sound control for TikTok/Instagram clips** in Discover, and a fallback if a group's account is private or the embed asks visitors to log in.
+2. ~~ID verification~~ and ~~holding payouts until check-in~~: built (see above).
+3. **Sound control for TikTok/Instagram clips** in Discover, and a fallback if a group's account is private or the embed asks visitors to log in.
 
 ## Sources
 

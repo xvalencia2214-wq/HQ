@@ -23,6 +23,7 @@ export function groupCard(g, i, ctx = "") {
   if (g.pro) tags.push(`<span class="tag pro">★ Pro</span>`);
   if (g.licensed) tags.push(`<span class="tag trust" title="${esc(t("badge.licensedTip"))}">📄 ${esc(t("badge.licensed"))}</span>`);
   if (g.verified) tags.push(`<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>`);
+  if (g.id_checked) tags.push(`<span class="tag trust" title="${esc(t("badge.idTip"))}">🪪 ${esc(t("badge.idChecked"))}</span>`);
   if (g.insured) tags.push(`<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>`);
   const href = `#/group/${esc(g.id)}${ctx ? "?" + esc(ctx) : ""}`;
   return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}${heart(g.id, "on-card")}

@@ -8,6 +8,7 @@ import { categorySections } from "./party.js";
 import { loadFavs } from "../fav.js";
 import { qrSvg } from "../qr.js";
 import { cartBox, wireCart } from "./bookings.js";
+import { guestPanels } from "./guests.js";
 
 const pct = (part, whole) => (whole > 0 ? Math.max(0, Math.min(100, Math.round((part / whole) * 100))) : 0);
 const statusWord = (s) => t(s === "unpaid" ? "pp.unpaid" : "status." + s);
@@ -78,12 +79,14 @@ export async function myParty(app, id) {
         ${g ? `<p>${esc(t("pp.calcFor", { n: P.guests }))}</p><ul class="calc"><li>🪑 ${esc(t("pp.calcTables", { n: g.roundTables, chairs: g.chairs }))}</li><li>⛺ ${esc(t("pp.calcTent", { size: g.tent }))}</li><li>🌮 ${esc(t("pp.calcTacos", { n: g.tacos, servings: g.servings }))}</li><li>🥤 ${esc(t("pp.calcAguas", { n: g.aguasGallons }))}</li><li>🎂 ${esc(t("pp.calcCake", { n: g.cakeServings }))}</li>${g.security ? `<li>🛡️ ${esc(t("pp.calcSecurity", { n: g.security }))}</li>` : ""}</ul><p class="dim small">${esc(t("pp.calcNote"))}</p>` : `<p class="dim">${esc(t("pp.calcNeedGuests"))}</p>`}
       </div>
     </div>
+    <div id="pp-guestbox"></div>
     ${state.meta.insurance_url ? `<div class="note"><strong>☂️ ${esc(t("ins.title"))}</strong> ${esc(t("ins.text"))} <a href="${esc(state.meta.insurance_url)}" target="_blank" rel="noopener">${esc(t("ins.link"))} →</a></div>` : ""}
     <h2 class="sec">${esc(t("pp.find"))}</h2><div id="pp-find"></div>`;
     wire();
     const missing = P.needs.filter((c) => !P.booked_categories.includes(c));
     categorySections(document.getElementById("pp-find"), { date: P.date, zip: P.zip, event: P.event, guests: P.guests }, missing, { pick: (gid) => api.post(`/api/parties/${encodeURIComponent(P.id)}/picks`, { groupId: gid }).then((r) => { P = r.party; }) });
     loadWeather();
+    guestPanels(document.getElementById("pp-guestbox"), P, { setGuestCount: async (n) => { try { await save({ guests: n }); toast(t("common.saved")); draw(); } catch (ex) { toast(ex.message, "error"); } } });
   }
 
   async function loadWeather() {

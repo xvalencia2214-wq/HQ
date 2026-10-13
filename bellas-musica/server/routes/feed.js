@@ -51,7 +51,7 @@ export default function feedRoutes(ctx, add) {
         item: {
           id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), city: z.city, state: z.state, distance_miles: Math.round(d),
           rating: Math.round(r.rating * 10) / 10, reviews: r.reviews, members: g.members, story: String(g.story || "").slice(0, 160),
-          from_cents: null, verified: Boolean(g.verified), insured: Boolean(g.insured), demo: Boolean(g.demo),
+          from_cents: null, verified: Boolean(g.verified), insured: Boolean(g.insured), id_checked: !g.demo && Boolean(g.id_checked), demo: Boolean(g.demo),
           promoted: isPromoted(g),
           video: g.video_provider ? { provider: g.video_provider, id: g.video_id, embed: embedUrl(g.video_provider, g.video_id) } : null,
           photo: photos.has(g.id) ? "/uploads/" + photos.get(g.id) : null

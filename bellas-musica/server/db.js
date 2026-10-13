@@ -496,6 +496,65 @@ CREATE TABLE IF NOT EXISTS sms_log (
   error TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
+-- The booking agreement signed in the app: one row per side, with a fingerprint of the terms that were signed.
+CREATE TABLE IF NOT EXISTS agreement_signs (
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  side TEXT NOT NULL CHECK (side IN ('customer','group')),
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  terms_hash TEXT NOT NULL,
+  ip_hash TEXT NOT NULL DEFAULT '',
+  signed_at INTEGER NOT NULL,
+  PRIMARY KEY (booking_id, side)
+);
+-- Reviews from a vendor's clients from before it joined (labelled "Past client"; server/routes/clientreviews.js).
+CREATE TABLE IF NOT EXISTS client_reviews (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  client_name TEXT NOT NULL,
+  client_email TEXT NOT NULL DEFAULT '',
+  event_type TEXT NOT NULL,
+  event_month TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'invited',          -- invited | done | cancelled | removed
+  rating INTEGER NOT NULL DEFAULT 0,
+  text TEXT NOT NULL DEFAULT '',
+  reply TEXT NOT NULL DEFAULT '',
+  reply_at INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER NOT NULL,
+  creator_ip_hash TEXT NOT NULL DEFAULT '',
+  reviewer_id INTEGER NOT NULL DEFAULT 0,
+  reviewer_ip_hash TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  reviewed_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_client_reviews_group ON client_reviews(group_id, status);
+-- A saved party's guest list with RSVPs, and its court of honor / padrinos (server/routes/guests.js).
+CREATE TABLE IF NOT EXISTS party_guests (
+  id INTEGER PRIMARY KEY,
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  seats INTEGER NOT NULL DEFAULT 1,
+  side TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  token TEXT NOT NULL UNIQUE,
+  rsvp TEXT NOT NULL DEFAULT '',                   -- '' (no answer yet) | yes | no | maybe
+  coming INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'host',             -- host | open (answered from the open link)
+  responded_at INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_guests_party ON party_guests(party_id);
+CREATE TABLE IF NOT EXISTS party_court (
+  id INTEGER PRIMARY KEY,
+  party_id TEXT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS webhook_events (
   id TEXT PRIMARY KEY,
   created_at INTEGER NOT NULL
@@ -601,6 +660,15 @@ export function openDb(config) {
   ensureColumn("bookings", "needs_json", "TEXT NOT NULL DEFAULT '[]'");     // what the family confirmed when booking
   ensureColumn("packages", "holiday", "TEXT NOT NULL DEFAULT ''");          // a holiday serenata: mothers_day | guadalupe
   ensureColumn("packages", "holiday_date", "TEXT NOT NULL DEFAULT ''");     // ...bookable only on this date
+  ensureColumn("bookings", "payout_hold", "INTEGER NOT NULL DEFAULT 0");       // the vendor's share waits for check-in (new vendors)
+  ensureColumn("bookings", "payout_released_at", "INTEGER NOT NULL DEFAULT 0"); // ...and when it was sent (or settled with nothing to send)
+  ensureColumn("groups", "id_checked", "INTEGER NOT NULL DEFAULT 0");       // Stripe verified the owner's identity before paying out (live mode only)
+  ensureColumn("groups", "founding_no", "INTEGER NOT NULL DEFAULT 0");      // 1..FOUNDING_SLOTS: one of the first listings to go live
+  ensureColumn("groups", "founding_until", "INTEGER NOT NULL DEFAULT 0");   // ...its lower fee lasts until then
+  ensureColumn("parties", "rsvp_token", "TEXT NOT NULL DEFAULT ''");     // the open invitation link (made the first time the guest list is opened)
+  ensureColumn("parties", "rsvp_note", "TEXT NOT NULL DEFAULT ''");      // what guests read on it (place, time, dress code)
+  ensureColumn("parties", "rsvp_by", "TEXT NOT NULL DEFAULT ''");        // answer by this date
+  db.exec("CREATE INDEX IF NOT EXISTS idx_parties_rsvp ON parties(rsvp_token)");
   ensureColumn("users", "email_verified", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("users", "email_notify", "INTEGER NOT NULL DEFAULT 1");
   const q = {

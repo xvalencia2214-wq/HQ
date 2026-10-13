@@ -27,7 +27,8 @@ function reel(g, i) {
     g.promoted ? `<span class="pill promo">${esc(t("feed.promoted"))}</span>` : "",
     g.demo ? `<span class="pill">${esc(t("card.sample"))}</span>` : "",
     g.verified ? `<span class="pill trust">✓ ${esc(t("badge.verified"))}</span>` : "",
-    g.insured ? `<span class="pill trust">🛡 ${esc(t("badge.insured"))}</span>` : ""
+    g.insured ? `<span class="pill trust">🛡 ${esc(t("badge.insured"))}</span>` : "",
+    g.id_checked ? `<span class="pill trust">🪪 ${esc(t("badge.idChecked"))}</span>` : ""
   ].join("");
   const rating = g.reviews ? `★ ${g.rating.toFixed(1)} (${g.reviews})` : `★ ${esc(t("card.new"))}`;
   return `<article class="reel" data-i="${i}" data-id="${esc(g.id)}" aria-label="${esc(g.name)}" aria-posinset="${i + 1}">

@@ -39,6 +39,19 @@ The Admin page's money tiles should match what Stripe shows (deposits collected,
 
 One checkout uses Stripe's "separate charges and transfers" (the money lands on the platform first, then we transfer each vendor its share). Connect Express supports this for US accounts with no extra setup. If a transfer or a reversal ever fails, you get an alert and it is retried every hour.
 
+## B3. Held deposits for new vendors (also test this)
+
+A new business's first 3 events (`HOLD_NEW_VENDOR_EVENTS`) are paid differently: the family's deposit is a plain
+charge to **your** Stripe balance (no "destination" and no application fee on it), and the vendor's share is sent as a
+**transfer** when the vendor checks in with the family's code, or 4 days after the event if nobody reports a no-show.
+
+1. With a brand-new test vendor, book and pay a deposit. In Stripe → **Payments**, the charge has no connected account.
+2. Move the event to today (or book for today), check in with the code: Stripe → **Connect → Transfers** shows the
+   vendor's share (deposit minus your fee), once.
+3. Book another, report a no-show the day after, refund it from the Admin page: the whole deposit goes back to the card
+   and no transfer is ever made.
+4. After the vendor's 3rd event, new deposits go straight to the vendor again (destination charge with your fee).
+
 ## C. Go live
 
 1. Complete Stripe's live-mode activation. Switch the dashboard to **Live** and repeat A.4 and A.5 with **live** keys and a **live** webhook endpoint.

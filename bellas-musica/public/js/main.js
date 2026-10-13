@@ -12,6 +12,8 @@ import { chicago } from "./views/chicago.js";
 import { claim } from "./views/claim.js";
 import { discover } from "./views/discover.js";
 import { agreement } from "./views/agreement.js";
+import { pastReview } from "./views/pastreview.js";
+import { rsvpPage } from "./views/guests.js";
 import { saved, shortlist } from "./views/saved.js";
 import { quotes } from "./views/quotes.js";
 import { party } from "./views/party.js";
@@ -133,6 +135,8 @@ async function route() {
     else if (seg[0] === "pay-link" && seg[1]) await payLinkPage(box, seg[1]);
     else if (seg[0] === "specials" && seg[1]) await specialsPage(box, seg[1], params);
     else if (seg[0] === "agreement" && seg[1]) await agreement(box, seg[1], params);
+    else if (seg[0] === "review" && seg[1]) await pastReview(box, seg[1]);
+    else if (seg[0] === "rsvp" && seg[1]) await rsvpPage(box, seg[1]);
     else if (seg[0] === "saved") await saved(box);
     else if (seg[0] === "quotes") await quotes(box, params);
     else if (seg[0] === "shortlist" && seg[1]) await shortlist(box, seg[1]);

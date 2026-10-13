@@ -10,7 +10,8 @@ import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
-import { RESCHED_TTL, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner, isTeam } from "../shared.js";
+import { signedFlags } from "../agreement.js";
+import { RESCHED_TTL, holdsPayout, releasePayoutLocked, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner, isTeam } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -104,7 +105,9 @@ export default function bookingRoutes(ctx, add) {
       discount_cents: b.discount_cents, bundle_id: b.bundle_id, direct: Boolean(b.direct), extras: extrasOf(db, b.id), tips: tipsOf(db, b.id).map((x) => ({ amount_cents: x.amount_cents, note: x.note, paid_at: x.paid_at })), can_tip: role === "customer" && canTip(b, today), series_id: b.series_id || "", series: b.series_id ? (() => { const all = db.all("SELECT id FROM bookings WHERE series_id = ? AND status NOT IN ('expired') ORDER BY date", b.series_id).map((x) => x.id); return { n: all.indexOf(b.id) + 1, of: all.length, last: all[all.length - 1] === b.id }; })() : null, needs: safeJson(b.needs_json, []),
       can_extra: b.status === "confirmed" && b.payment_status !== "unpaid" && !b.noshow_status && today >= b.date && today <= addDays(b.date, 1),
       arrival: db.get("SELECT at, label FROM party_timeline WHERE booking_id = ? ORDER BY at LIMIT 1", b.id) || null,
-      reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null
+      reschedule: reschedPending(b) ? { date: b.resched_date, time: b.resched_time, note: b.resched_note } : null,
+      signed: b.status === "confirmed" ? signedFlags(db, b) : null,
+      payout_held: Boolean(b.payout_hold) && !b.payout_released_at && ["paid", "partial_refund"].includes(b.payment_status) && !["cancelled", "declined", "expired"].includes(b.status)
     };
     if (role === "customer") {
       out.can_cancel = ["requested", "confirmed", "pending_payment"].includes(b.status) && b.date > today;
@@ -276,6 +279,7 @@ export default function bookingRoutes(ctx, add) {
       throw new HttpError(400, fails >= CHECKIN_MAX_FAILS ? "That code isn't right, and check-in is now locked for a few hours. Ask the customer to tap \"The group arrived\" in their booking." : `That code isn't right. Ask the customer to open their booking and read you the 4-digit code (${CHECKIN_MAX_FAILS - fails} tries left).`);
     }
     db.run("UPDATE bookings SET checked_in_at = ?, updated_at = ? WHERE id = ?", now(), now(), b.id);
+    await releasePayoutLocked(ctx, b.id); // a new vendor's held deposit goes out now
     notify.to(b.customer_id, "checkin.customer", { ...notify.bookingVars(b, g), url: `${config.baseUrl}/#/bookings` });
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "owner") };
   }), { auth: true });
@@ -287,6 +291,7 @@ export default function bookingRoutes(ctx, add) {
     if (b.checked_in_at) throw new HttpError(400, "The arrival is already recorded.");
     if (b.date !== todayStr()) throw new HttpError(400, "You can confirm the arrival on the day of the event.");
     db.run("UPDATE bookings SET checked_in_at = ?, updated_at = ? WHERE id = ?", now(), now(), b.id);
+    await releasePayoutLocked(ctx, b.id);
     return { booking: view(db.get(`${BOOKING_SELECT} WHERE b.id = ?`, b.id), "customer") };
   }), { auth: true });
 
@@ -384,6 +389,7 @@ export default function bookingRoutes(ctx, add) {
       throw e;
     }
     ctx.stats.count("booking_started", r.group.id);
+    if (holdsPayout(ctx, r.group)) db.run("UPDATE bookings SET payout_hold = 1 WHERE id = ?", id); // a new vendor: paid at check-in
     const b = db.get(`${BOOKING_SELECT} WHERE b.id = ?`, id);
     if (!stripe.live) return { booking: view(b, "customer"), payment: { mode: "simulated", url: `${config.baseUrl}/#/pay/booking/${id}` } };
     try {

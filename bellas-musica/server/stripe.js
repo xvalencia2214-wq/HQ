@@ -47,6 +47,7 @@ export function createStripe(config) {
     mode: live ? "stripe" : "simulated",
 
     // Deposit for a booking: charged to the platform, transferred to the group's connected account minus our fee.
+    // A held deposit (a new vendor): charged to the platform only; the vendor's share is transferred at check-in.
     checkoutForBooking({ booking, group, successUrl, cancelUrl, attempt = "" }) {
       return call("POST", "/v1/checkout/sessions", {
         mode: "payment",
@@ -55,7 +56,7 @@ export function createStripe(config) {
         client_reference_id: booking.id,
         expires_at: Math.floor(Date.now() / 1000) + 2400, // Stripe requires 30 min or more; our slot hold is 30 min and late payments are handled
         line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: booking.deposit_cents, product_data: { name: `Deposit: ${group.name} on ${booking.date}` } } }],
-        payment_intent_data: {
+        payment_intent_data: booking.payout_hold ? { transfer_group: booking.id, metadata: { kind: "booking", booking_id: booking.id } } : {
           application_fee_amount: booking.platform_fee_cents,
           transfer_data: { destination: group.stripe_account_id },
           metadata: { kind: "booking", booking_id: booking.id }

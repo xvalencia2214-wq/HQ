@@ -41,6 +41,9 @@ import specialsRoutes from "./routes/specials.js";
 import tipRoutes from "./routes/tips.js";
 import seriesRoutes from "./routes/series.js";
 import pushRoutes from "./routes/push.js";
+import agreementRoutes from "./routes/agreement.js";
+import clientReviewRoutes from "./routes/clientreviews.js";
+import guestRoutes from "./routes/guests.js";
 import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
 
@@ -100,7 +103,7 @@ export function createApp(config) {
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes, agreementRoutes, clientReviewRoutes, guestRoutes]) mod(ctx, router.add);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -177,8 +180,8 @@ export function createApp(config) {
     if (pathname.includes("\0")) throw new HttpError(400, "Bad URL"); // a NUL byte would make the file system throw
     const share = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(pathname);
     if (share) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, share[1], share[2]));
-    const land = /^\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(pathname);
-    if (land) { const page = renderLandingPage(ctx, land[1], land[2] || ""); if (page) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, "l", land[1], page)); }
+    const land = /^(\/es)?\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(pathname);
+    if (land) { const page = renderLandingPage(ctx, land[2], land[3] || "", land[1] ? "es" : "en"); if (page) return sendText(res, "text/html; charset=utf-8", renderSharePage(ctx, "l", land[2], page)); }
     const site = /^\/v\/([\w-]+)\/?$/.exec(pathname); // a vendor's free website page
     if (site) { const page = renderVendorSite(ctx, site[1]); if (page) return sendText(res, "text/html; charset=utf-8", page); }
     if (pathname === "/robots.txt") return sendText(res, "text/plain; charset=utf-8", robotsTxt(config));

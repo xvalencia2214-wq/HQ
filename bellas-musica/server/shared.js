@@ -37,7 +37,12 @@ export function firstOpenDate(db, groupId) {
 
 export function ratingMap(db) {
   const m = new Map();
-  for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM reviews GROUP BY group_id")) m.set(r.group_id, r);
+  for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM reviews GROUP BY group_id")) m.set(r.group_id, { c: r.c, s: r.s });
+  // reviews from past clients count toward the stars too (they are labelled on the page)
+  for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM client_reviews WHERE status = 'done' GROUP BY group_id")) {
+    const x = m.get(r.group_id) || { c: 0, s: 0 };
+    m.set(r.group_id, { c: x.c + r.c, s: x.s + r.s });
+  }
   return m;
 }
 export function ratingOf(g, map) {
@@ -63,16 +68,31 @@ export function doneCount(db, groupId) {
 
 export const isPromoted = (g) => g.promoted_until > now();
 export const isPro = (g) => g.pro_until > now();
-// The platform fee for a listing: lower for Bella's Pro, half for 30 days after a referral.
+// The platform fee for a listing: lower for Bella's Pro and for founding vendors, half for 30 days after a referral.
 export function feePctFor(g, config) {
   let pct = config.platformFeePct;
   if (isPro(g)) pct = Math.min(pct, config.proFeePct);
+  if (g.founding_until > now()) pct = Math.min(pct, config.foundingFeePct);
   if (g.fee_discount_until > now()) pct = Math.min(pct, Math.floor(config.platformFeePct / 2));
   return pct;
 }
 
 // The "from" price on cards: the cheapest package, else the hourly price (for listings that can be booked by the hour).
 export const fromCents = (g, minPrice) => minPrice.get(g.id) ?? (g.hourly !== 0 ? g.rate_cents : 0);
+
+// Founding vendors: the first real listings to go live lock in a lower fee for a while. Called when a listing is first
+// published; the slot number is handed out inside one transaction so two listings can never get the same one.
+export const foundingLeft = (db, config) => Math.max(0, config.foundingSlots - db.get("SELECT COUNT(*) c FROM groups WHERE founding_no > 0").c);
+export function claimFounding(db, config, groupId) {
+  return db.tx(() => {
+    const g = db.get("SELECT id, demo, founding_no FROM groups WHERE id = ?", groupId);
+    if (!g || g.demo || g.founding_no || config.foundingSlots <= 0) return false;
+    const used = db.get("SELECT COUNT(*) c, COALESCE(MAX(founding_no), 0) m FROM groups WHERE founding_no > 0");
+    if (used.c >= config.foundingSlots) return false;
+    db.run("UPDATE groups SET founding_no = ?, founding_until = ? WHERE id = ?", used.m + 1, now() + config.foundingDays * 86400, g.id);
+    return true;
+  });
+}
 
 export function isBookable(ctx, g) {
   // In live Stripe mode only real groups that finished payout setup can take deposits.
@@ -92,7 +112,7 @@ export function publicGroup(ctx, g, extras = {}) {
   return {
     id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), hourly: g.hourly !== 0, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
     rate_cents: g.rate_cents, min_hours: g.min_hours || 1, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
-    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
+    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), id_checked: !g.demo && Boolean(g.id_checked), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
     events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []), weekly_discount_pct: g.weekly_discount_pct || 0,
@@ -113,7 +133,12 @@ export function groupDetail(ctx, g) {
         `SELECT r.id, r.rating, r.text, r.created_at, r.reply, r.reply_at, u.name FROM reviews r JOIN users u ON u.id = r.customer_id
          WHERE r.group_id = ? ORDER BY r.id DESC LIMIT 20`, g.id
       ).map((r) => ({ id: r.id, rating: r.rating, text: r.text, created_at: r.created_at, name: firstName(r.name), reply: r.reply ? { text: r.reply, at: r.reply_at } : null,
-        photos: db.all("SELECT file FROM review_photos WHERE review_id = ? ORDER BY id", r.id).map((p) => "/uploads/" + p.file) })),
+        photos: db.all("SELECT file FROM review_photos WHERE review_id = ? ORDER BY id", r.id).map((p) => "/uploads/" + p.file) }))
+        .concat(db.all(`SELECT c.id, c.rating, c.text, c.reviewed_at, c.reply, c.reply_at, c.event_type, c.event_month, u.name FROM client_reviews c JOIN users u ON u.id = c.reviewer_id
+           WHERE c.group_id = ? AND c.status = 'done' ORDER BY c.reviewed_at DESC LIMIT 10`, g.id)
+          .map((r) => ({ id: "c" + r.id, past_client: true, event: r.event_type, when: r.event_month, rating: r.rating, text: r.text, created_at: r.reviewed_at, name: firstName(r.name), reply: r.reply ? { text: r.reply, at: r.reply_at } : null, photos: [] })))
+        .sort((a, b) => b.created_at - a.created_at).slice(0, 20),
+      past_reviews: db.get("SELECT COUNT(*) c FROM client_reviews WHERE group_id = ? AND status = 'done'", g.id).c,
       response: responseTime(db, g)
     }
   });
@@ -184,8 +209,9 @@ export async function refundBooking(ctx, booking, cents) {
   if (cents <= 0) return booking;
   if (stripe.live && booking.stripe_payment_intent && !booking.stripe_payment_intent.startsWith("sim_")) {
     try {
-      // Paid in a cart: refund the customer from the shared charge; the vendor's transfer is settled just below.
-      if (booking.cart_id) await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}`, destination: false });
+      // Paid in a cart, or held for a new vendor: the platform holds the charge, so refund the customer from it; the vendor's
+      // transfer (if it was already sent) is settled just below.
+      if (platformHeld(booking)) await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}`, destination: false });
       else await stripe.refund({ paymentIntent: booking.stripe_payment_intent, amountCents: cents, key: `refund-${booking.id}-${cents}` });
     }
     catch (e) { ctx.alert(`REFUND FAILED for booking ${booking.id} (${(cents / 100).toFixed(2)} USD): ${e.message}`, "refund-" + booking.id); throw e; }
@@ -193,7 +219,7 @@ export async function refundBooking(ctx, booking, cents) {
   const total = booking.refund_cents + cents;
   db.run("UPDATE bookings SET refund_cents = ?, payment_status = ?, updated_at = ? WHERE id = ?",
     total, total >= booking.deposit_cents ? "refunded" : "partial_refund", now(), booking.id);
-  if (booking.cart_id) await settleCartTransfer(ctx, booking.id);
+  if (platformHeld(booking)) await settleCartTransfer(ctx, booking.id);
   return db.get("SELECT * FROM bookings WHERE id = ?", booking.id);
 }
 
@@ -233,6 +259,41 @@ export async function refundBalance(ctx, booking, cents) {
   return db.get("SELECT * FROM bookings WHERE id = ?", booking.id);
 }
 
+// The deposit sits with the platform (not sent to the vendor at payment time): paid in a cart, or held for a new vendor.
+export const platformHeld = (b) => Boolean(b.cart_id || b.payout_hold);
+// New vendors: the deposit waits for check-in for their first few events here (config.holdNewVendorEvents). Never for
+// sample listings, and never for a vendor's own client paying through its payment link.
+export const holdsPayout = (ctx, g) => ctx.config.holdNewVendorEvents > 0 && !g.demo && doneCount(ctx.db, g.id) < ctx.config.holdNewVendorEvents;
+export const RELEASE_AFTER_DAYS = 4; // with no check-in, sent once the no-show window (3 days after the event) has closed
+// Is a held deposit ready to go to the vendor? Checked in; or the event passed with no open no-show report; or it ended
+// (cancelled, declined, refunded, no-show decided) and only what the vendor keeps is left to send.
+export function releaseDue(b, today = todayStr()) {
+  if (!b.payout_hold || b.payout_released_at) return false;
+  if (b.noshow_status === "reported") return false;                  // you decide first, on the Admin page
+  if (b.status === "confirmed") return Boolean(b.checked_in_at) || addDays(b.date, RELEASE_AFTER_DAYS) <= today || ["refunded", "rejected"].includes(b.noshow_status);
+  return ["cancelled", "declined", "expired"].includes(b.status);
+}
+// Send a held vendor share. Safe to call again (the transfer has an idempotency key and is recorded); the hourly job
+// retries a transfer that failed. Call it while holding the booking's lock.
+export async function releasePayoutLocked(ctx, bookingId) {
+  const { db, stripe } = ctx;
+  const b = db.get("SELECT b.*, g.stripe_account_id FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", bookingId);
+  if (!b || !releaseDue(b)) return b;
+  const amount = ["paid", "partial_refund"].includes(b.payment_status) ? cartTransferCents(b) : 0;
+  if (!stripe.live || amount <= 0 || b.stripe_transfer_id) { db.run("UPDATE bookings SET payout_released_at = ? WHERE id = ?", now(), b.id); return b; }
+  const cart = b.cart_id ? db.get("SELECT pi FROM carts WHERE id = ?", b.cart_id) : null;
+  const pi = cart ? cart.pi : b.stripe_payment_intent;
+  if (!pi || pi.startsWith("sim_") || !b.stripe_account_id) { ctx.alert(`HELD PAYOUT for booking ${b.id} has no payment or payout account to send from. Check it in Stripe.`, "release-" + b.id); return b; }
+  let charge = "";
+  try { charge = String((await stripe.getPaymentIntent(pi)).latest_charge || ""); } catch { /* transfer without source_transaction */ }
+  try {
+    const tr = await stripe.transfer({ amountCents: amount, destination: b.stripe_account_id, group: b.cart_id || b.id, sourceCharge: charge, key: `transfer-${b.id}` });
+    db.run("UPDATE bookings SET stripe_transfer_id = ?, transfer_cents = ?, payout_released_at = ? WHERE id = ?", String(tr.id || ""), amount, now(), b.id);
+  } catch (e) { ctx.alert(`HELD PAYOUT FAILED for booking ${b.id} (${(amount / 100).toFixed(2)} USD): ${e.message}. It will be retried.`, "release-" + b.id); }
+  return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
+}
+export const releasePayout = (ctx, bookingId) => withLock("booking:" + bookingId, () => releasePayoutLocked(ctx, bookingId));
+
 // A cart booking's vendor should hold (deposit - fee) of what was kept: the same proportion as a destination charge.
 const vendorShare = (b, cents) => Math.round((cents * (b.deposit_cents - b.platform_fee_cents)) / b.deposit_cents);
 export const cartTransferCents = (b) => Math.max(0, vendorShare(b, b.deposit_cents - b.refund_cents));
@@ -253,12 +314,13 @@ export async function settleCartTransfer(ctx, bookingId) {
 
 // A payment that must not stand (a second payment, or money that arrived after a cancellation) goes straight back, in full,
 // and is written down so our records always add up to what Stripe actually refunded.
-async function strayRefund(ctx, booking, paymentIntent, cents, reason) {
+// `destination: false` for a payment that went to the platform only (a new vendor's held deposit): nothing to reverse.
+async function strayRefund(ctx, booking, paymentIntent, cents, reason, { destination = true } = {}) {
   const { db, stripe } = ctx;
   if (cents <= 0) return; // nothing was paid (a $0 balance when the deposit was 100%)
   if (paymentIntent && db.get("SELECT 1 AS x FROM extra_refunds WHERE payment_intent = ?", paymentIntent)) return; // this payment was already sent back (the same payment can be reported twice)
   if (stripe.live && paymentIntent && !paymentIntent.startsWith("sim_")) {
-    try { await stripe.refund({ paymentIntent, amountCents: cents, key: `stray-${paymentIntent}-${cents}`, applicationFee: false }); }
+    try { await stripe.refund({ paymentIntent, amountCents: cents, key: `stray-${paymentIntent}-${cents}`, applicationFee: false, destination }); }
     catch (e) { ctx.alert(`STRAY PAYMENT COULD NOT BE REFUNDED (${reason}) booking ${booking.id}, ${paymentIntent}: ${e.message}`, "stray-" + paymentIntent); throw e; }
   } else if (stripe.live) ctx.alert(`A payment arrived without a payment id (${reason}) for booking ${booking.id}: refund it by hand in Stripe`, "stray-noid");
   db.run("INSERT INTO extra_refunds (booking_id, payment_intent, cents, reason, created_at) VALUES (?, ?, ?, ?, ?)", booking.id, paymentIntent || "", cents, reason, now());
@@ -300,7 +362,7 @@ async function markBookingPaidLocked(ctx, bookingId, paymentIntent) {
   if (b.payment_status !== "unpaid") {
     // The same payment reported twice is fine. A different payment for a deposit that is already paid (two checkouts open
     // at once) goes straight back, in full.
-    if (paymentIntent && b.stripe_payment_intent && paymentIntent !== b.stripe_payment_intent) await strayRefund(ctx, b, paymentIntent, b.deposit_cents, "second payment of the same deposit");
+    if (paymentIntent && b.stripe_payment_intent && paymentIntent !== b.stripe_payment_intent) await strayRefund(ctx, b, paymentIntent, b.deposit_cents, "second payment of the same deposit", { destination: !b.payout_hold });
     return db.get("SELECT * FROM bookings WHERE id = ?", b.id);
   }
   if (b.status === "pending_payment") {
@@ -441,6 +503,7 @@ export async function transferCart(ctx, cartId) {
     await withLock("booking:" + id, async () => {
       const b = db.get("SELECT b.*, g.stripe_account_id FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.id = ?", id);
       if (!b || b.stripe_transfer_id || b.cart_id !== cart.id || !["paid", "partial_refund"].includes(b.payment_status)) return;
+      if (b.payout_hold) return; // a new vendor: sent when it checks in (releasePayout)
       const amount = cartTransferCents(b);
       if (amount <= 0 || !b.stripe_account_id) return;
       try {

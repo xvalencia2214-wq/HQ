@@ -49,11 +49,14 @@ export function renderSharePage(ctx, kind, id, extra) {
     }
   }
 
-  let ld = "", robots = "";
+  let ld = "", robots = "", alternates = "";
   if (kind === "l") { // a neighborhood / event landing page (see renderLandingPage)
     if (!extra) return null;
     ({ title, desc, url, summary, ld } = extra);
     robots = extra.indexable ? "" : `<meta name="robots" content="noindex">`;
+    // the same page in English and Spanish: search engines show each person the one in their language
+    alternates = Object.entries(extra.alternates || {}).map(([l, u]) => `<link rel="alternate" hreflang="${l}" href="${h(u)}">`).join("\n") + (extra.alternates ? `\n<link rel="alternate" hreflang="x-default" href="${h(extra.alternates.en)}">` : "");
+    if (extra.lang === "es") html = html.replace('<html lang="en">', '<html lang="es">');
   }
   const tags = [
     `<meta name="description" content="${h(desc)}">`, `<link rel="canonical" href="${h(url)}">`,
@@ -61,7 +64,7 @@ export function renderSharePage(ctx, kind, id, extra) {
     `<meta property="og:title" content="${h(title)}">`, `<meta property="og:description" content="${h(desc)}">`,
     `<meta property="og:url" content="${h(url)}">`, `<meta property="og:image" content="${h(image)}">`,
     `<meta name="twitter:card" content="summary_large_image">`, `<meta name="twitter:title" content="${h(title)}">`, `<meta name="twitter:image" content="${h(image)}">`,
-    robots, ld
+    robots, alternates, ld
   ].filter(Boolean).join("\n");
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${h(title)}</title>`).replace("</head>", tags + "\n</head>");
   if (summary) html = html.replace('<main id="app"></main>', `<main id="app">${summary}</main>`);
@@ -80,6 +83,16 @@ export const LANDING_EVENTS = {
   anniversary: { event: "Anniversary", phrase: "an anniversary", label: "anniversary" },
   corporate: { event: "Corporate / Restaurant", phrase: "a corporate event or restaurant", label: "corporate event" }
 };
+// The Spanish pages (/es/chicago/<barrio>/<evento>): most families search in Spanish ("mariachi para quinceañera en Pilsen").
+export const LANDING_EVENTS_ES = {
+  quinceanera: { key: "quinceanera", phrase: "una quinceañera", label: "quinceañera" },
+  boda: { key: "wedding", phrase: "una boda", label: "boda" },
+  cumpleanos: { key: "birthday", phrase: "un cumpleaños", label: "cumpleaños" },
+  serenata: { key: "serenata", phrase: "una serenata", label: "serenata" },
+  aniversario: { key: "anniversary", phrase: "un aniversario", label: "aniversario" },
+  corporativo: { key: "corporate", phrase: "un evento corporativo o restaurante", label: "evento corporativo" }
+};
+const esSlugOf = (key) => Object.keys(LANDING_EVENTS_ES).find((s) => LANDING_EVENTS_ES[s].key === key);
 const LANDING_RADIUS = 20; // miles from the neighborhood's ZIP
 
 // Real live groups serving a neighborhood, nearest first; with an event, those that play it (or haven't limited their events).
@@ -111,12 +124,16 @@ export function landingGroups(ctx, hood, eventKey) {
   return hoodGroups(ctx, hood).filter((x) => playsEvent(x, eventKey));
 }
 
-export function renderLandingPage(ctx, hoodId, eventKey) {
+export function renderLandingPage(ctx, hoodId, eventSlug, lang = "en") {
   const { config } = ctx;
   const hood = MARKET.neighborhoods.find((n) => n.id === hoodId);
+  // Spanish pages use Spanish event words in the address (boda, cumpleanos...); both point at the same event
+  const eventKey = lang === "es" ? (eventSlug ? LANDING_EVENTS_ES[eventSlug]?.key : "") : eventSlug;
   const ev = eventKey ? LANDING_EVENTS[eventKey] : null;
-  if (!hood || (eventKey && !ev)) return null;
+  if (!hood || (eventSlug && !ev)) return null;
   const groups = landingGroups(ctx, hood, eventKey);
+  const alternates = { en: `${config.baseUrl}/${MARKET.key}/${hood.id}${ev ? "/" + eventKey : ""}`, es: `${config.baseUrl}/es/${MARKET.key}/${hood.id}${ev ? "/" + esSlugOf(eventKey) : ""}` };
+  if (lang === "es") return landingPageEs(ctx, hood, eventKey, groups, alternates);
   const what = ev ? `for ${ev.phrase}` : "for your event";
   const title = `Live mariachi, banda and norteño ${what} in ${hood.name}, ${MARKET.name} · Bella's Música`;
   const url = `${config.baseUrl}/${MARKET.key}/${hood.id}${ev ? "/" + eventKey : ""}`;
@@ -134,12 +151,39 @@ export function renderLandingPage(ctx, hoodId, eventKey) {
     <h2>Groups serving ${h(hood.name)}</h2>${list}
     <p><a class="btn" href="${h(searchHash)}">See who is free on your date</a></p>
     ${ev ? "" : `<h2>By event</h2><p>${evLinks}</p>`}
-    <h2>Nearby</h2><p>${others}</p></div>`;
+    <h2>Nearby</h2><p>${others}</p><p><a href="${h(alternates.es.replace(config.baseUrl, ""))}" hreflang="es">En español</a></p></div>`;
   const ld = groups.length ? `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Música", ""),
     itemListElement: groups.map((x, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "MusicGroup", name: x.g.name, url: `${config.baseUrl}/g/${x.g.id}`, address: { "@type": "PostalAddress", addressLocality: x.place.split(", ")[0], addressRegion: x.place.split(", ")[1] }, ...(x.r.reviews >= 3 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Math.round(x.r.rating * 10) / 10, reviewCount: x.r.reviews } } : {}) } }))
   }).replace(/</g, "\\u003c")}</script>` : "";
-  return { title, desc, url, summary, ld, indexable: groups.length > 0 };
+  return { title, desc, url, summary, ld, indexable: groups.length > 0, alternates, lang: "en" };
+}
+
+function landingPageEs(ctx, hood, eventKey, groups, alternates) {
+  const esSlug = eventKey ? esSlugOf(eventKey) : "";
+  const ev = esSlug ? LANDING_EVENTS_ES[esSlug] : null;
+  const what = ev ? `para ${ev.phrase}` : "para tu fiesta";
+  const title = `Mariachi, banda y norteño en vivo ${what} en ${hood.name}, ${MARKET.name} · Bella's Música`;
+  const rates = groups.map((x) => x.g.rate_cents);
+  const priceLine = groups.length ? ` Los grupos cerca de ${hood.name} cobran desde $${Math.round(Math.min(...groups.map((x) => x.from)) / 100)}${rates.length > 1 ? `; por hora, de $${Math.round(Math.min(...rates) / 100)} a $${Math.round(Math.max(...rates) / 100)}` : ""}.` : "";
+  const desc = `Contrata música mexicana en vivo ${what} en ${hood.name}, ${MARKET.name}. ${groups.length ? `${groups.length} grupo${groups.length > 1 ? "s" : ""} de la zona con precios y fechas libres.` : "Ve quién está libre en tu fecha."}${priceLine} Paga un depósito en línea.`.slice(0, 300);
+  const searchHash = `/chicago/${hood.id}${eventKey ? "/" + eventKey : ""}`;
+  const list = groups.length
+    ? `<ul>${groups.map((x) => `<li><a href="/g/${h(x.g.id)}"><strong>${h(x.g.name)}</strong></a> · ${h(x.g.type)} · ${Math.round(x.distance) < 1 ? "en el barrio" : `a ${Math.round(x.distance)} millas`} · desde $${Math.round(x.from / 100)}${x.r.reviews ? ` · ★ ${x.r.rating.toFixed(1)} (${x.r.reviews})` : ""}</li>`).join("")}</ul>`
+    : `<p>Estamos sumando grupos en ${h(hood.name)}. Busca por tu fecha para ver quién está libre.</p>`;
+  const others = MARKET.neighborhoods.filter((n) => n.id !== hood.id).slice(0, 8).map((n) => `<a href="/es/${MARKET.key}/${n.id}${esSlug ? "/" + esSlug : ""}">${h(n.name)}</a>`).join(" · ");
+  const evLinks = Object.entries(LANDING_EVENTS_ES).filter(([s]) => s !== esSlug).map(([s, e]) => `<a href="/es/${MARKET.key}/${hood.id}/${s}">${h(e.label)}</a>`).join(" · ");
+  const summary = `<div class="panel"><h1>Música mexicana en vivo ${h(what)} en ${h(hood.name)}, ${h(MARKET.name)}</h1>
+    <p>Bella's Música ayuda a las familias de ${h(hood.name)} y de todo ${h(MARKET.area)} a contratar mariachi, banda, norteño, grupera, trío y DJ ${h(what)}. Ve primero el precio y las fechas libres de cada grupo, mándales un mensaje y aparta tu fecha con un depósito. Si un grupo no llega, te devolvemos todo lo que pagaste en la app.</p>
+    <h2>Grupos que tocan en ${h(hood.name)}</h2>${list}
+    <p><a class="btn" href="${h(searchHash)}">Ve quién está libre en tu fecha</a></p>
+    ${ev ? "" : `<h2>Por evento</h2><p>${evLinks}</p>`}
+    <h2>Cerca</h2><p>${others}</p><p><a href="${h(alternates.en.replace(ctx.config.baseUrl, ""))}" hreflang="en">English</a></p></div>`;
+  const ld = groups.length ? `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Música", ""), inLanguage: "es",
+    itemListElement: groups.map((x, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "MusicGroup", name: x.g.name, url: `${ctx.config.baseUrl}/g/${x.g.id}`, address: { "@type": "PostalAddress", addressLocality: x.place.split(", ")[0], addressRegion: x.place.split(", ")[1] }, ...(x.r.reviews >= 3 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Math.round(x.r.rating * 10) / 10, reviewCount: x.r.reviews } } : {}) } }))
+  }).replace(/</g, "\\u003c")}</script>` : "";
+  return { title, desc, url: alternates.es, summary, ld, indexable: groups.length > 0, alternates, lang: "es" };
 }
 
 export function robotsTxt(config) {
@@ -161,8 +205,8 @@ export function sitemapXml(ctx) {
   const shared = { ratings: ratingMap(db), minPrice: new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m])) };
   for (const hood of MARKET.neighborhoods) {
     const all = hoodGroups(ctx, hood, shared);
-    if (all.length) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}`);
-    for (const k of Object.keys(LANDING_EVENTS)) if (all.some((x) => playsEvent(x, k))) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}/${k}`);
+    if (all.length) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}`, `${config.baseUrl}/es/${MARKET.key}/${hood.id}`);
+    for (const k of Object.keys(LANDING_EVENTS)) if (all.some((x) => playsEvent(x, k))) urls.push(`${config.baseUrl}/${MARKET.key}/${hood.id}/${k}`, `${config.baseUrl}/es/${MARKET.key}/${hood.id}/${esSlugOf(k)}`);
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${h(u)}</loc></url>`).join("\n")}\n</urlset>\n`;
   sitemapCache = { at: Date.now(), key: config.baseUrl, xml };

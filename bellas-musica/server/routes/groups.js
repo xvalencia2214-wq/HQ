@@ -7,7 +7,7 @@ import { lookupZip } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
-import { activeOffers, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
+import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 
 const MAX_GROUPS_PER_USER = 5;
@@ -77,6 +77,7 @@ export default function groupRoutes(ctx, add) {
       checklist: checklist(g, detail),
       status: statusOf(g), publish_missing: g.published_at === 0 && !g.demo ? publishMissing(g, detail) : [], outside_market: !inMarket(g.zip),
       contact_phone: g.contact_phone, capacity: g.capacity || 1, buffer_min: g.buffer_min || 0, promoted_until: g.promoted_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
+      founding_no: g.founding_no || 0, founding_until: g.founding_until || 0,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
       stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
@@ -115,7 +116,7 @@ export default function groupRoutes(ctx, add) {
     if (missing.length) throw new HttpError(400, "Finish these steps before you publish", { missing });
     const first = g.published_at === 0;
     db.run("UPDATE groups SET published_at = CASE WHEN published_at = 0 THEN ? ELSE published_at END, paused = 0 WHERE id = ?", now(), g.id);
-    if (first) rewardReferral(g);
+    if (first) { rewardReferral(g); claimFounding(db, config, g.id); }
     return manageView(getGroup(db, g.id));
   }, { auth: true });
 
@@ -429,7 +430,11 @@ export default function groupRoutes(ctx, add) {
     const acct = await stripe.getAccount(g.stripe_account_id);
     const transfersOk = acct.capabilities?.transfers === undefined || acct.capabilities.transfers === "active";
     const ready = Boolean(acct.charges_enabled && acct.payouts_enabled && transfersOk);
-    db.run("UPDATE groups SET stripe_ready = ? WHERE id = ?", ready ? 1 : 0, g.id);
+    // Stripe only turns payouts on once it has checked who the person is (name, date of birth, SSN, and an ID document when
+    // it asks for one). Nothing is outstanding or overdue: we show "ID checked". We never see or keep the ID itself.
+    const req = acct.requirements || {};
+    const idOk = ready && !req.disabled_reason && !(req.past_due || []).length && !(req.currently_due || []).some((r) => /verification|individual|representative|id_number|dob|ssn/.test(r));
+    db.run("UPDATE groups SET stripe_ready = ?, id_checked = ? WHERE id = ?", ready ? 1 : 0, idOk ? 1 : 0, g.id);
     return { ready };
   }, { auth: true });
 

@@ -8,7 +8,7 @@ import { createApp } from "../server/app.js";
 
 export async function startApp(env = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bm-test-"));
-  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_FORGOT: "1000", RATE_WAITLIST: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", SITEMAP_CACHE: "0", ...env });
+  const config = loadConfig({ DATA_DIR: dir, BASE_URL: "http://localhost:3000", RATE_API: "100000", RATE_REGISTER: "1000", RATE_FORGOT: "1000", RATE_WAITLIST: "1000", RATE_BOOKING: "1000", RATE_CHAT: "1000", RATE_UPLOAD: "1000", SITEMAP_CACHE: "0", FOUNDING_SLOTS: "0", HOLD_NEW_VENDOR_EVENTS: "0", ...env }); // the founding-vendor fee and held payouts are off unless a test turns them on
   const app = createApp(config);
   const port = await app.listen(0);
   const base = `http://127.0.0.1:${port}`;
@@ -103,7 +103,7 @@ export async function fakeStripe() {
     if (req.method === "GET" && req.url.startsWith("/v1/webhook_endpoints")) return send({ data: state.webhooks });
     if (req.method === "POST" && req.url === "/v1/accounts") return send({ id: "acct_test_1" });
     if (req.method === "POST" && req.url === "/v1/account_links") return send({ url: "https://connect.stripe.test/onboard" });
-    if (req.method === "GET" && req.url.startsWith("/v1/accounts/")) return send({ id: "acct_test_1", charges_enabled: state.ready, payouts_enabled: state.ready });
+    if (req.method === "GET" && req.url.startsWith("/v1/accounts/")) return send({ id: "acct_test_1", charges_enabled: state.ready, payouts_enabled: state.ready, ...(state.requirements ? { requirements: state.requirements } : {}) });
     res.writeHead(404, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: { message: "unknown" } }));
   });
   await new Promise((r) => server.listen(0, r));

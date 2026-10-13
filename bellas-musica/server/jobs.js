@@ -3,7 +3,7 @@ import { usd } from "./emails.js";
 import { balanceLeft } from "./pricing.js";
 import { backupIfNeeded } from "./backups.js";
 import { RESCHED_TTL } from "./shared.js";
-import { expirePending, transferCart, settleCartTransfer, refundBooking } from "./shared.js";
+import { expirePending, transferCart, settleCartTransfer, refundBooking, releaseDue, releasePayout } from "./shared.js";
 import { withLock } from "./util.js";
 import { fillDemoAvailability } from "./seed.js";
 import { expandSilentRequests } from "./routes/requests.js";
@@ -127,10 +127,22 @@ function retryCartTransfers(ctx) {
   for (const b of ctx.db.all("SELECT id FROM bookings WHERE stripe_transfer_id != '' AND refund_cents > 0")) settleCartTransfer(ctx, b.id).catch(() => {});
 }
 
+// New vendors' held deposits: sent once the event passed with no no-show report, or the booking ended. Check-ins send
+// them right away; this catches the rest (and retries a transfer that failed).
+export async function releaseHeldPayouts(ctx) {
+  let n = 0;
+  for (const b of ctx.db.all("SELECT * FROM bookings WHERE payout_hold = 1 AND payout_released_at = 0")) {
+    if (!releaseDue(b)) continue;
+    const after = await releasePayout(ctx, b.id).catch((e) => { ctx.alert(`Held payout ${b.id}: ${e.message}`, "release-job"); return null; });
+    if (after && ctx.db.get("SELECT payout_released_at r FROM bookings WHERE id = ?", b.id).r) n++;
+  }
+  return n;
+}
+
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); releaseHeldPayouts(ctx).catch((e) => ctx.alert("Held payouts failed: " + e.message, "job")); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }
