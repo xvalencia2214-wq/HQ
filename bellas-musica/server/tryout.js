@@ -3,6 +3,7 @@
 //   npm run tryout              start (sets everything up the first time)
 //   npm run tryout -- --reset   throw the practice data away and start over
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +16,18 @@ process.env.DATA_DIR = dataDir;
 process.env.ADMIN_EMAILS = [process.env.ADMIN_EMAILS, OWNER].filter(Boolean).join(",");
 for (const k of ["STRIPE_SECRET_KEY", "TWILIO_ACCOUNT_SID", "RESEND_API_KEY"]) delete process.env[k]; // practice money and messages only
 process.env.PAST_REVIEW_IP_CHECK = "0"; // everyone is on this one computer here
+// This computer's address on the home Wi-Fi, so an iPad or phone on the same Wi-Fi can open the test drive too, and the
+// links it makes (invitations, review links, payment links) work there. Virtual adapters (WSL, VirtualBox...) are skipped.
+function wifiAddress() {
+  const found = [];
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    if (/vethernet|wsl|virtualbox|vmware|docker|loopback|hyper-v|tailscale|zerotier/i.test(name)) continue;
+    for (const a of list || []) if (a.family === "IPv4" && !a.internal && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a.address)) found.push(a.address);
+  }
+  return found.find((a) => a.startsWith("192.168.")) || found.find((a) => a.startsWith("10.")) || found[0] || "";
+}
+const LAN = wifiAddress();
+if (LAN && !process.env.BASE_URL) process.env.BASE_URL = `http://${LAN}:${process.env.PORT || 3000}`;
 
 const { loadConfig } = await import("./config.js");
 const { createApp } = await import("./app.js");
@@ -219,9 +232,13 @@ const since = Math.floor(Date.now() / 1000) - 5;
 sendDailyTexts(app.ctx, { hour: 8 });
 const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
-const url = config.baseUrl;
-console.log(`Bella's Música TEST DRIVE is running (version ${VERSION}): open ${url}
-Opening the welcome page in your browser: ${url}/#/welcome
+const url = config.baseUrl, here = `http://localhost:${port}`;
+console.log(`Bella's Música TEST DRIVE is running (version ${VERSION}): open ${here}
+Opening the welcome page in your browser: ${here}/#/welcome
+${LAN ? `
+  >>> On your iPad or phone (same Wi-Fi as this computer), open:  ${url}
+      If Windows asks whether to allow Node.js on networks, choose "Allow" (private networks).
+` : ""}
 (practice money only; nothing here is real. Stop with Ctrl+C. Start over with: npm run tryout -- --reset)
 
 Every password: ${PASSWORD}
@@ -238,7 +255,7 @@ ${morning.length ? `\nThe morning text vendors get (pretend texts; turn it off i
 // Open the welcome page in the browser (only when started by a person in a window, not by a script).
 if (process.stdout.isTTY && !process.env.NO_BROWSER) {
   const { spawn } = await import("node:child_process");
-  const target = `${url}/#/welcome`;
+  const target = `${here}/#/welcome`;
   const [cmd, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", target]] : process.platform === "darwin" ? ["open", [target]] : ["xdg-open", [target]];
   try { spawn(cmd, args, { stdio: "ignore", detached: true, windowsHide: true }).on("error", () => {}).unref(); } catch { /* no browser: the address above still works */ }
 }

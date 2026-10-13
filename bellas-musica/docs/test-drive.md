@@ -15,6 +15,20 @@ pretend. It uses its own practice data (the `data-tryout` folder), so it never m
    tap the sombrero, press **Play la diana**, and scroll all the way down. **Find music** or **Log in** takes you into the app.
    If the black window says an **older copy is still running**, do what it says (close it in Task Manager) and try again.
 
+### On your iPad or phone
+
+The test drive runs on your computer, and an iPad or phone on the **same Wi-Fi** can open it:
+
+1. Start it on the computer as above. The black window prints a line like
+   `>>> On your iPad or phone (same Wi-Fi as this computer), open:  http://192.168.1.23:3000`
+2. The first time, Windows may ask whether to allow **Node.js** on networks: tick **Private networks** and press **Allow**.
+   (If you pressed Cancel by mistake: Start → "Allow an app through Windows Firewall" → find Node.js → tick Private.)
+3. On the iPad, open **Safari** and type that address exactly (with `http://` and the `:3000`).
+4. Log in with the practice accounts below. Invitation, review and payment links made in the test drive use this address,
+   so they open on the iPad too. The computer has to stay on with the black window open.
+
+Phone notifications and "Add to Home Screen" need the published site (https), not the test drive.
+
 To start over with fresh practice data: `npm run tryout -- --reset` (do this once after downloading a new version, so the
 practice data has the newest tools).
 
