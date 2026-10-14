@@ -200,6 +200,8 @@ export const newScreen = () => { WHO = "music"; return ++SCREEN; };
 export const currentScreen = () => SCREEN;
 export const setWho = (category, screen = SCREEN) => { if (screen === SCREEN) WHO = DICT.en["who." + category] ? category : "music"; };
 export function t(key, vars) {
+  // one of something: a "<key>One" string, when there is one ("1 review", not "1 reviews")
+  if (vars && vars.n === 1 && (DICT[current][key + "One"] ?? EN[key + "One"]) !== undefined) key += "One";
   let s = DICT[current][key] ?? EN[key];
   if (s === undefined) { console.warn("missing translation:", key); return key; }
   // the listing's name goes in first, so text people typed (passed in vars) is never changed

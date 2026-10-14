@@ -65,3 +65,11 @@ test("{who} follows the screen on show: a screen the user already left can't cha
   assert.match(t("show.groupReport", { note: "they said {whos} and {who}" }), /they said \{whos\} and \{who\}/);
   newScreen();
 });
+
+test("one of something reads as one: '1 review', '1 musician', '1 day', in both languages", () => {
+  newScreen();
+  assert.equal(t("g.reviews", { n: 1 }), "1 review"); assert.equal(t("g.reviews", { n: 2 }), "2 reviews");
+  assert.equal(t("card.members", { n: 1 }), "1 musician"); assert.equal(t("pl.daysN", { n: 1 }), "1 day");
+  for (const lang of ["en", "es"]) for (const k of Object.keys(DICT[lang])) if (k.endsWith("One") && DICT[lang][k.slice(0, -3)] !== undefined)
+    assert.ok(!/\{n\}/.test(DICT[lang][k.slice(0, -3)]) || /\{n\}|^1 /.test(DICT[lang][k]) || k === "gl.copyOne", `${lang} ${k} should be the singular of ${k.slice(0, -3)}`);
+});
