@@ -85,7 +85,9 @@ test("analytics: anonymous counters for the funnel, per-group views, top searche
     assert.deepEqual(s.funnel_30d, { searches: 4, group_views: 3, booking_started: 1, booking_paid: 1, booking_confirmed: 1, signups: 3, feed_views: 0, feed_taps: 0 });
     assert.deepEqual(s.top_zips[0], { zip: "60608", city: "Chicago", searches: 3 });
     const mine = (await owner.get("/api/my/groups")).json.groups[0].stats_30d;
-    assert.deepEqual(mine, { views: 3, requests: 1, confirmed: 1, feed_views: 0, feed_taps: 0 });
+    const { seen, ...rest } = mine;
+    assert.deepEqual(rest, { views: 3, requests: 1, confirmed: 1, feed_views: 0, feed_taps: 0 });
+    assert.equal(seen, S.db.get("SELECT COALESCE(SUM(n), 0) n FROM stats_daily WHERE key = 'search_seen' AND ref = ?", gid).n); // each search that showed it
     // nothing personal is stored
     const cols = S.db.all("PRAGMA table_info(stats_daily)").map((c) => c.name).sort();
     assert.deepEqual(cols, ["day", "key", "n", "ref"]);
