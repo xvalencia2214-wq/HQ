@@ -46,6 +46,9 @@ export function toast(message, kind = "info") {
   toastTimer = setTimeout(() => { el.hidden = true; }, kind === "error" ? 6000 : 3500);
 }
 
+// Shown under the pay buttons: Stripe Checkout offers Apple Pay and Google Pay by itself on devices that have them.
+export const payWays = () => `<p class="payways"><span class="pw">Apple Pay</span><span class="pw">Google Pay</span><span class="pw">${esc(t("pay.card"))}</span><span class="pw-t">${esc(t("pay.ways"))}</span></p>`;
+
 export const stars = (n) => `<span class="stars" aria-label="${esc(n)} / 5">${"★".repeat(Math.round(n))}${"☆".repeat(5 - Math.round(n))}</span>`;
 
 export function statusBadge(status) {

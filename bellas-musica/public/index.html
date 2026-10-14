@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <base href="/">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#070b1a">
+<meta name="theme-color" content="#ffffff">
 <title>Bella's Música</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -18,14 +18,13 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="#/"><img src="logo.svg" alt="" width="54" height="54"><span>Bella's Música<small>Book live Mexican music</small></span></a>
-    <button type="button" id="navtoggle" class="navtoggle" aria-label="Menu" aria-expanded="false" aria-controls="nav">☰</button>
-    <nav id="nav" aria-label="Main"></nav>
+    <button type="button" id="navtoggle" class="navtoggle" aria-expanded="false" aria-controls="nav"><span class="nt-i" aria-hidden="true">☰</span><span class="nt-l">Menu</span></button>
   </div>
   <div class="bunting alt" aria-hidden="true"></div>
   <div id="banner" class="banner" hidden></div>
   <div id="vbanner" class="banner verify" hidden></div>
 </header>
-<main id="app"></main>
+<div class="shell"><nav id="nav" aria-label="Main"></nav><main id="app"></main></div>
 <footer id="foot"></footer>
 <script src="vendor/leaflet/leaflet.js"></script>
 <script type="module" src="js/main.js"></script>

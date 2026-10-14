@@ -64,29 +64,41 @@ new MutationObserver(ensureH1).observe(app, { childList: true, subtree: true });
 let routeToken = 0;
 let viewCleanup = null; // a view that runs animations (the welcome page) leaves a function that stops them
 
+// Bigger text (the menu's button): remembered on this device, set before the first screen draws.
+const bigText = () => document.documentElement.classList.contains("big");
+try { if (localStorage.getItem("bm_big") === "1") document.documentElement.classList.add("big"); } catch { /* private mode */ }
+
+// The menu, in sections: a sidebar on wide screens, the "Menu" button on phones. Each row is an icon and a word.
 function renderChrome() {
   const u = state.user;
   const a = state.attention;
   const dot = (n) => (n > 0 ? `<span class="dot" aria-label="${n}">${n}</span>` : "");
   const managerCount = a ? a.manager.requests + a.manager.messages : 0;
+  const link = (r, href, icon, label, extra = "", cls = "") => `<a href="${href}" data-r="${r}"${cls ? ` class="${cls}"` : ""}><span class="ni" aria-hidden="true">${icon}</span><span class="nl">${esc(label)}</span>${extra}</a>`;
+  const section = (id, title, rows) => `<div class="nav-sec" role="group" aria-labelledby="nh-${id}"><p class="nav-h" id="nh-${id}">${esc(title)}</p>${rows}</div>`;
   document.getElementById("nav").innerHTML =
-    `<a href="#/" data-r="home">${esc(t("nav.find"))}</a><a href="#/quotes" data-r="quotes">${esc(t("nav.quotes"))}</a><a href="#/discover" data-r="discover">${esc(t("nav.discover"))}</a><a href="#/party" data-r="party">${esc(t("party.nav"))}</a>` +
-    (u ? `<a href="#/saved" data-r="saved">♥ ${esc(t("nav.saved"))}</a><a href="#/bookings" data-r="bookings">${esc(t("nav.bookings"))}</a><a href="#/messages" data-r="messages">${esc(t("nav.messages"))}${dot(a ? a.messages : 0)}</a>` : "") +
-    `<a href="#/dashboard" data-r="dashboard">${esc(t("nav.groups"))}${dot(managerCount)}</a>` +
-    (u && u.is_admin ? `<a href="#/admin" data-r="admin">${esc(t("nav.admin"))}</a>` : "") +
-    (u ? `<a href="#/account" data-r="account">${esc(u.name.split(" ")[0])}</a><button type="button" id="logout" class="linkbtn">${esc(t("nav.logout"))}</button>`
-      : `<a href="#/login" data-r="login">${esc(t("nav.login"))}</a><a href="#/signup" data-r="signup" class="cta">${esc(t("nav.signup"))}</a>`) +
-    `<button type="button" id="langbtn" class="linkbtn" aria-label="Español / English">${lang() === "es" ? "EN" : "ES"}</button>`;
+    section("find", t("side.find"), link("home", "#/", "🔎", t("nav.find")) + link("quotes", "#/quotes", "✉️", t("nav.quotes")) + link("discover", "#/discover", "▶️", t("nav.discover")) + link("party", "#/party", "🎉", t("party.nav"))) +
+    (u ? section("mine", t("side.mine"), link("saved", "#/saved", "♥", t("nav.saved")) + link("bookings", "#/bookings", "📅", t("nav.bookings")) + link("messages", "#/messages", "💬", t("nav.messages"), dot(a ? a.messages : 0))) : "") +
+    section("biz", t("side.biz"), link("dashboard", "#/dashboard", "🎤", t("nav.groups"), dot(managerCount)) + (u && u.is_admin ? link("admin", "#/admin", "🛠️", t("nav.admin")) : "")) +
+    section("you", t("side.you"), (u ? link("account", "#/account", "👤", u.name.split(" ")[0]) + `<button type="button" id="logout" class="navbtn"><span class="ni" aria-hidden="true">↩️</span><span class="nl">${esc(t("nav.logout"))}</span></button>`
+      : link("login", "#/login", "🔑", t("nav.login")) + link("signup", "#/signup", "✨", t("nav.signup"), "", "cta")) +
+      `<button type="button" id="langbtn" class="navbtn" aria-label="Español / English"><span class="ni" aria-hidden="true">🌐</span><span class="nl" lang="${lang() === "es" ? "en" : "es"}">${lang() === "es" ? "English" : "Español"}</span></button>` +
+      `<button type="button" id="textbtn" class="navbtn" aria-pressed="${bigText()}"><span class="ni" aria-hidden="true">🔠</span><span class="nl">${esc(t("side.bigText"))}</span></button>`);
   const lo = document.getElementById("logout");
   if (lo) lo.onclick = async () => { await api.post("/api/auth/logout"); setUser(null); location.hash = "#/"; toast(t("nav.loggedOut")); };
   document.getElementById("langbtn").onclick = () => setLang(lang() === "es" ? "en" : "es");
+  document.getElementById("textbtn").onclick = () => {
+    const on = document.documentElement.classList.toggle("big");
+    try { localStorage.setItem("bm_big", on ? "1" : "0"); } catch { /* private mode */ }
+    document.getElementById("textbtn").setAttribute("aria-pressed", String(on));
+  };
   document.getElementById("foot").innerHTML = `${esc(t("foot"))} · <a href="terms.html">${esc(t("foot.terms"))}</a> · <a href="privacy.html">${esc(t("foot.privacy"))}</a>${appLink()}`;
   const banner = document.getElementById("banner");
   banner.hidden = state.meta.payments !== "simulated";
   banner.textContent = t("banner.test");
   renderVerifyBanner();
   const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
-  nav.classList.remove("open"); tog.setAttribute("aria-expanded", "false"); tog.setAttribute("aria-label", t("nav.menu"));
+  nav.classList.remove("open"); tog.setAttribute("aria-expanded", "false"); tog.querySelector(".nt-l").textContent = t("nav.menu");
   const cur0 = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] || "home", cur = cur0 === "my-party" ? "party" : cur0;
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
@@ -157,10 +169,15 @@ async function route() {
   }
 }
 
+// The sidebar sits under the header and the phone menu opens just below it: both need the header's height.
+const setTopH = () => { const h = document.querySelector("header.top"); if (h) document.documentElement.style.setProperty("--toph", Math.round(h.getBoundingClientRect().bottom) + "px"); };
+new ResizeObserver(setTopH).observe(document.querySelector("header.top"));
 document.getElementById("navtoggle").onclick = () => {
+  setTopH();
   const nav = document.getElementById("nav"), open = nav.classList.toggle("open");
   document.getElementById("navtoggle").setAttribute("aria-expanded", String(open));
 };
+document.addEventListener("keydown", (e) => { const nav = document.getElementById("nav"); if (e.key === "Escape" && nav.classList.contains("open")) { nav.classList.remove("open"); const tog = document.getElementById("navtoggle"); tog.setAttribute("aria-expanded", "false"); tog.focus(); } });
 window.addEventListener("bm:unauth", () => {
   if (!state.user) return;
   setUser(null);

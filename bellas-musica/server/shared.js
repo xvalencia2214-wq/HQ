@@ -66,7 +66,9 @@ export function doneCount(db, groupId) {
   return db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'confirmed' AND date < ? AND payment_status IN ('paid','partial_refund')", groupId, todayStr()).c;
 }
 
-export const isPromoted = (g) => g.promoted_until > now();
+// Spotlight is the top paid placement and includes everything Featured gives, so a Spotlight group counts as promoted too.
+export const isSpotlight = (g) => (g.spotlight_until || 0) > now();
+export const isPromoted = (g) => g.promoted_until > now() || isSpotlight(g);
 export const isPro = (g) => g.pro_until > now();
 // The platform fee for a listing: lower for Bella's Pro and for founding vendors, half for 30 days after a referral.
 export function feePctFor(g, config) {
@@ -112,7 +114,7 @@ export function publicGroup(ctx, g, extras = {}) {
   return {
     id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), hourly: g.hourly !== 0, zip: g.zip, city: zip?.city || "", state: zip?.state || "",
     rate_cents: g.rate_cents, min_hours: g.min_hours || 1, members: g.members, story: g.story, rating: Math.round(rating * 10) / 10, reviews,
-    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), id_checked: !g.demo && Boolean(g.id_checked), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
+    events_done: doneCount(ctx.db, g.id), verified: Boolean(g.verified), insured: Boolean(g.insured), id_checked: !g.demo && Boolean(g.id_checked), licensed: Boolean(g.licensed), pro: isPro(g), weather_policy: g.weather_policy || "", promoted: isPromoted(g), spotlight: isSpotlight(g), demo: Boolean(g.demo), bookable: isBookable(ctx, g),
     max_guests: g.max_guests, sound_system: Boolean(g.sound_system), dress_code: g.dress_code, set_minutes: g.set_minutes,
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
     events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []), weekly_discount_pct: g.weekly_discount_pct || 0,
@@ -520,7 +522,7 @@ export function markFeaturePaid(ctx, featureId) {
   if (!f || f.status === "paid") return f;
   db.tx(() => {
     db.run("UPDATE payments_feature SET status = 'paid' WHERE id = ?", f.id);
-    const col = f.kind === "pro" ? "pro_until" : "promoted_until"; // Bella's Pro or Featured: both 30 days, added to any time left
+    const col = { pro: "pro_until", spotlight: "spotlight_until" }[f.kind] || "promoted_until"; // Pro, Spotlight or Featured: 30 days, added to any time left
     const g = db.get(`SELECT ${col} AS until FROM groups WHERE id = ?`, f.group_id);
     db.run(`UPDATE groups SET ${col} = ? WHERE id = ?`, Math.max(now(), g.until) + 30 * 86400, f.group_id);
   });

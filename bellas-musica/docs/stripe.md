@@ -12,7 +12,8 @@ Bella's Música uses **Stripe Connect (Express)**: the customer pays a deposit; 
    - `checkout.session.completed`
    - `checkout.session.async_payment_succeeded`
    Copy the signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`.
-6. Redeploy. `npm run preflight` should say "Stripe key: test mode", "account reachable", and that the webhook endpoint points at your domain with the right events.
+6. **Apple Pay and Google Pay:** Settings, Payment methods. Make sure **Apple Pay** and **Google Pay** are turned on (they usually are by default). The app never lists payment methods itself, so Stripe's checkout page shows the Apple Pay button on any iPhone, iPad or Mac that has a card in Wallet, and Google Pay on Android and Chrome. Nothing else to set up: Stripe hosts the checkout page, so no domain verification is needed. The pay buttons in the app say "Apple Pay · Google Pay · Card".
+7. Redeploy. `npm run preflight` should say "Stripe key: test mode", "account reachable", and that the webhook endpoint points at your domain with the right events.
 
 ## B. The test-mode script (do all of it, with two browsers/accounts)
 
@@ -56,7 +57,7 @@ charge to **your** Stripe balance (no "destination" and no application fee on it
 
 1. Complete Stripe's live-mode activation. Switch the dashboard to **Live** and repeat A.4 and A.5 with **live** keys and a **live** webhook endpoint.
 2. Replace `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` with the live values, redeploy, run `npm run preflight`.
-3. Do one real booking with your own card for the smallest package with a friendly group, accept it, then cancel it and confirm the refund arrives.
+3. Do one real booking with your own card (pay with Apple Pay on your iPhone or iPad to check it shows up) for the smallest package with a friendly group, accept it, then cancel it and confirm the refund arrives.
 4. From now on, groups **must** finish Stripe onboarding before they can publish (the publish checklist enforces it), and the fictional samples can't be booked.
 
 ## Notes and limits

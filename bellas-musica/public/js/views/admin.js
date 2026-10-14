@@ -10,9 +10,9 @@ function groupsTable(list, empty) {
   if (!list.length) return `<div class="panel empty small">${esc(empty)}</div>`;
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Group</th><th>Owner</th><th>Where</th><th>Status</th><th class="num">Active bookings</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
     ${list.map((g) => `<tr><td><a href="#/group/${esc(g.id)}">${esc(g.name)}</a></td><td>${esc(g.owner_email || "(sample)")}</td><td>${esc(g.type)} · ${esc(g.city)}</td>
-      <td>${g.demo ? '<span class="badge">sample</span> ' : ""}${g.status === "draft" ? '<span class="badge requested">draft</span> ' : ""}${g.status === "paused" ? '<span class="badge cancelled">paused</span> ' : ""}${g.verified ? '<span class="badge confirmed">verified</span> ' : ""}${g.insured ? '<span class="badge confirmed">insured</span> ' : ""}${g.id_checked ? '<span class="badge confirmed">ID checked</span> ' : ""}${g.hidden ? '<span class="badge cancelled">hidden</span> ' : ""}${g.promoted_until * 1000 > Date.now() ? '<span class="badge confirmed">featured</span> ' : ""}${!g.demo ? (g.stripe_ready ? '<span class="badge confirmed">payouts ready</span>' : '<span class="badge requested">no payouts yet</span>') : ""}</td>
+      <td>${g.demo ? '<span class="badge">sample</span> ' : ""}${g.status === "draft" ? '<span class="badge requested">draft</span> ' : ""}${g.status === "paused" ? '<span class="badge cancelled">paused</span> ' : ""}${g.verified ? '<span class="badge confirmed">verified</span> ' : ""}${g.insured ? '<span class="badge confirmed">insured</span> ' : ""}${g.id_checked ? '<span class="badge confirmed">ID checked</span> ' : ""}${g.hidden ? '<span class="badge cancelled">hidden</span> ' : ""}${g.spotlight_until * 1000 > Date.now() ? '<span class="badge confirmed">spotlight</span> ' : g.promoted_until * 1000 > Date.now() ? '<span class="badge confirmed">featured</span> ' : ""}${!g.demo ? (g.stripe_ready ? '<span class="badge confirmed">payouts ready</span>' : '<span class="badge requested">no payouts yet</span>') : ""}</td>
       <td class="num">${g.active_bookings}</td>
-      <td class="acts">${g.demo ? "" : `<button class="btn ghost small" data-badge="verified" data-g="${esc(g.id)}" data-to="${g.verified ? "0" : "1"}">${g.verified ? "Remove verified" : "Mark verified"}</button> <button class="btn ghost small" data-badge="insured" data-g="${esc(g.id)}" data-to="${g.insured ? "0" : "1"}">${g.insured ? "Remove insured" : "Mark insured"}</button> `}<button class="btn ghost small" data-hide="${esc(g.id)}" data-to="${g.hidden ? "0" : "1"}">${g.hidden ? "Unhide" : "Hide"}</button>${g.demo ? "" : ` <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="30">Feature 30 days</button> <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="0">Clear</button>`}</td></tr>`).join("")}
+      <td class="acts">${g.demo ? "" : `<button class="btn ghost small" data-badge="verified" data-g="${esc(g.id)}" data-to="${g.verified ? "0" : "1"}">${g.verified ? "Remove verified" : "Mark verified"}</button> <button class="btn ghost small" data-badge="insured" data-g="${esc(g.id)}" data-to="${g.insured ? "0" : "1"}">${g.insured ? "Remove insured" : "Mark insured"}</button> `}<button class="btn ghost small" data-hide="${esc(g.id)}" data-to="${g.hidden ? "0" : "1"}">${g.hidden ? "Unhide" : "Hide"}</button>${g.demo ? "" : ` <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="30">Feature 30 days</button> <button class="btn ghost small" data-feat="${esc(g.id)}" data-level="spotlight" data-days="30">Spotlight 30 days</button> <button class="btn ghost small" data-feat="${esc(g.id)}" data-days="0">Clear featured</button>${g.spotlight_until * 1000 > Date.now() ? ` <button class="btn ghost small" data-feat="${esc(g.id)}" data-level="spotlight" data-days="0">Clear spotlight</button>` : ""}`}</td></tr>`).join("")}
     </tbody></table></div>`;
 }
 
@@ -26,14 +26,14 @@ export async function admin(app) {
   app.innerHTML = `<div class="titlebar"><h1>Owner dashboard</h1><div class="chips"><span class="tag">${live ? "Payments: live" : "Payments: test mode (simulated)"}</span><span class="tag">${s.texts === "twilio" ? "Texts: live" : "Texts: simulated"}</span><span class="tag">${s.email === "resend" ? "Email: live" : "Email: simulated"}</span><span class="tag">Day = ${esc(s.timezone)}</span></div></div>
     ${live ? "" : `<div class="note">Test mode: the numbers below are from simulated payments, not real money.</div>`}
     <div class="hero-fig"><div class="tile-l">Platform fees kept</div><div class="hero-v">${cents(s.money.platform_fees_kept_cents)}</div>
-      <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured and Pro passes add ${cents(s.money.featured_revenue_cents)}.</div></div>
+      <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured, Spotlight and Pro passes add ${cents(s.money.featured_revenue_cents)}.</div></div>
     <div class="tiles">
       ${tile("Users", s.users.total, `${s.users.last7} in the last 7 days`)}
       ${tile("Real groups", s.groups.real, `${s.groups.sample} sample listings · ${s.groups.hidden} hidden`)}
       ${tile("Bookings", Object.values(b).reduce((a, x) => a + x, 0), statusLine)}
       ${tile("Confirmed booking value", cents(s.bookings.confirmed_value_cents), "total price of confirmed bookings")}
       ${tile("Deposits collected", cents(s.money.deposits_collected_cents), `${cents(s.money.refunded_cents)} refunded`)}
-      ${tile("Groups ready for payouts", `${s.groups.payouts_ready} of ${s.groups.real}`, `${s.groups.featured_now} featured now · founding vendors ${s.groups.founding} of ${s.groups.founding_slots} (${s.groups.founding_fee_pct}% fee)`)}
+      ${tile("Groups ready for payouts", `${s.groups.payouts_ready} of ${s.groups.real}`, `${s.groups.featured_now} featured now (${s.groups.spotlight_now || 0} in the spotlight) · founding vendors ${s.groups.founding} of ${s.groups.founding_slots} (${s.groups.founding_fee_pct}% fee)`)}
       ${tile("Texts, last 30 days", `${s.texts_30d.sent} sent`, `${s.texts_30d.failed} failed · ${s.texts_30d.logged_only} logged only`)}
     </div>
 
@@ -98,7 +98,7 @@ export async function admin(app) {
     try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.hide)}/hide`, { hidden: hide }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
   }; });
   app.querySelectorAll("[data-feat]").forEach((btn) => { btn.onclick = async () => {
-    try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.feat)}/feature`, { days: Number(btn.dataset.days) }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
+    try { await api.post(`/api/admin/groups/${encodeURIComponent(btn.dataset.feat)}/feature`, { days: Number(btn.dataset.days), level: btn.dataset.level || "" }); toast("Done"); reload(); } catch (e) { toast(e.message, "error"); }
   }; });
   app.querySelectorAll("[data-ns]").forEach((btn) => { btn.onclick = async () => {
     const refund = btn.dataset.ns === "refund";

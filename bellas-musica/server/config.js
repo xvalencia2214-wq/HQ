@@ -46,6 +46,7 @@ export function loadConfig(env = process.env) {
     platformFeePct: int(env.PLATFORM_FEE_PCT, 10), // % of the booking total, taken from the deposit
     featurePriceCents: int(env.FEATURE_PRICE_CENTS, 4900), // 30 days of featured placement
     proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
+    spotlightPriceCents: int(env.SPOTLIGHT_PRICE_CENTS, 9900), // 30 days of Spotlight: Featured plus the top of every list
     proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
     directFeePct: int(env.DIRECT_FEE_PCT, 3),
     // Founding vendors: the first FOUNDING_SLOTS real listings to go live pay FOUNDING_FEE_PCT for FOUNDING_DAYS (0 slots = off)

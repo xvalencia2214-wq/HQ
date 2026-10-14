@@ -4,7 +4,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, toast, goto, sel, lenLabel, minutesOf, fmtPhone, tomorrowKey } from "../ui.js";
+import { esc, money, fmtDate, toast, goto, sel, lenLabel, minutesOf, fmtPhone, tomorrowKey, payWays } from "../ui.js";
 
 const loc = () => (lang() === "es" ? "es-US" : "en-US");
 const waLink = (phone, text) => `https://wa.me/${phone ? "1" + String(phone).replace(/\D/g, "").slice(-10) : ""}?text=${encodeURIComponent(text)}`;
@@ -184,7 +184,7 @@ async function drawTeam(g, refresh) {
 // Payouts, Pro and Featured are the owner's: a helper sees a note instead of the buttons.
 export function ownerOnly(root, g) {
   if (isOwnerOf(g)) return;
-  root.querySelectorAll("#onboard, #feature, #buypro").forEach((el) => { el.outerHTML = `<p class="dim small">${esc(t("team.ownerOnly"))}</p>`; });
+  root.querySelectorAll("#onboard, #feature, #spotlight, #buypro").forEach((el) => { el.outerHTML = `<p class="dim small">${esc(t("team.ownerOnly"))}</p>`; });
 }
 
 // ======================= on each booking (vendor side) =======================
@@ -335,7 +335,7 @@ export async function payLinkPage(app, token) {
       ${l.address ? "" : `<label for="plp-addr">${esc(t("g.address"))}</label><input id="plp-addr" name="address" maxlength="160" required>`}
       ${(l.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${l.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" name="needs"> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
       <label class="chk"><input type="checkbox" name="agree"> <span>${esc(t("g.agree"))}</span></label>
-      <div class="err" role="alert"></div><button class="btn wide" type="submit">${esc(t("pl.pay", { amount: money(l.deposit_cents) }))}</button></form>`
+      <div class="err" role="alert"></div><button class="btn wide" type="submit">${esc(t("pl.pay", { amount: money(l.deposit_cents) }))}</button>${payWays()}</form>`
       : `<div class="note">${esc(t("pl.loginFirst"))}</div><a class="btn" href="#/signup?next=${next}">${esc(t("nav.signup"))}</a> <a class="btn ghost" href="#/login?next=${next}">${esc(t("nav.login"))}</a>`}</div>`;
   const form = document.getElementById("plpay");
   if (form) form.onsubmit = async (e) => {

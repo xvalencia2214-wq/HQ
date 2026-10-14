@@ -2,7 +2,7 @@ import { HttpError, int, isZip, str } from "../util.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { MARKET } from "../market.js";
 import { embedUrl } from "../media.js";
-import { LIVE_SQL, firstPhotos, fromCents, isPromoted, ratingMap, ratingOf } from "../shared.js";
+import { LIVE_SQL, firstPhotos, fromCents, isPromoted, isSpotlight, ratingMap, ratingOf } from "../shared.js";
 import { CATEGORIES, categoryOf } from "../pricing.js";
 import { oneOf } from "../util.js";
 
@@ -20,7 +20,8 @@ function rng(seedStr) {
 }
 const shuffle = (list, rand) => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-// "Discover": a swipeable feed of nearby groups. Groups that paid for Featured also get more turns here (labelled "Promoted");
+// "Discover": a swipeable feed of nearby groups. Groups that paid for Featured also get more turns here (labelled "Promoted"),
+// and Spotlight groups twice as many as Featured ones;
 // everyone else still appears, in an order that favors groups with a video, then a photo.
 export default function feedRoutes(ctx, add) {
   const { db, stats, limiters } = ctx;
@@ -52,7 +53,7 @@ export default function feedRoutes(ctx, add) {
           id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), city: z.city, state: z.state, distance_miles: Math.round(d),
           rating: Math.round(r.rating * 10) / 10, reviews: r.reviews, members: g.members, story: String(g.story || "").slice(0, 160),
           from_cents: null, verified: Boolean(g.verified), insured: Boolean(g.insured), id_checked: !g.demo && Boolean(g.id_checked), demo: Boolean(g.demo),
-          promoted: isPromoted(g),
+          promoted: isPromoted(g), spotlight: isSpotlight(g),
           video: g.video_provider ? { provider: g.video_provider, id: g.video_id, embed: embedUrl(g.video_provider, g.video_id) } : null,
           photo: photos.has(g.id) ? "/uploads/" + photos.get(g.id) : null
         }
@@ -69,14 +70,17 @@ export default function feedRoutes(ctx, add) {
 
     // Build the stream by position. Every group appears once. Promoted groups take every 4th slot while there are other cards
     // to put between them, so a paying group with a big feed comes around several times; nobody repeats back to back.
-    const stream = [];
-    let oi = 0, pi = 0;
+    // The promoted turns go round a list where each Spotlight group is in twice.
+    const rotation = [...promoted, ...promoted.filter((x) => x.spotlight)];
+    const stream = [], seen = new Set();
+    let oi = 0, ri = 0;
     for (let i = 0; i < MAX_ITEMS; i++) {
-      if (oi >= organic.length && pi >= promoted.length) break;
       let pick;
-      if (promoted.length && i % EVERY === PROMO_SLOT && oi < organic.length) pick = promoted[pi++ % promoted.length];
+      if (rotation.length && i % EVERY === PROMO_SLOT && oi < organic.length) pick = rotation[ri++ % rotation.length];
       else if (oi < organic.length) pick = organic[oi++];
-      else pick = promoted[pi++]; // the organic cards ran out: show any promoted group not yet seen
+      else pick = promoted.find((x) => !seen.has(x.id)); // the organic cards ran out: show any promoted group not yet seen
+      if (!pick) break;
+      seen.add(pick.id);
       stream.push({ ...pick, position: i });
     }
     const items = stream.slice(page * PAGE, page * PAGE + PAGE);

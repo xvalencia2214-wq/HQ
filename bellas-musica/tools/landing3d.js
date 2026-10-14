@@ -1,5 +1,6 @@
-// The 3D scene on the welcome page: a silver charro sombrero turned on a lathe (its profile spun around an axis), with an
-// embroidered leather band and silver trim, under a string of papel picado that waves in the breeze. It follows the
+// The 3D scene on the welcome page: a navy charro sombrero turned on a lathe (its profile spun around an axis), with a
+// gold band embroidered with vines, gold trim and a gold vine climbing round the brim, under a string of papel picado
+// that waves in the breeze. It follows the
 // pointer, turns with the scroll, bounces to the music and spins when tapped.
 // Bundled with only the parts of three.js it uses:  npm run build:landing  ->  public/vendor/landing3d.js
 import {
@@ -7,7 +8,8 @@ import {
   LatheGeometry, CylinderGeometry, TorusGeometry, PlaneGeometry, SphereGeometry,
   MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial, Mesh, InstancedMesh, Object3D,
   HemisphereLight, DirectionalLight, PointLight, CanvasTexture, SRGBColorSpace, DoubleSide, PMREMGenerator, ACESFilmicToneMapping,
-  BufferGeometry, Float32BufferAttribute, LineBasicMaterial, Line, RepeatWrapping, Points, PointsMaterial
+  BufferGeometry, Float32BufferAttribute, LineBasicMaterial, Line, RepeatWrapping, Points, PointsMaterial,
+  CatmullRomCurve3, TubeGeometry
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
@@ -15,21 +17,21 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 function bandTexture() {
   const c = document.createElement("canvas"); c.width = 1024; c.height = 128;
   const x = c.getContext("2d");
-  const g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, "#c08a5c"); g.addColorStop(1, "#6e4326");
+  const g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, "#f3d37a"); g.addColorStop(1, "#b8862a");
   x.fillStyle = g; x.fillRect(0, 0, 1024, 128);
-  x.strokeStyle = "rgba(255,240,220,.85)"; x.lineWidth = 3; x.setLineDash([10, 8]);
+  x.strokeStyle = "rgba(11,24,56,.7)"; x.lineWidth = 3; x.setLineDash([10, 8]);
   for (const y of [14, 114]) { x.beginPath(); x.moveTo(0, y); x.lineTo(1024, y); x.stroke(); }
   x.setLineDash([]);
-  // embroidered flowers and vines (the "pita" stitching on a charro hat band)
+  // embroidered flowers and vines (the "pita" stitching on a charro hat band), in navy thread on the gold
   for (let i = 0; i < 8; i++) {
     const cx = 64 + i * 128;
-    x.strokeStyle = "#f7efe2"; x.lineWidth = 4;
+    x.strokeStyle = "#14285e"; x.lineWidth = 4;
     x.beginPath(); x.moveTo(cx - 64, 64); x.bezierCurveTo(cx - 40, 30, cx - 20, 98, cx, 64); x.bezierCurveTo(cx + 20, 30, cx + 40, 98, cx + 64, 64); x.stroke();
     for (let p = 0; p < 6; p++) {
       const a = (p / 6) * Math.PI * 2;
-      x.fillStyle = "#fffaf0"; x.beginPath(); x.ellipse(cx + Math.cos(a) * 13, 64 + Math.sin(a) * 13, 9, 5, a, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#14285e"; x.beginPath(); x.ellipse(cx + Math.cos(a) * 13, 64 + Math.sin(a) * 13, 9, 5, a, 0, Math.PI * 2); x.fill();
     }
-    x.fillStyle = "#d9b26f"; x.beginPath(); x.arc(cx, 64, 7, 0, Math.PI * 2); x.fill();
+    x.fillStyle = "#fff4cf"; x.beginPath(); x.arc(cx, 64, 7, 0, Math.PI * 2); x.fill();
   }
   const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = RepeatWrapping; t.repeat.set(2, 1);
   return t;
@@ -64,16 +66,16 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.25 : 2));
   renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   const scene = new Scene();
-  scene.fog = new Fog(new Color("#070b1a"), 9, 22);
+  scene.fog = new Fog(new Color("#fdfbf6"), 9, 22);
   const camera = new PerspectiveCamera(35, 1, 0.1, 100);
   camera.position.set(0, 1.4, 9.5);
   const pmrem = new PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.55;
 
-  scene.add(new HemisphereLight("#bcd4ff", "#0b1022", 0.6));
+  scene.add(new HemisphereLight("#fff6e0", "#c9b68a", 0.9));
   const key = new DirectionalLight("#ffffff", 1.6); key.position.set(4, 6, 5); scene.add(key);
-  const rim = new PointLight("#4f8dff", 30, 20); rim.position.set(-4, 2, -3); scene.add(rim);
+  const rim = new PointLight("#ffd27a", 30, 20); rim.position.set(-4, 2, -3); scene.add(rim);
   const warm = new PointLight("#ffb347", 18, 16); warm.position.set(3.5, -1, 3); scene.add(warm);
 
   // ---- the sombrero: a profile (radius, height) spun around the vertical axis ----
@@ -83,23 +85,36 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32], [3.36, 0.5], [3.42, 0.62], [3.38, 0.7],          // the brim curling up at the edge
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
-  const felt = new MeshPhysicalMaterial({ color: "#9fb0d0", roughness: 0.5, metalness: 0.55, sheen: 1, sheenColor: new Color("#dfe8ff"), sheenRoughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.35, envMapIntensity: 0.7, side: DoubleSide });
+  const felt = new MeshPhysicalMaterial({ color: "#0c1a44", roughness: 0.62, metalness: 0.08, sheen: 0.8, sheenColor: new Color("#3a55a0"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
   const body = new Mesh(new LatheGeometry(profile, reduced || lowPower ? 64 : 128), felt);
   hat.add(body);
   const band = new Mesh(new CylinderGeometry(0.985, 1.03, 0.36, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.65, metalness: 0.1 }));
   band.position.y = 0.5; hat.add(band);
-  const silver = new MeshPhysicalMaterial({ color: "#f4f7ff", metalness: 1, roughness: 0.18, clearcoat: 1 });
+  const silver = new MeshPhysicalMaterial({ color: "#e0b04a", metalness: 1, roughness: 0.22, clearcoat: 1 }); // gold trim
   const trim = new Mesh(new TorusGeometry(3.36, 0.06, 16, 200), silver); trim.rotation.x = Math.PI / 2; trim.position.y = 0.66; hat.add(trim);
   const trim2 = new Mesh(new TorusGeometry(1.02, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.68; hat.add(trim2);
-  // little silver studs (botonadura) around the brim
+  // little gold studs (botonadura) around the brim
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
   for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27, Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
+  // a gold vine winding round the top of the brim, with leaves: it follows the brim's height so it sits on the felt
+  const brimTop = [[1.02, 0.32], [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32]];
+  const topY = (r) => { for (let i = 1; i < brimTop.length; i++) { const [r0, y0] = brimTop[i - 1], [r1, y1] = brimTop[i]; if (r <= r1) return y0 + ((r - r0) / (r1 - r0)) * (y1 - y0); } return 0.32; };
+  const WAVES = 14, vinePts = [];
+  for (let i = 0; i <= 280; i++) { const a = (i / 280) * Math.PI * 2, r = 1.95 + 0.17 * Math.sin(a * WAVES); vinePts.push(new Vector3(Math.cos(a) * r, topY(r) + 0.045, Math.sin(a) * r)); }
+  hat.add(new Mesh(new TubeGeometry(new CatmullRomCurve3(vinePts, true), reduced || lowPower ? 280 : 560, 0.04, 8, true), silver));
+  const leafGeo = new SphereGeometry(0.13, 12, 8), leaves = new InstancedMesh(leafGeo, silver, WAVES * 2);
+  for (let i = 0; i < WAVES * 2; i++) {
+    const a = ((i + 0.5) / (WAVES * 2)) * Math.PI * 2, side = i % 2 ? -1 : 1, r = 1.95 + side * 0.3;
+    dummy.position.set(Math.cos(a) * r, topY(r) + 0.05, Math.sin(a) * r); dummy.rotation.set(0, -a + side * 0.6, 0); dummy.scale.set(1.3, 0.3, 0.6);
+    dummy.updateMatrix(); leaves.setMatrixAt(i, dummy.matrix);
+  }
+  hat.add(leaves);
   hat.position.set(2.9, -0.7, 0); hat.rotation.x = 0.32;
   scene.add(hat);
 
   // ---- papel picado: a string across the top with paper flags that wave ----
-  const flags = [], colors = ["#2f6bff", "#ff3d8b", "#f4f7ff", "#18c2a7", "#ffb020", "#7b5cff", "#4fa3ff"];
+  const flags = [], colors = ["#14285e", "#d6336c", "#d4a53c", "#0f8a78", "#e8833a", "#6a4cc9", "#2f6bff"];
   const strand = new Group(); scene.add(strand);
   const N = lowPower ? 9 : 13;
   const linePts = [];
@@ -114,14 +129,14 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     m.userData = { base: geo.attributes.position.array.slice(), phase: i * 0.7 };
     strand.add(m); flags.push(m);
   }
-  const string = new Line(new BufferGeometry().setFromPoints(linePts), new LineBasicMaterial({ color: "#c9d3e6", transparent: true, opacity: 0.5 }));
+  const string = new Line(new BufferGeometry().setFromPoints(linePts), new LineBasicMaterial({ color: "#8a7a55", transparent: true, opacity: 0.6 }));
   strand.add(string);
 
-  // ---- stars far behind ----
+  // ---- gold dust far behind ----
   const starGeo = new BufferGeometry(), sp = [];
   for (let i = 0; i < (lowPower ? 300 : 900); i++) sp.push((Math.random() - 0.5) * 40, Math.random() * 18 - 4, -8 - Math.random() * 10);
   starGeo.setAttribute("position", new Float32BufferAttribute(sp, 3));
-  const stars = new Points(starGeo, new PointsMaterial({ color: "#cfe0ff", size: 0.05, transparent: true, opacity: 0.8, fog: false }));
+  const stars = new Points(starGeo, new PointsMaterial({ color: "#c9962b", size: 0.045, transparent: true, opacity: 0.45, fog: false }));
   scene.add(stars);
 
   // ---- state from the page ----

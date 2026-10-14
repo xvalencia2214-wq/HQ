@@ -19,6 +19,13 @@ test("refund schedules follow each policy", () => {
   assert.equal(refundPercent("nonsense", 10), 100); // unknown policy falls back to moderate
 });
 
+test("a last-minute cancel (within 48 hours) never gets the deposit back, under any policy", () => {
+  for (const policy of ["flexible", "moderate", "strict", "nonsense"]) for (const days of [0, 1, 2]) assert.equal(refundPercent(policy, days), 0, `${policy} ${days}`);
+  const b = { payment_status: "paid", deposit_cents: 20000, policy: "flexible", date: "2030-01-10", balance_status: "unpaid", balance_parts_cents: 0, total_cents: 80000 };
+  assert.equal(refundForCancel(b, "2030-01-08"), 0);
+  assert.equal(refundForCancel(b, "2030-01-07"), 20000);
+});
+
 test("refund is zero when nothing was paid, and rounds down", () => {
   const b = { payment_status: "paid", deposit_cents: 10001, policy: "moderate", date: "2030-01-10" };
   assert.equal(refundForCancel({ ...b, payment_status: "unpaid" }, "2030-01-01"), 0);

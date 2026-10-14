@@ -42,7 +42,12 @@ export const POLICIES = {
   strict: { rows: [[30, 100], [14, 50]], text: { en: "Full deposit back 30+ days before, 50% back 14–29 days before, none after that.", es: "Depósito completo 30 o más días antes, 50% de 14 a 29 días antes, nada después." } }
 };
 
+// The late-cancel rule for every policy: cancelling in the last days before the party (a last-minute cancel, or within
+// 48 hours) never gets the deposit back, whatever a policy's rows say. Counted in calendar days, so 3 covers any 48 hours.
+export const LATE_CANCEL_DAYS = 3;
+
 export function refundPercent(policy, daysBefore) {
+  if (daysBefore < LATE_CANCEL_DAYS) return 0;
   const p = POLICIES[policy] || POLICIES.moderate;
   for (const [minDays, pct] of p.rows) if (daysBefore >= minDays) return pct;
   return 0;

@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t } from "../i18n.js";
-import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey, lenLabel, minutesOf, slotButtons } from "../ui.js";
+import { esc, money, fmtDate, statusBadge, toast, today, goto, parseKey, lenLabel, minutesOf, slotButtons, payWays } from "../ui.js";
 import { customerBizBox, wireCustomerBiz } from "./business.js";
 import { calendar, monthKey } from "../calendar.js";
 import { shrink } from "./dashboard.js";
@@ -94,7 +94,7 @@ export function cartBox(bookings) {
   if (unpaid.length < 2) return "";
   const total = unpaid.reduce((n, b) => n + b.deposit_cents, 0);
   return `<div class="note cartbox"><strong>🛒 ${esc(t("cart.title", { n: unpaid.length }))}</strong><br><span class="small">${esc(unpaid.map((b) => b.group_name).join(" · "))}</span><br>
-    <button type="button" class="btn small" data-cart="${esc(unpaid.slice(0, 6).map((b) => b.id).join(","))}">${esc(t("cart.pay", { amount: money(total) }))}</button> <span class="dim small">${esc(t("cart.hint"))}</span></div>`;
+    <button type="button" class="btn small" data-cart="${esc(unpaid.slice(0, 6).map((b) => b.id).join(","))}">${esc(t("cart.pay", { amount: money(total) }))}</button> <span class="dim small">${esc(t("cart.hint"))}</span>${payWays()}</div>`;
 }
 export function wireCart(root) {
   root.querySelectorAll("[data-cart]").forEach((b) => {
@@ -204,7 +204,7 @@ export async function bookingPage(app, id, params) {
     : b.payment_status !== "unpaid" && (params.get("paid") || b.status === "requested") ? `<div class="note ok"><strong>${esc(t("bk.paidTitle"))}</strong> ${esc(t(b.status === "confirmed" ? "bk.paidConfirmed" : "bk.paidText"))}</div>`
     : params.get("cancelled") ? `<div class="note">${esc(t("bk.payCancelled"))}</div>` : "";
   app.innerHTML = `<h1 class="sec">${esc(t("bk.detail"))}</h1>${msg}<div class="panel">${card(b)}
-    ${b.status === "pending_payment" && b.pay_url ? `<a class="btn" href="${esc(b.pay_url)}">${esc(t("bk.payNow"))}</a>` : ""}
+    ${b.status === "pending_payment" && b.pay_url ? `<a class="btn" href="${esc(b.pay_url)}">${esc(t("bk.payNow"))}</a>${payWays()}` : ""}
     <p><a href="#/bookings">${esc(t("bk.all"))}</a></p></div>`;
   wire(app, () => bookingPage(app, id, new URLSearchParams()));
 }
@@ -241,9 +241,10 @@ export async function simulatedPay(app, kind, id) {
     if (x.status !== "offered") { app.innerHTML = `<div class="panel empty">${esc(t("ex.done"))}</div>`; return; }
     title = t("ex.payTitle", { name: x.group_name }); amount = x.amount_cents; summary = `${esc(x.label)} · ${esc(fmtDate(x.date))}`;
   } else if (kind === "pro") { title = t("pro.title"); amount = state.meta.pro_price_cents; summary = esc(t("pro.text", { fee: state.meta.pro_fee_pct, base: state.meta.fee_pct }));
+  } else if (kind === "spotlight") { title = t("pay.spotTitle"); amount = state.meta.spotlight_price_cents; summary = esc(t("pay.spotText"));
   } else { title = t("pay.featureTitle"); amount = state.meta.feature_price_cents; summary = esc(t("pay.featureText")); }
   app.innerHTML = `<div class="panel narrow"><h1>${esc(title)}</h1><p>${summary}</p><div class="sum strong"><span>${esc(t(kind === "balance" ? "bal.amount" : "pay.amount"))}</span><span>${money(amount)}</span></div>
-    <div class="note">${esc(t("pay.testMode"))}</div><div id="payerr" class="err" role="alert"></div><button class="btn wide" id="paybtn">${esc(t("pay.button", { amount: money(amount) }))}</button></div>`;
+    <div class="note">${esc(t("pay.testMode"))}</div><div id="payerr" class="err" role="alert"></div><button class="btn wide" id="paybtn">${esc(t("pay.button", { amount: money(amount) }))}</button>${payWays()}</div>`;
   document.getElementById("paybtn").onclick = async () => {
     document.getElementById("paybtn").disabled = true;
     try {
@@ -253,7 +254,7 @@ export async function simulatedPay(app, kind, id) {
       else if (kind === "cart") { await api.post(`/api/carts/${encodeURIComponent(id)}/simulate-pay`); toast(t("cart.thanks")); location.hash = "#/bookings"; }
       else if (kind === "tip") { const r = await api.post(`/api/tips/${encodeURIComponent(id)}/simulate-pay`); toast(t("tip.thanks")); location.hash = `#/booking/${r.booking_id}`; }
       else if (kind === "extra") { const x = (await api.get(`/api/extras/${encodeURIComponent(id)}`)).extra; await api.post(`/api/extras/${encodeURIComponent(id)}/simulate-pay`); toast(t("ex.paid")); location.hash = `#/booking/${x.booking_id}`; }
-      else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t(kind === "pro" ? "pro.done" : "dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
+      else { const r = await api.post(`/api/feature/${encodeURIComponent(id)}/simulate-pay`); toast(t(kind === "pro" ? "pro.done" : kind === "spotlight" ? "spot.done" : "dash.featured")); location.hash = `#/dashboard?g=${r.group_id}&tab=payments`; }
     } catch (e) { document.getElementById("payerr").textContent = e.message; document.getElementById("paybtn").disabled = false; }
   };
 }

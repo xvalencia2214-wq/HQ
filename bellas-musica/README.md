@@ -5,14 +5,14 @@
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
 Groups list themselves, set prices, packages, songs, photos, video and open dates, and accept or decline requests.
-English and Spanish. Night theme across the whole app (deep navy, glowing blue, silver, Bricolage Grotesque type), matching the 3D welcome page, with a silver-blue charro sombrero logo (brown embroidered band).
+English and Spanish. White and gold across the whole app, with black and navy writing (Bricolage Grotesque type), matching the 3D welcome page, with a navy charro sombrero logo embroidered with gold vines; a sidebar menu in sections and a Bigger text button.
 
 **No dependencies.** Node 22.13+ only (built-in SQLite). Nothing to `npm install`.
 
 ```bash
 npm start          # http://localhost:3000  (test mode: no keys needed)
 npm run tryout     # test drive: practice accounts and a party in progress, to try every feature (docs/test-drive.md)
-npm test           # 147 tests (incl. the competitor features in test/winning.test.js): API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, unanswered requests refunded after 3 days, an access audit of every route, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
+npm test           # 149 tests (incl. the competitor features in test/winning.test.js, Spotlight and the 48-hour rule): API, money, Stripe/Twilio/Resend against fakes, random stress test, marketplace simulation, scheduling (any time, crews), vendor business tools, tips, weekly gigs, morning text, unanswered requests refunded after 3 days, an access audit of every route, phone notifications (encrypted and checked end to end), hostile-input fuzzer, time zones, i18n, share pages, ops
 # Marketplace simulation: vendors of every kind, families, padrinos and the owner over weeks of simulated time (holds expire,
 # events happen, reminders and background jobs run), checking the money and every page after each step. Longer runs:
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
@@ -31,6 +31,7 @@ node e2e/e2e13.mjs [dir]                   # 23-step run of the business tools: 
 node e2e/e2e14.mjs [dir]                   # 14-step run: weekly gigs with a discount, accept all, a tip after the party, morning text off, Spanish
 node e2e/e2e15.mjs [dir]                   # 17-step run of the phone app: service worker, offline page, Get the app, notifications switch and reminder, store version without in-app purchases, manifest and store files
 node e2e/e2e16.mjs [dir]                   # 18-step run of the welcome page: 3D sombrero, fanfare, budget with real prices, real groups, search into the app, cleanup, Spanish, reduce motion, phone
+node e2e/e2e18.mjs [dir]                   # 27-step run of the white-and-gold look: sidebar sections, phone Menu, bigger text, Spotlight bought and shown, Apple Pay note, 48-hour rule wording
 node e2e/e2e17.mjs [dir]                   # 22-step run of the competitor features: founding offer, signing the agreement, a past client's review, guest list + RSVP on a phone + court of honor, held deposit notes, Spanish
 node e2e/e2e2.mjs [dir]                    # 42-step run of the launch features: password reset, Chicago page, waitlist, invite/claim, balance, reschedule, offers, replies, badges
 node e2e/touch.mjs                         # iPad-style touch run: real finger swipes on Discover, and a tap-target size check on the main screens
@@ -80,13 +81,16 @@ In test mode payments and texts are **simulated** (a banner says so), and fictio
 | Offers | Customers can send a one-tap quote request; the group replies with a private custom-priced offer only that customer can book |
 | Trust | Public replies to reviews, admin-granted Verified/Insured badges, "usually replies within..." computed from real message times |
 | Email | Password reset, email confirmation, booking/message/reminder emails (English/Spanish), unsubscribe links; simulated without a Resend key |
+| Look and menu | White and gold with black and navy writing (welcome page, app, emails, vendor web pages); a navy charro-hat icon with gold vines (`public/logo.svg`; all the app icons, the share picture and the store banner are made from it by `node e2e/app-images.mjs --icons`). The menu is a **sidebar in sections** (Find and plan, My party, For businesses, You) with an icon and a word on each big row on wide screens, and a big **Menu** button on phones. **Bigger text** button in the menu (remembered on the device) |
+| Spotlight | The paid level above Featured (default $99 for 30 days, `SPOTLIGHT_PRICE_CENTS`): first in local search (above Featured), on the home page's "In the spotlight" strip, twice the Discover turns of Featured, always labelled. Vendors pick Featured or Spotlight side by side under Payments; you can comp or clear either from the owner page |
+| Apple Pay | Stripe's checkout shows Apple Pay and Google Pay by itself (turned on in the Stripe Dashboard, see docs/stripe.md); every pay button says "Apple Pay · Google Pay · Card" |
 
 ## Money model
 
 - The customer pays a **deposit** (group sets 20–50% of the total) at booking time. The rest (the balance) is paid to the group at the event, or in the app by the customer (no fee on it), or recorded by the group as received offline.
 - **Your fee** is `PLATFORM_FEE_PCT` (default 10%) of the booking **total**, taken out of the deposit; the rest of the deposit is transferred to the group's Stripe account. Example: $600 booking, 25% deposit = $150 charged, $60 is your fee, $90 goes to the group.
-- Refunds reverse the transfer and refund your fee too. Group declines or cancels = full refund. Customer cancels = by the group's policy (Flexible / Moderate / Strict, see `server/pricing.js`).
-- Featured placement (or a free one you grant from the owner page) is a separate $49 (`FEATURE_PRICE_CENTS`) charge for 30 days.
+- Refunds reverse the transfer and refund your fee too. Group declines or cancels = full refund. Customer cancels = by the group's policy (Flexible / Moderate / Strict, see `server/pricing.js`). **Last-minute rule, for every policy:** a customer who cancels within 48 hours of the party (counted as the last 3 calendar days) gets no deposit back (`LATE_CANCEL_DAYS`). Before the group accepts, cancelling is always a full refund.
+- Featured placement (or a free one you grant from the owner page) is a separate $49 (`FEATURE_PRICE_CENTS`) charge for 30 days; Spotlight is $99 (`SPOTLIGHT_PRICE_CENTS`).
 - All amounts are computed on the server; nothing the browser sends can change a price.
 
 ## Going live checklist

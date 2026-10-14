@@ -585,7 +585,7 @@ export function openDb(config) {
   ensureColumn("groups", "ical_import_url", "TEXT NOT NULL DEFAULT ''");
   ensureColumn("groups", "ical_synced_at", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("groups", "ical_error", "TEXT NOT NULL DEFAULT ''");
-  ensureColumn("payments_feature", "kind", "TEXT NOT NULL DEFAULT 'feature'"); // feature | pro
+  ensureColumn("payments_feature", "kind", "TEXT NOT NULL DEFAULT 'feature'"); // feature | pro | spotlight
   ensureColumn("event_requests", "category", "TEXT NOT NULL DEFAULT 'music'");
   ensureColumn("bookings", "balance_parts_cents", "INTEGER NOT NULL DEFAULT 0"); // balance paid in parts (plan or padrinos), gross
   ensureColumn("bookings", "cart_id", "TEXT NOT NULL DEFAULT ''");
@@ -665,6 +665,7 @@ export function openDb(config) {
   ensureColumn("groups", "id_checked", "INTEGER NOT NULL DEFAULT 0");       // Stripe verified the owner's identity before paying out (live mode only)
   ensureColumn("groups", "founding_no", "INTEGER NOT NULL DEFAULT 0");      // 1..FOUNDING_SLOTS: one of the first listings to go live
   ensureColumn("groups", "founding_until", "INTEGER NOT NULL DEFAULT 0");   // ...its lower fee lasts until then
+  ensureColumn("groups", "spotlight_until", "INTEGER NOT NULL DEFAULT 0");  // paid Spotlight: above Featured in search, the home page strip, twice the Discover turns
   ensureColumn("parties", "rsvp_token", "TEXT NOT NULL DEFAULT ''");     // the open invitation link (made the first time the guest list is opened)
   ensureColumn("parties", "rsvp_note", "TEXT NOT NULL DEFAULT ''");      // what guests read on it (place, time, dress code)
   ensureColumn("parties", "rsvp_by", "TEXT NOT NULL DEFAULT ''");        // answer by this date

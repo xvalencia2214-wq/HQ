@@ -24,7 +24,7 @@ const track = (kind, groupId) => { api.post("/api/feed/event", { kind, groupId }
 function reel(g, i) {
   const bg = g.photo ? `style="background-image:url('${esc(g.photo)}')"` : "";
   const tags = [
-    g.promoted ? `<span class="pill promo">${esc(t("feed.promoted"))}</span>` : "",
+    g.promoted ? `<span class="pill promo">${g.spotlight ? `★ ${esc(t("card.spotlight"))} · ` : ""}${esc(t("feed.promoted"))}</span>` : "",
     g.demo ? `<span class="pill">${esc(t("card.sample"))}</span>` : "",
     g.verified ? `<span class="pill trust">✓ ${esc(t("badge.verified"))}</span>` : "",
     g.insured ? `<span class="pill trust">🛡 ${esc(t("badge.insured"))}</span>` : "",

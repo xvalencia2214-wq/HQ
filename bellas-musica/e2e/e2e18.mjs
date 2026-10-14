@@ -1,0 +1,119 @@
+// Browser end-to-end for the white-and-gold look and its features: the sidebar in sections on a wide screen, the big
+// Menu button on a phone, the Bigger text button, Spotlight (bought by a vendor, then shown first, on the home strip and
+// on the group page), the Apple Pay note under the pay buttons, and the 48-hour rule in the terms.
+//   NODE_PATH=$(npm root -g) node e2e/e2e18.mjs [screenshotDir]
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { startApp, client, inDays, makeGroup } from "../test/helpers.js";
+const { chromium } = createRequire(import.meta.url)("playwright");
+
+const shots = process.argv[2] || "";
+if (shots) fs.mkdirSync(shots, { recursive: true });
+const S = await startApp({ DEMO_SEED: "0", WEATHER: "0" });
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
+const problems = [];
+let failed = 0, nav = 0;
+const ok = (name, cond) => { if (!cond) failed++; console.log(`${cond ? "PASS" : "FAIL"} ${name}`); };
+const PW = "correct horse battery";
+
+async function person(label, viewport = { width: 1180, height: 820 }, touch = false) {
+  const ctx = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch && viewport.width < 500 });
+  await ctx.route("**/tile.openstreetmap.org/**", (r) => r.abort());
+  const p = await ctx.newPage();
+  p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("dialog", (d) => d.accept());
+  return p;
+}
+const go = (p, hash) => p.goto(`${S.base}/?n=${++nav}${hash}`);
+const shot = (p, n) => shots && p.screenshot({ path: path.join(shots, n) });
+const login = async (p, email) => { await p.goto(S.base + "/#/login"); await p.waitForSelector("#authform"); await p.fill("#a-email", email); await p.fill("#a-pw", PW); await p.click("#authform button[type=submit]"); await p.waitForFunction(() => !location.hash.startsWith("#/login")); };
+const text = (p) => p.locator("body").innerText();
+const until = async (fn, ms = 4000) => { for (let i = 0; i < ms / 100; i++) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 100)); } return false; };
+
+try {
+  const vo = client(S.base), other = client(S.base);
+  await vo.signup("v18@example.com", "Chuy Hernández"); await other.signup("o18@example.com", "Otro Grupo");
+  await client(S.base).signup("f18@example.com", "Rosa Martínez");
+  const gid = await makeGroup(vo, { name: "Mariachi Dieciocho", dates: [inDays(20)] });
+  const gid2 = await makeGroup(other, { name: "Banda Normal", dates: [inDays(20)] });
+
+  // ---- the look: white page, navy writing ----
+  const W = await person("wide");
+  await go(W, "#/"); await W.waitForSelector("#sform");
+  const look = await W.evaluate(() => { const b = getComputedStyle(document.body); return { bg: b.backgroundColor, ink: b.color }; });
+  ok("the page is white with navy writing", look.bg === "rgb(253, 251, 246)" && look.ink === "rgb(11, 24, 56)");
+  // ---- the sidebar ----
+  ok("on a wide screen the menu is a sidebar, always showing, with no Menu button", await W.locator("#nav").isVisible() && !(await W.locator("#navtoggle").isVisible()));
+  ok("logged out, the sidebar has its sections in order", (await W.locator("#nav .nav-h").allInnerTexts()).map((x) => x.toLowerCase()).join("|") === "find and plan|for businesses|you");
+  const box = await W.locator("#nav a[data-r=home]").boundingBox();
+  ok("each row is big enough to tap easily (48 px)", box && box.height >= 47);
+  ok("the page you are on is marked", (await W.locator("#nav a.on").getAttribute("data-r")) === "home");
+  await shot(W, "e18-sidebar.png");
+
+  // ---- the vendor buys Spotlight ----
+  const V = await person("vendor");
+  await login(V, "v18@example.com");
+  ok("logged in, the sidebar adds My party", (await V.locator("#nav .nav-h").allInnerTexts()).map((x) => x.toLowerCase()).join("|") === "find and plan|my party|for businesses|you");
+  await go(V, `#/dashboard?g=${gid}&tab=payments`); await V.waitForSelector("#spotlight");
+  ok("Payments shows Featured and Spotlight side by side, with their prices", /Featured\s*\$49/.test(await text(V)) && /Spotlight\s*\$99/.test(await text(V)) && /Most seen/.test(await text(V)));
+  await shot(V, "e18-get-seen.png");
+  await V.click("#spotlight"); await V.waitForSelector("#paybtn");
+  ok("the test checkout says Spotlight and shows the ways to pay", /Spotlight \(30 days\)/.test(await text(V)) && (await V.locator(".payways .pw").allInnerTexts()).join(",") === "Apple Pay,Google Pay,Card");
+  await V.click("#paybtn");
+  ok("paid: in the spotlight for 30 days", await until(async () => /In the spotlight until/.test(await text(V))));
+
+  // ---- families see it ----
+  await go(W, "#/"); await W.waitForSelector(".spotstrip .card");
+  ok("the home page shows the Spotlight vendor in its own labelled strip", /In the spotlight\s*Promoted/.test(await W.locator(".spotstrip h2").innerText()) && (await W.locator(".spotstrip h3").allInnerTexts()).join() === "Mariachi Dieciocho");
+  await go(W, "#/?zip=60608"); await W.waitForSelector("#results .card");
+  ok("in search it comes first with a Spotlight badge; the other group has none", (await W.locator("#results .card h3").first().innerText()) === "Mariachi Dieciocho" && (await W.locator("#results .card").first().locator(".feat.spot").count()) === 1 && (await W.locator("#results .card", { hasText: "Banda Normal" }).locator(".feat").count()) === 0);
+  await shot(W, "e18-search.png");
+  await go(W, `#/group/${gid}`); await W.waitForSelector(".feat.spot");
+  ok("the group page has the badge", /Spotlight/.test(await W.locator("h1 .feat.spot").innerText()));
+
+  // ---- the Apple Pay note on the booking form ----
+  const F = await person("family");
+  await login(F, "f18@example.com");
+  await go(F, `#/group/${gid2}`); await F.waitForSelector(".day[data-d]"); await F.click(`.day[data-d="${inDays(20)}"]`); await F.click(".slot"); await F.waitForSelector("#bookform");
+  ok("under the deposit button: Apple Pay, Google Pay or a card", /Apple Pay\s*Google Pay\s*Card\s*Pay with Apple Pay, Google Pay or any card/.test(await F.locator("#bookform .payways").innerText()));
+
+  // ---- the phone: Menu button, sections, bigger text ----
+  const P = await person("phone", { width: 390, height: 844 }, true);
+  await login(P, "f18@example.com");
+  await go(P, "#/bookings"); await P.waitForSelector("#navtoggle");
+  ok("on a phone the menu is hidden behind a big Menu button with the word on it", !(await P.locator("#nav").isVisible()) && (await P.locator("#navtoggle").innerText()).includes("Menu") && (await P.locator("#navtoggle").boundingBox()).height >= 47);
+  await P.evaluate(() => window.scrollTo(0, 400));
+  await P.click("#navtoggle");
+  const menuBox = await P.locator("#nav").boundingBox(), headBox = await P.locator("header.top").boundingBox();
+  ok("Menu opens the same sections right under the header, even scrolled down", await P.locator("#nav").isVisible() && Math.abs(menuBox.y - (headBox.y + headBox.height)) < 3 && (await P.locator("#nav .nav-h").count()) === 4);
+  await shot(P, "e18-phone-menu.png");
+  await P.keyboard.press("Escape");
+  ok("Escape closes it", !(await P.locator("#nav").isVisible()) && (await P.locator("#navtoggle").getAttribute("aria-expanded")) === "false");
+  await P.click("#navtoggle");
+  const before = await P.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  await P.click("#textbtn");
+  const after = await P.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  ok("Bigger text makes the writing bigger and shows it is on", after >= before * 1.15 && (await P.locator("#textbtn").getAttribute("aria-pressed")) === "true");
+  await P.click("#nav a[data-r=home]"); await P.waitForSelector("#sform");
+  ok("tapping a row goes there and closes the menu", !(await P.locator("#nav").isVisible()));
+  await P.reload(); await P.waitForSelector("#sform");
+  ok("bigger text is remembered on the device", await P.evaluate(() => document.documentElement.classList.contains("big")));
+  await shot(P, "e18-phone-big.png");
+  await P.click("#navtoggle"); await P.click("#textbtn");
+  ok("and can be turned off again", !(await P.evaluate(() => document.documentElement.classList.contains("big"))));
+  await P.click("#langbtn"); await P.waitForFunction(() => document.documentElement.lang === "es" || /Buscar/.test(document.body.innerText));
+  await P.click("#navtoggle");
+  ok("Spanish: the sections and the buttons", /BUSCAR Y PLANEAR|Buscar y planear/i.test(await P.locator("#nav").innerText()) && /Letra más grande/.test(await P.locator("#nav").innerText()) && /English/.test(await P.locator("#langbtn").innerText()));
+
+  // ---- the 48-hour rule is in the terms ----
+  const terms = await (await fetch(S.base + "/terms.html")).text();
+  ok("the terms say a last-minute cancel (within 48 hours) keeps the deposit", /within 48 hours of the event/.test(terms));
+} catch (e) { failed++; console.log("FAIL crashed:", e.message); }
+finally {
+  for (const p of problems) { console.log("PROBLEM", p); failed++; }
+  await browser.close(); await S.close();
+  console.log(failed ? `${failed} FAILED` : "ALL PASSED");
+  process.exit(failed ? 1 : 0);
+}

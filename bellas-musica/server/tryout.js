@@ -60,7 +60,7 @@ const busy = async (e) => {
 const port = await app.listen().catch(busy);
 const base = `http://127.0.0.1:${port}`;
 const db = app.ctx.db;
-const PHOTO = fs.readFileSync(path.join(root, "public", "og.png")).toString("base64");
+const PHOTO = fs.readFileSync(path.join(root, "public", "icon-512.png")).toString("base64");
 
 // the private-preview password (the online practice copy): the setup talks to the server like a visitor, so it needs it too
 const PREVIEW_AUTH = process.env.PREVIEW_PASSWORD ? { Authorization: "Basic " + Buffer.from("setup:" + process.env.PREVIEW_PASSWORD).toString("base64") } : {};

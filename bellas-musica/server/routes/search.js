@@ -2,7 +2,7 @@ import { HttpError, addDays, int, isDate, isZip, oneOf, str, safeJson, todayStr,
 import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, TIMES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
-import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
+import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, isSpotlight, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
 import { upcomingHolidays } from "./specials.js";
 
 // Which music suits which event when a group hasn't said what it plays.
@@ -70,6 +70,8 @@ export default function searchRoutes(ctx, add) {
       list.push({ g, distance, r, fits, matched, openForDate, openSoon, score: bayes(r.rating, r.reviews) });
     }
     list.sort((a, b) => {
+      const sa = isSpotlight(a.g), sb = isSpotlight(b.g);
+      if (sa !== sb) return sa ? -1 : 1;
       const pa = isPromoted(a.g), pb = isPromoted(b.g);
       if (pa !== pb) return pa ? -1 : 1;
       if (event && a.fits !== b.fits) return a.fits ? -1 : 1;
@@ -105,7 +107,7 @@ export default function searchRoutes(ctx, add) {
     events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, times: TIMES, short_minutes: SHORT_MINUTES, needs_presets: NEEDS_PRESETS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
-    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, direct_fee_pct: config.directFeePct,
+    payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, spotlight_price_cents: config.spotlightPriceCents, direct_fee_pct: config.directFeePct,
     hold_events: config.holdNewVendorEvents,
     founding: config.foundingSlots > 0 ? { left: foundingLeft(ctx.db, config), slots: config.foundingSlots, fee_pct: config.foundingFeePct, days: config.foundingDays } : null, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone(),
     play_url: config.androidPackage ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(config.androidPackage)}` : "", app_store_url: config.appStoreUrl
@@ -126,6 +128,12 @@ export default function searchRoutes(ctx, add) {
   });
 
   add("GET", "/api/search", ({ query }) => { const out = search(query); ctx.stats.count("search", out.origin.zip); return out; });
+
+  // The home page's "In the spotlight" strip: paid Spotlight vendors of any kind near a ZIP (the market's center by default).
+  add("GET", "/api/spotlight", ({ query }) => {
+    const zip = isZip(query.zip) ? query.zip : MARKET.center.zip;
+    return { results: search({ zip, category: "all" }, { limit: 50 }).results.filter((g) => g.spotlight).slice(0, 6) };
+  });
 
   // "Best of your city": the top-rated groups within 40 miles of a ZIP.
   add("GET", "/api/best", ({ query }) => {

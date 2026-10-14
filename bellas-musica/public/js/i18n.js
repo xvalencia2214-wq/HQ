@@ -4,6 +4,7 @@ import { EN2, ES2 } from "./i18n-new.js";
 import { EN3, ES3 } from "./i18n-pro.js";
 import { EN4, ES4 } from "./i18n-land.js";
 import { EN5, ES5 } from "./i18n-win.js";
+import { EN6, ES6 } from "./i18n-look.js";
 
 const EN = {
   "cal.open": "available", "acct.delete": "Delete my account", "acct.deleteWarn": "This signs you out, removes your name, phone and messages, and takes your listings offline. Booking and payment records are kept without your personal details. You can't undo this.", "acct.deletePw": "Type your password to confirm", "acct.deleteBtn": "Delete my account", "acct.deleteConfirm": "Delete your account for good?", "acct.deleted": "Your account was deleted.",
@@ -36,7 +37,7 @@ const EN = {
   "g.travel": "Travel", "g.travelFree": "Free within {miles} mi", "g.travelFee": "{fee} beyond {miles} mi", "g.deposit": "Deposit", "g.policy": "Cancellation policy",
   "g.story": "Our story", "g.noStory": "This group hasn't added a story yet.", "g.songs": "Songs they play", "g.songFilter": "Search their songs", "g.noSong": "No songs match.",
   "g.packages": "Packages", "g.hours": "{n} hr", "g.choose": "Choose", "g.reviews": "{n} reviews", "g.reviewsTitle": "Reviews from customers", "g.photo": "Photo {n}",
-  "g.dates": "Open dates & times", "g.datesHint": "Days with a blue border are open. Tap one to see times.", "g.request": "Request this group", "g.message": "Message the manager",
+  "g.dates": "Open dates & times", "g.datesHint": "Days with a gold border are open. Tap one to see times.", "g.request": "Request this group", "g.message": "Message the manager",
   "g.pickDate": "Pick an open date and time to start your request.", "g.pickFirst": "Now pick an open date and time.", "g.package": "Package", "g.hourly": "Hourly ({price}/hr)", "g.hoursLabel": "Hours of music",
   "g.eventZip": "Event ZIP code", "g.yourName": "Your name", "g.yourPhone": "Your phone (shared with the group only after they confirm)", "g.address": "Event location (venue or address)",
   "g.special": "Special requests", "g.specialHint": "Songs, surprise timing, dress code…", "g.quoteHint": "Enter guests and the event ZIP to see your price.",
@@ -46,7 +47,7 @@ const EN = {
   "g.noMsgs": "No messages yet. Say hello.", "g.msgHint": "Ask about songs, location, setup…", "g.privacy": "Phone numbers and emails stay hidden until a booking is confirmed. Everything goes through the app.",
   "g.masked": "For everyone's privacy, contact details are hidden until a booking is confirmed.",
   "q.subtotal": "Music", "q.travel": "Travel fee", "q.total": "Estimated total", "q.deposit": "Deposit today ({pct}%)", "q.balance": "Balance due to the group",
-  "q.policyRow": "{days}+ days before the event: {pct}% of the deposit back", "q.policyNone": "Less than that: no refund", "q.declined": "If the group declines your request, you get your full deposit back.",
+  "q.policyRow": "{days}+ days before the event: {pct}% of the deposit back", "q.policyNone": "Less than that, or a last-minute cancel (within 48 hours of the party): the deposit is kept, no refund", "q.declined": "If the group declines your request, you get your full deposit back.",
   "policy.flexible": "Flexible", "policy.moderate": "Moderate", "policy.strict": "Strict",
   "auth.loginTitle": "Log in", "auth.signupTitle": "Create your account", "auth.name": "Your name", "auth.email": "Email", "auth.password": "Password", "auth.pwHint": "At least 8 characters.",
   "auth.phone": "Mobile phone (optional)", "auth.smsConsent": "Text me about my bookings and messages. Message and data rates may apply. Reply STOP to opt out.",
@@ -117,7 +118,7 @@ const ES = {
   "g.travel": "Viaje", "g.travelFree": "Gratis dentro de {miles} mi", "g.travelFee": "{fee} después de {miles} mi", "g.deposit": "Depósito", "g.policy": "Política de cancelación",
   "g.story": "Nuestra historia", "g.noStory": "Este grupo aún no ha agregado su historia.", "g.songs": "Canciones que tocan", "g.songFilter": "Buscar sus canciones", "g.noSong": "Ninguna canción coincide.",
   "g.packages": "Paquetes", "g.hours": "{n} h", "g.choose": "Elegir", "g.reviews": "{n} reseñas", "g.reviewsTitle": "Reseñas de clientes", "g.photo": "Foto {n}",
-  "g.dates": "Fechas y horarios disponibles", "g.datesHint": "Los días con borde azul están disponibles. Toca uno para ver los horarios.", "g.request": "Solicitar este grupo", "g.message": "Escríbele al representante",
+  "g.dates": "Fechas y horarios disponibles", "g.datesHint": "Los días con borde dorado están disponibles. Toca uno para ver los horarios.", "g.request": "Solicitar este grupo", "g.message": "Escríbele al representante",
   "g.pickDate": "Elige una fecha y hora disponibles para empezar tu solicitud.", "g.pickFirst": "Ahora elige una fecha y hora disponibles.", "g.package": "Paquete", "g.hourly": "Por hora ({price}/h)", "g.hoursLabel": "Horas de música",
   "g.eventZip": "Código postal del evento", "g.yourName": "Tu nombre", "g.yourPhone": "Tu teléfono (se comparte con el grupo solo cuando confirme)", "g.address": "Lugar del evento (salón o dirección)",
   "g.special": "Peticiones especiales", "g.specialHint": "Canciones, sorpresas, vestimenta…", "g.quoteHint": "Escribe los invitados y el código postal del evento para ver tu precio.",
@@ -127,7 +128,7 @@ const ES = {
   "g.noMsgs": "Aún no hay mensajes. Saluda.", "g.msgHint": "Pregunta por canciones, lugar, equipo…", "g.privacy": "Los teléfonos y correos permanecen ocultos hasta que se confirme una reserva. Todo se hace por la app.",
   "g.masked": "Por privacidad de todos, los datos de contacto se ocultan hasta que se confirme una reserva.",
   "q.subtotal": "Música", "q.travel": "Cargo por viaje", "q.total": "Total estimado", "q.deposit": "Depósito hoy ({pct}%)", "q.balance": "Saldo a pagar al grupo",
-  "q.policyRow": "{days}+ días antes del evento: te devuelven el {pct}% del depósito", "q.policyNone": "Con menos tiempo: sin reembolso", "q.declined": "Si el grupo rechaza tu solicitud, te devolvemos todo el depósito.",
+  "q.policyRow": "{days}+ días antes del evento: te devuelven el {pct}% del depósito", "q.policyNone": "Con menos tiempo, o si cancelas a última hora (dentro de las 48 horas antes de la fiesta): el depósito no se devuelve", "q.declined": "Si el grupo rechaza tu solicitud, te devolvemos todo el depósito.",
   "policy.flexible": "Flexible", "policy.moderate": "Moderada", "policy.strict": "Estricta",
   "auth.loginTitle": "Iniciar sesión", "auth.signupTitle": "Crea tu cuenta", "auth.name": "Tu nombre", "auth.email": "Correo electrónico", "auth.password": "Contraseña", "auth.pwHint": "Al menos 8 caracteres.",
   "auth.phone": "Celular (opcional)", "auth.smsConsent": "Envíenme mensajes de texto sobre mis reservas y mensajes. Pueden aplicar tarifas de mensajes y datos. Responde STOP para cancelar.",
@@ -167,7 +168,7 @@ const ES = {
   "event.Wedding": "Boda", "event.Quinceañera": "Quinceañera", "event.Birthday": "Cumpleaños", "event.Anniversary": "Aniversario", "event.Serenata": "Serenata", "event.Corporate / Restaurant": "Corporativo / Restaurante", "event.Other": "Otro"
 };
 
-Object.assign(EN, EN2, EN3, EN4, EN5); Object.assign(ES, ES2, ES3, ES4, ES5);
+Object.assign(EN, EN2, EN3, EN4, EN5, EN6); Object.assign(ES, ES2, ES3, ES4, ES5, ES6);
 export const DICT = { en: EN, es: ES };
 let current = "en";
 let onLang = () => {};

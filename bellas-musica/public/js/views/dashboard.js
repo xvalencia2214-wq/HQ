@@ -484,16 +484,24 @@ async function payments({ g, body, refresh }) {
   if (params.get("feature")) { try { await api.post(`/api/feature/${encodeURIComponent(params.get("feature"))}/refresh`); } catch { /* shown below */ } }
   const { groups } = await api.get("/api/my/groups");
   const cur = groups.find((x) => x.id === g.id) || g;
-  const until = cur.promoted_until * 1000;
+  const until = cur.promoted_until * 1000, spotUntil = (cur.spotlight_until || 0) * 1000, loc = lang() === "es" ? "es-US" : "en-US";
+  const perks = (keys) => `<ul class="perks">${keys.map((k) => `<li>${esc(t(k))}</li>`).join("")}</ul>`;
   body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("dash.payouts"))}</h2>
     ${cur.stripe.mode === "simulated" ? `<div class="note">${esc(t("dash.payTest"))}</div>` : cur.stripe.ready ? `<div class="note ok">✓ ${esc(t("dash.payReady"))}</div>` : `<div class="note warn">${esc(t("dash.payNeeded"))}</div><button class="btn" id="onboard">${esc(cur.stripe.connected ? t("dash.payContinue") : t("dash.payStart"))}</button>`}
     <p class="dim small">${esc(t("dash.feeExplain"))}</p>${state.meta.hold_events && !g.demo && (g.events_done || 0) < state.meta.hold_events ? `<p class="note small">🔒 ${esc(t("hold.payTab", { n: state.meta.hold_events }))}</p>` : ""}</div>
-    <div class="panel"><h2 class="sec">⭐ ${esc(t("dash.featureTitle"))}</h2><p>${esc(t("dash.featureText"))}</p>
-    ${until > Date.now() ? `<div class="note ok">${esc(t("dash.featuredUntil", { date: new Date(until).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</div>` : ""}
-    ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : `<button class="btn" id="feature">${esc(t("dash.buyFeature", { price: money(state.meta.feature_price_cents) }))}</button>`}</div></div>`;
+    <div class="panel" id="seen"><h2 class="sec">⭐ ${esc(t("seen.title"))}</h2><p class="small">${esc(t("seen.text"))}</p>
+    ${spotUntil > Date.now() ? `<div class="note ok">${esc(t("seen.spotUntil", { date: new Date(spotUntil).toLocaleDateString(loc) }))}</div>` : ""}
+    ${until > Date.now() ? `<div class="note ok">${esc(t("dash.featuredUntil", { date: new Date(until).toLocaleDateString(loc) }))}</div>` : ""}
+    <div class="levels"><div class="level"><h3>${esc(t("seen.feat"))} <span class="lv-price">${money(state.meta.feature_price_cents)}</span></h3>${perks(["seen.f1", "seen.f2", "seen.f3"])}
+        ${storeApp() ? "" : `<button class="btn ghost wide" id="feature">${esc(t("seen.buyFeat", { price: money(state.meta.feature_price_cents) }))}</button>`}</div>
+      <div class="level best"><span class="lv-tag">${esc(t("seen.best"))}</span><h3>★ ${esc(t("seen.spot"))} <span class="lv-price">${money(state.meta.spotlight_price_cents)}</span></h3>${perks(["seen.s1", "seen.s2", "seen.s3", "seen.s4"])}
+        ${storeApp() ? "" : `<button class="btn wide" id="spotlight">${esc(t("seen.buySpot", { price: money(state.meta.spotlight_price_cents) }))}</button>`}</div></div>
+    ${storeApp() ? `<p class="note small">${esc(t("app.buyOnWeb"))}</p>` : ""}</div></div>`;
   const ob = document.getElementById("onboard");
   if (ob) ob.onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/stripe/onboard`); if (r.url) goto(r.url); else refresh(); } catch (e) { toast(e.message, "error"); } };
-  if (document.getElementById("feature")) document.getElementById("feature").onclick = async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`); goto(r.url); } catch (e) { toast(e.message, "error"); } };
+  const buy = (level) => async () => { try { const r = await api.post(`/api/groups/${encodeURIComponent(g.id)}/feature`, { level }); goto(r.url); } catch (e) { toast(e.message, "error"); } };
+  if (document.getElementById("feature")) document.getElementById("feature").onclick = buy("feature");
+  if (document.getElementById("spotlight")) document.getElementById("spotlight").onclick = buy("spotlight");
   await growPanels({ g: cur, body, refresh });
   ownerOnly(body, cur); // payouts, Pro and Featured are the owner's
 }

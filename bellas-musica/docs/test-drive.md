@@ -174,6 +174,20 @@ else. Or use a private (incognito) window for a second person at the same time.
   people searching in Spanish).
 - **You (dueno@prueba.com) → Admin:** reviews from past clients, with a **Remove** button; founding spots used.
 
+## 7. New: the white-and-gold look
+
+- **The menu:** on an iPad held sideways (or a computer) it is a sidebar on the left, in sections: *Find and plan*,
+  *My party*, *For businesses*, *You*. On a phone or an iPad held upright, tap the big **Menu** button at the top.
+- **Bigger text:** in the menu, under *You*. It stays on for that device until you tap it again.
+- **Spotlight:** log in as the mariachi (mariachi@prueba.com) → **For groups → Payments → Get seen more**. Featured
+  ($49) and Spotlight ($99) side by side; buy Spotlight with the test button. Then log out and look at the home page
+  (the **In the spotlight** strip), search (first, with a gold **Spotlight** badge) and **Discover** (it comes round
+  twice as often). The owner can give or clear it from **Admin**.
+- **Apple Pay:** under every pay button: *Apple Pay · Google Pay · Card*. In the test drive the payment is pretend;
+  on the real site Stripe shows the Apple Pay button on an iPhone or iPad with a card in Wallet.
+- **Cancelling at the last minute:** the cancellation rules now say that cancelling within 48 hours of the party never
+  gives the deposit back, under any policy.
+
 ## Switch to Spanish
 
-Press **ES** at the top (EN to go back). Everything above is in Spanish too.
+Open the menu and press **Español** (**English** to go back). Everything above is in Spanish too.

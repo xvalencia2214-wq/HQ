@@ -15,7 +15,8 @@ const carry = (p) => new URLSearchParams(Object.entries({ event: p.event, guests
 
 export function groupCard(g, i, ctx = "") {
   const tags = [];
-  if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
+  if (g.spotlight) tags.push(`<span class="feat spot">★ ${esc(t("card.spotlight"))}</span>`);
+  else if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
   if (g.events_done) tags.push(`<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>`);
   if (g.open_soon) tags.push(`<span class="tag soon">${esc(t("card.soon"))}</span>`);
@@ -92,9 +93,16 @@ export async function home(app, params) {
   const box = document.getElementById("results");
   if (!p.zip) {
     const m = meta.market;
-    box.innerHTML = `<div class="panel empty">${esc(t("home.hint"))}</div>
+    box.innerHTML = `<div class="panel empty">${esc(t("home.hint"))}</div><div id="spotstrip"></div>
       <div class="panel"><h2 class="sec">${esc(t("chi.hoods"))} · ${esc(m.name)}</h2><div class="chips">${m.neighborhoods.map((n) => `<a class="tag chip-link" href="#/?zip=${esc(n.zip)}">${esc(n.name)}</a>`).join("")}</div>
       <p><a href="#/chicago">${esc(t("chi.title"))} →</a></p></div>`;
+    // paid Spotlight vendors near the market, before anyone searches
+    const spot = await api.get("/api/spotlight").catch(() => ({ results: [] }));
+    const strip = document.getElementById("spotstrip");
+    if (strip && spot.results.length) {
+      strip.innerHTML = `<section class="spotstrip" aria-labelledby="spot-h"><h2 class="sec" id="spot-h">★ ${esc(t("spot.strip"))} <small class="dim">${esc(t("spot.paid"))}</small></h2><div class="grid">${spot.results.map((g) => groupCard(g, null)).join("")}</div></section>`;
+      wireShare(strip); wireHearts(strip);
+    }
     return;
   }
   box.innerHTML = `<div class="panel empty">${esc(t("home.searching"))}</div>`;

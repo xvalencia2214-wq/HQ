@@ -30,7 +30,7 @@ export default function adminRoutes(ctx, add) {
       users: { total: one("SELECT COUNT(*) c FROM users").c, last7: one("SELECT COUNT(*) c FROM users WHERE created_at > ?", d7).c, last30: one("SELECT COUNT(*) c FROM users WHERE created_at > ?", d30).c },
       groups: {
         real: one("SELECT COUNT(*) c FROM groups WHERE demo = 0").c, sample: one("SELECT COUNT(*) c FROM groups WHERE demo = 1").c, hidden: one("SELECT COUNT(*) c FROM groups WHERE hidden = 1").c,
-        featured_now: one("SELECT COUNT(*) c FROM groups WHERE promoted_until > ?", now()).c, payouts_ready: one("SELECT COUNT(*) c FROM groups WHERE demo = 0 AND stripe_ready = 1").c,
+        featured_now: one("SELECT COUNT(*) c FROM groups WHERE promoted_until > ? OR spotlight_until > ?", now(), now()).c, spotlight_now: one("SELECT COUNT(*) c FROM groups WHERE spotlight_until > ?", now()).c, payouts_ready: one("SELECT COUNT(*) c FROM groups WHERE demo = 0 AND stripe_ready = 1").c,
         founding: one("SELECT COUNT(*) c FROM groups WHERE founding_no > 0").c, founding_slots: config.foundingSlots, founding_fee_pct: config.foundingFeePct
       },
       bookings: {
@@ -61,7 +61,7 @@ export default function adminRoutes(ctx, add) {
       ).map((r) => ({ ...r, paid_cents: (r.deposit_cents - r.refund_cents) + (balancePaidInApp(r) - r.balance_refund_cents) })),
       invites: db.all("SELECT id, name, type, zip, created_at FROM groups WHERE invited = 1 AND owner_id IS NULL ORDER BY created_at DESC").map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "" })),
       groups_list: db.all(
-        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.id_checked, g.published_at, g.promoted_until, g.stripe_ready, u.email AS owner_email,
+        `SELECT g.id, g.name, g.type, g.zip, g.demo, g.hidden, g.paused, g.verified, g.insured, g.id_checked, g.published_at, g.promoted_until, g.spotlight_until, g.stripe_ready, u.email AS owner_email,
                 (SELECT COUNT(*) FROM bookings b WHERE b.group_id = g.id AND b.status IN ('requested','confirmed')) AS active_bookings
          FROM groups g LEFT JOIN users u ON u.id = g.owner_id ORDER BY g.demo, g.created_at DESC LIMIT 200`).map((g) => ({ ...g, city: lookupZip(g.zip)?.city || "", demo: Boolean(g.demo), hidden: Boolean(g.hidden), verified: Boolean(g.verified), insured: Boolean(g.insured), status: g.hidden ? "hidden" : g.demo ? "live" : g.published_at === 0 ? "draft" : g.paused ? "paused" : "live", stripe_ready: Boolean(g.stripe_ready) })),
       recent_bookings: db.all(`SELECT b.id, g.name AS group_name, b.status, b.payment_status, b.date, b.total_cents, b.deposit_cents, b.created_at FROM bookings b JOIN groups g ON g.id = b.group_id WHERE b.status != 'expired' ORDER BY b.created_at DESC LIMIT 15`),
@@ -172,13 +172,14 @@ export default function adminRoutes(ctx, add) {
     return { ok: true, verified: Boolean(verified), insured: Boolean(insured) };
   });
 
-  // Comp (or clear) featured placement without a payment.
+  // Comp (or clear) featured placement or Spotlight without a payment.
   add("POST", "/api/admin/groups/:id/feature", ({ params, body, user }) => {
     admin(user);
     if (!db.get("SELECT 1 AS x FROM groups WHERE id = ?", params.id)) throw new HttpError(404, "Group not found");
     const days = int(body.days, "days", { min: 0, max: 365 });
-    db.run("UPDATE groups SET promoted_until = ? WHERE id = ?", days ? now() + days * 86400 : 0, params.id);
-    log(user, days ? "comp featured" : "clear featured", params.id, days ? `${days} days` : "");
+    const spot = body.level === "spotlight";
+    db.run(`UPDATE groups SET ${spot ? "spotlight_until" : "promoted_until"} = ? WHERE id = ?`, days ? now() + days * 86400 : 0, params.id);
+    log(user, `${days ? "comp" : "clear"} ${spot ? "spotlight" : "featured"}`, params.id, days ? `${days} days` : "");
     return { ok: true };
   });
 

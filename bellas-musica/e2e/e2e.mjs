@@ -142,7 +142,7 @@ try {
   const icsRes = await C.request.get(S.base + icsHref);
   ok("'Add to calendar' downloads a valid .ics", icsRes.status() === 200 && (await icsRes.text()).startsWith("BEGIN:VCALENDAR") && /text\/calendar/.test(icsRes.headers()["content-type"]));
   ok("customer sees Confirmed and the refund preview", (await C.locator(".req").innerText()).includes("Confirmed") && /get back \$/.test(await C.locator(".req").innerText()));
-  await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h1:has-text(\"Mis reservas\")"); await C.click("#navtoggle");
+  await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h1:has-text(\"Mis reservas\")"); if (await C.locator("#nav.open").count()) await C.click("#navtoggle"); // switching language closes the menu
   ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").innerText()).includes("Buscar música"));
   await shot(C, "3-bookings-es-phone.png");
   C.once("dialog", (d) => d.accept());

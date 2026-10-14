@@ -156,7 +156,7 @@ export class ParticleMorph {
     const x = off.getContext("2d", { willReadFrequently: true });
     x.textAlign = "center"; x.textBaseline = "middle";
     if (kind === "emoji") { x.font = "280px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; x.fillText(value, W / 2, H / 2 + 14); }
-    else { x.fillStyle = "#cfe0ff"; let size = 150; x.font = `800 ${size}px 'Bricolage Grotesque Variable',system-ui,sans-serif`; while (x.measureText(value).width > W - 20 && size > 30) { size -= 6; x.font = `800 ${size}px 'Bricolage Grotesque Variable',system-ui,sans-serif`; } x.fillText(value, W / 2, H / 2); }
+    else { x.fillStyle = "#b8862a"; let size = 150; x.font = `800 ${size}px 'Bricolage Grotesque Variable',system-ui,sans-serif`; while (x.measureText(value).width > W - 20 && size > 30) { size -= 6; x.font = `800 ${size}px 'Bricolage Grotesque Variable',system-ui,sans-serif`; } x.fillText(value, W / 2, H / 2); }
     const d = x.getImageData(0, 0, W, H).data, pts = [];
     for (let yy = 0; yy < H; yy += 2) for (let xx = 0; xx < W; xx += 2) { const i = (yy * W + xx) * 4; if (d[i + 3] > 140) { const k = Math.max(d[i], d[i + 1], d[i + 2]) < 90 ? 2.2 : 1; pts.push([xx / W, yy / H, Math.min(255, d[i] * k + 30), Math.min(255, d[i + 1] * k + 30), Math.min(255, d[i + 2] * k + 40)]); } }
     if (!pts.length) return null;

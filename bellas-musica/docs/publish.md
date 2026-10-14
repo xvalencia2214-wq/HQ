@@ -33,7 +33,7 @@ The repository already has a file (`render.yaml`) that tells Render how to set e
 2. The browser asks for a user name and password: type anything as the name and your **PREVIEW_PASSWORD**.
 3. Press **Sign up** and use the email you put in **ADMIN_EMAILS**. An **Admin** link appears at the top.
 
-The site works like the test drive: payments, texts and emails are pretend, and a blue bar says "Test mode".
+The site works like the test drive: payments, texts and emails are pretend, and a gold bar says "Test mode".
 Sample groups fill the search until real ones join.
 
 Now you can send the link and the password to a few vendors and families you trust and let them try it on their

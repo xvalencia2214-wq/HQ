@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons } from "../ui.js";
+import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons, payWays } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
@@ -35,7 +35,7 @@ export async function group(app, id, params = new URLSearchParams()) {
 
   app.innerHTML = `<a class="back" href="#/">← ${esc(t("common.back"))}</a>
   <div class="gp"><div class="gp-main">
-  <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
+  <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.spotlight ? ` <span class="feat inline spot">★ ${esc(t("card.spotlight"))}</span>` : g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${g.events_done ? `<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>` : ""}${g.min_hours > 1 ? `<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>` : ""}${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
     ${gallery}${video}
     <div class="facts">
@@ -123,7 +123,7 @@ export async function group(app, id, params = new URLSearchParams()) {
       ${(g.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" id="b-needs" name="needs"> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
       <label class="chk"><input type="checkbox" id="b-agree" name="agree"> <span>${esc(t("g.agree"))}</span></label>
       <div id="bookerr" class="err" role="alert"></div>
-      <button class="btn wide" type="submit" id="bookbtn">${esc(t("g.pay"))}</button></form>`;
+      <button class="btn wide" type="submit" id="bookbtn">${esc(t("g.pay"))}</button>${payWays()}</form>`;
     const form = document.getElementById("bookform");
     const syncHours = () => { const w = document.getElementById("hrs-wrap"); if (w) w.hidden = Boolean(form.packageId.value); const h = document.getElementById("wk-hint"); if (h) h.hidden = Number(form.weeks.value) < 2; };
     syncHours();

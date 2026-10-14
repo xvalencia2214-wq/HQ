@@ -76,7 +76,7 @@ export default function groupRoutes(ctx, add) {
       ...detail,
       checklist: checklist(g, detail),
       status: statusOf(g), publish_missing: g.published_at === 0 && !g.demo ? publishMissing(g, detail) : [], outside_market: !inMarket(g.zip),
-      contact_phone: g.contact_phone, capacity: g.capacity || 1, buffer_min: g.buffer_min || 0, promoted_until: g.promoted_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
+      contact_phone: g.contact_phone, capacity: g.capacity || 1, buffer_min: g.buffer_min || 0, promoted_until: g.promoted_until, spotlight_until: g.spotlight_until, pro_until: g.pro_until, fee_discount_until: g.fee_discount_until, fee_pct: feePctFor(g, config),
       founding_no: g.founding_no || 0, founding_until: g.founding_until || 0,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
@@ -438,18 +438,20 @@ export default function groupRoutes(ctx, add) {
     return { ready };
   }, { auth: true });
 
-  // ---- paid featured placement (30 days) ----
-  add("POST", "/api/groups/:id/feature", async ({ params, user }) => {
+  // ---- paid placement (30 days): Featured, or Spotlight (the top level: Featured plus the top of every list) ----
+  add("POST", "/api/groups/:id/feature", async ({ params, body, user }) => {
     const g = requireRealOwner(db, user, params.id);
+    const kind = body.level === "spotlight" ? "spotlight" : "feature";
+    const amount = kind === "spotlight" ? config.spotlightPriceCents : config.featurePriceCents;
     const id = newId("f");
-    db.run("INSERT INTO payments_feature (id, group_id, amount_cents, created_at) VALUES (?, ?, ?, ?)", id, g.id, config.featurePriceCents, now());
-    if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/feature/${id}`, amount_cents: config.featurePriceCents };
+    db.run("INSERT INTO payments_feature (id, group_id, amount_cents, kind, created_at) VALUES (?, ?, ?, ?, ?)", id, g.id, amount, kind, now());
+    if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/${kind}/${id}`, amount_cents: amount };
     const session = await stripe.checkoutForFeature({
-      feature: { id, amount_cents: config.featurePriceCents }, group: g,
+      feature: { id, amount_cents: amount, name: kind === "spotlight" ? `Spotlight (30 days): ${g.name}` : "" }, group: g,
       successUrl: `${config.baseUrl}/#/dashboard?feature=${id}`, cancelUrl: `${config.baseUrl}/#/dashboard`
     });
     db.run("UPDATE payments_feature SET stripe_session_id = ? WHERE id = ?", session.id, id);
-    return { id, url: session.url, amount_cents: config.featurePriceCents };
+    return { id, url: session.url, amount_cents: amount };
   }, { auth: true });
 
   const ownedFeature = (user, id) => {

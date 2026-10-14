@@ -8,12 +8,12 @@ import { esc, money } from "../ui.js";
 import { reducedMotion, finePointer, clamp, customCursor, magnetic, tilt, spotlight, scramble, countUp, onceVisible, marquees, wordReveal, dragScroll, ParticleMorph, diana } from "../fx.js";
 
 const GENRES = [
-  ["Mariachi", "🎺", "#2f6bff"], ["Banda", "🥁", "#ff3d8b"], ["Norteño", "🪗", "#18c2a7"], ["Trío romántico", "🎸", "#ffb020"],
+  ["Mariachi", "🎺", "#14285e"], ["Banda", "🥁", "#ff3d8b"], ["Norteño", "🪗", "#18c2a7"], ["Trío romántico", "🎸", "#ffb020"],
   ["DJ", "🎧", "#7b5cff"], ["Grupera", "🎤", "#4fa3ff"], ["food", "🌮", "#ff7a3d"], ["rentals", "⛺", "#a3b4d6"]
 ];
 const EVENTS = ["Quinceañera", "Wedding", "Birthday", "Serenata", "Anniversary", "Corporate / Restaurant"];
 const CATS = ["music", "food", "rentals", "decor", "photo", "services", "venues"];
-const CAT_COLORS = { music: "#2a5ff5", food: "#ff7a3d", rentals: "#18c2a7", decor: "#ff3d8b", photo: "#ffb020", services: "#7b5cff", venues: "#a3b4d6" };
+const CAT_COLORS = { music: "#14285e", food: "#ff7a3d", rentals: "#18c2a7", decor: "#ff3d8b", photo: "#ffb020", services: "#7b5cff", venues: "#a3b4d6" };
 // text on a selected chip: white on the dark blues, night ink on the light colours (both at least 4.5:1)
 const CAT_TEXT = { music: "#fff", services: "#fff", food: "#070b1a", rentals: "#070b1a", decor: "#070b1a", photo: "#070b1a", venues: "#070b1a" };
 const TYPE_EMOJI = Object.fromEntries(GENRES.map(([k, e]) => [k, e]));
@@ -240,7 +240,7 @@ export async function landing(app) {
   const confetti = () => {
     if (reduced) return;
     const box = document.createElement("div"); box.className = "lp-confetti"; $("#lp-hero").appendChild(box);
-    const colors = ["#2f6bff", "#ff3d8b", "#18c2a7", "#ffb020", "#7b5cff", "#f4f7ff"];
+    const colors = ["#14285e", "#d6336c", "#18c2a7", "#e6c063", "#7b5cff", "#c9962b"];
     for (let i = 0; i < 70; i++) { const s = document.createElement("i"); s.style.cssText = `--x:${(Math.random() - 0.5) * 900}px;--y:${-200 - Math.random() * 500}px;--r:${Math.random() * 720}deg;--d:${0.9 + Math.random() * 0.9}s;background:${colors[i % colors.length]};left:50%;top:55%`; box.appendChild(s); }
     setTimeout(() => box.remove(), 2200);
   };
@@ -252,7 +252,7 @@ export async function landing(app) {
     const w = viz.width = viz.clientWidth * 2, h = viz.height = viz.clientHeight * 2; vctx.clearRect(0, 0, w, h);
     if (!bins) return;
     const n = 48, bw = w / n;
-    for (let i = 0; i < n; i++) { const v = bins[Math.floor((i / n) * bins.length * 0.7)] / 255; const g = vctx.createLinearGradient(0, h, 0, h - v * h); g.addColorStop(0, "rgba(47,107,255,.0)"); g.addColorStop(1, "rgba(127,176,255,.85)"); vctx.fillStyle = g; vctx.fillRect(i * bw + 2, h - v * h, bw - 4, v * h); }
+    for (let i = 0; i < n; i++) { const v = bins[Math.floor((i / n) * bins.length * 0.7)] / 255; const g = vctx.createLinearGradient(0, h, 0, h - v * h); g.addColorStop(0, "rgba(201,150,43,.0)"); g.addColorStop(1, "rgba(184,134,42,.85)"); vctx.fillStyle = g; vctx.fillRect(i * bw + 2, h - v * h, bw - 4, v * h); }
   };
   const playBtn = $("#lp-play");
   playBtn.onclick = () => {
