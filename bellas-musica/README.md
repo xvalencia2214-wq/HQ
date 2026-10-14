@@ -5,7 +5,7 @@
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
 Groups list themselves, set prices, packages, songs, photos, video and open dates, and accept or decline requests.
-English and Spanish. White and gold across the whole app, with black and navy writing (Bricolage Grotesque type), matching the 3D welcome page, with a navy charro sombrero logo seen from the side (wide rounded crown, a canoe-shaped brim swept up at the back, gold loop stitching on the rolled edge, the braided band and the knot with its cord on the front); a sidebar menu in sections and a Bigger text button.
+English and Spanish. White and gold across the whole app, with black and navy writing (Bricolage Grotesque type), matching the 3D welcome page, with a navy sombrero logo seen from the side (a tall crown with a dented top and a gold band, a long brim curling up at both ends, gold zigzag on the front of the brim and scallops on the back); a sidebar menu in sections and a Bigger text button.
 
 **No dependencies.** Node 22.13+ only (built-in SQLite). Nothing to `npm install`.
 
