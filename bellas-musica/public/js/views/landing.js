@@ -225,7 +225,7 @@ export async function landing(app) {
   const canvas3d = $("#lp-3d");
   const webgl = (() => { try { const c = document.createElement("canvas"); return Boolean(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; } })();
   if (webgl) {
-    import("/vendor/landing3d.js").then(({ mountSombrero }) => {
+    import("/vendor/landing3d.js?v=20261014") /* change the version whenever the 3D scene is rebuilt: phones keep /vendor/ files for a week */.then(({ mountSombrero }) => {
       if (!root.isConnected) return;
       hat = mountSombrero(canvas3d, { reduced, lowPower: innerWidth < 760 || (navigator.hardwareConcurrency || 8) <= 4 });
       canvas3d.classList.add("ready");

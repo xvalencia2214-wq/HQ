@@ -33,9 +33,7 @@ await render("badge.png", 96, `<img src="${dataUrl(hatOnly)}" style="width:96px;
 // Maskable icons: full-bleed background, the hat inside the middle 70% so any shape (circle, squircle) keeps it whole
 for (const n of [192, 512]) await render(`icon-maskable-${n}.png`, n, `<div style="width:${n}px;height:${n}px;background:${CREAM};display:flex;align-items:center;justify-content:center"><img src="${dataUrl(hatOnly)}" style="width:${Math.round(n * 0.7)}px;height:${Math.round(n * 0.7)}px"></div>`);
 
-// Google Play's "feature graphic" (1024x500): the banner at the top of the store page
 fs.mkdirSync(path.join(root, "docs", "store"), { recursive: true });
-await page.setViewportSize({ width: 1024, height: 500 });
 // The banner: white and gold, navy writing. Google Play's "feature graphic" (1024x500) and the picture WhatsApp and
 // Facebook show when someone shares the site (og.png, 1200x630).
 const banner = (w, h, logo) => `<html><body style="margin:0"><div style="width:${w}px;height:${h}px;background:radial-gradient(circle at 25% 40%,#ffffff,#f7f1e3 75%);border-bottom:10px solid #c9962b;display:flex;align-items:center;gap:52px;padding:0 76px;box-sizing:border-box;font-family:Georgia,serif;color:#0b1838">

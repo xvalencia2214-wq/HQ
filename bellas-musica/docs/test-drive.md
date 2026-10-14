@@ -185,6 +185,11 @@ else. Or use a private (incognito) window for a second person at the same time.
   twice as often). The owner can give or clear it from **Admin**.
 - **Apple Pay:** under every pay button: *Apple Pay · Google Pay · Card*. In the test drive the payment is pretend;
   on the real site Stripe shows the Apple Pay button on an iPhone or iPad with a card in Wallet.
+- **Words for each kind of business:** on Find music, tap **Food**: the heading and the list talk about food vendors,
+  **Venues** about venues, and a tent company's page says "Request this rental company". Same in Spanish.
+- **Businesses make their own page:** as the owner (dueno@prueba.com) → **Admin**, the first box is a link to send a
+  business by WhatsApp or text; they sign up and fill in their own page. A vendor sees **Edit your page** on its own
+  listing, and a new listing shows its setup as numbered steps that tick off as they go.
 - **Cancelling at the last minute:** the cancellation rules now say that cancelling within 48 hours of the party never
   gives the deposit back, under any policy.
 

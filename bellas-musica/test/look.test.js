@@ -57,5 +57,15 @@ test("spotlight: bought in test mode, first in search, on the home strip, twice 
     const after = (await anon.get("/api/search?zip=60608&sort=price")).json.results;
     assert.equal(after[0].id, feat.id); assert.ok(!after.find((g) => g.id === spot.id).promoted);
     assert.deepEqual((await anon.get("/api/spotlight")).json.results, []);
+    // paid time never overlaps: Featured bought during a Spotlight starts after it, and Featured days left move after a new Spotlight
+    const g4 = gs[4], g5 = gs[5], day = 86400;
+    const pay = async (g, level) => { const r = await g.o.post(`/api/groups/${g.id}/feature`, { level }); assert.equal((await g.o.post(`/api/feature/${r.json.id}/simulate-pay`)).status, 200); return S.db.get("SELECT promoted_until p, spotlight_until s FROM groups WHERE id = ?", g.id); };
+    let st = await pay(g4, "spotlight"); st = await pay(g4, "feature");
+    assert.ok(Math.abs(st.p - (st.s + 30 * day)) <= 2, "Featured starts when the Spotlight ends");
+    st = await pay(g4, "feature"); assert.ok(Math.abs(st.p - (st.s + 60 * day)) <= 2, "and a second Featured adds 30 more");
+    st = await pay(g5, "feature"); const featuredEnd = st.p;
+    st = await pay(g5, "spotlight");
+    assert.ok(Math.abs(st.p - (st.s + (featuredEnd - (st.s - 30 * day)))) <= 2 && st.p > st.s, "the Featured days left move to after the new Spotlight");
+    st = await pay(g5, "spotlight"); assert.ok(st.p - st.s > 29 * day, "a second Spotlight pushes the Featured days later again");
   } finally { await S.close(); }
 });

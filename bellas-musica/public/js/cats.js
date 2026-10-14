@@ -1,10 +1,13 @@
 import { t } from "./i18n.js";
 import { esc } from "./ui.js";
+import { state } from "./state.js";
 
 // The kinds of things you can book for a party. Order = how they are shown.
 export const CAT_ORDER = ["music", "food", "rentals", "decor", "photo", "services", "venues"];
 export const CAT_ICON = { all: "✨", music: "🎺", food: "🌮", rentals: "⛺", decor: "🎈", photo: "📸", services: "🛡️", venues: "🏛️" };
 export const catLabel = (c) => `${CAT_ICON[c] || ""} ${t("cat." + c)}`.trim();
+// The category of a listing type ("Tents" -> rentals); anything unknown counts as music, like the server.
+export const catOfType = (type) => CAT_ORDER.find((c) => (state.meta?.categories?.[c] || []).includes(type)) || "music";
 
 // A row of category chips. `href(c)` makes links (search page); without it they are buttons with data-cat (Discover).
 export function catChips(active, { withAll = false, href = null, label = "" } = {}) {

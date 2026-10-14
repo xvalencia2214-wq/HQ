@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { storeApp } from "../appmode.js";
 import { state } from "../state.js";
-import { t, lang } from "../i18n.js";
+import { t, lang, setWho } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars, lenLabel, minutesOf } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
@@ -20,6 +20,7 @@ export async function dashboard(app, params) {
   if (!groups.length) { createForm(app); return; }
   const g = groups.find((x) => x.id === params.get("g")) || groups[0];
   const tab = TABS.includes(params.get("tab")) ? params.get("tab") : "requests";
+  setWho(g.category); // "Reply from the venue"…
   const link = (over) => { const q = new URLSearchParams({ g: g.id, tab, ...over }); return "#/dashboard?" + q.toString(); };
 
   app.innerHTML = `<div class="titlebar"><h1>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h1>
@@ -498,7 +499,7 @@ async function payments({ g, body, refresh }) {
     <div class="panel" id="seen"><h2 class="sec">⭐ ${esc(t("seen.title"))}</h2><p class="small">${esc(t("seen.text"))}</p>
     ${spotUntil > Date.now() ? `<div class="note ok">${esc(t("seen.spotUntil", { date: new Date(spotUntil).toLocaleDateString(loc) }))}</div>` : ""}
     ${until > Date.now() ? `<div class="note ok">${esc(t("dash.featuredUntil", { date: new Date(until).toLocaleDateString(loc) }))}</div>` : ""}
-    <div class="levels"><div class="level"><h3>${esc(t("seen.feat"))} <span class="lv-price">${money(state.meta.feature_price_cents)}</span></h3>${perks(["seen.f1", "seen.f2", "seen.f3"])}
+    <div class="levels"><div class="level"><h3>${esc(t("seen.feat"))} <span class="lv-price">${money(state.meta.feature_price_cents)}</span></h3>${perks(["seen.f1", "seen.f2", "seen.f3"])}${spotUntil > Date.now() ? `<p class="dim small">${esc(t("seen.afterSpot"))}</p>` : ""}
         ${storeApp() ? "" : `<button class="btn ghost wide" id="feature">${esc(t("seen.buyFeat", { price: money(state.meta.feature_price_cents) }))}</button>`}</div>
       <div class="level best"><span class="lv-tag">${esc(t("seen.best"))}</span><h3>★ ${esc(t("seen.spot"))} <span class="lv-price">${money(state.meta.spotlight_price_cents)}</span></h3>${perks(["seen.s1", "seen.s2", "seen.s3", "seen.s4"])}
         ${storeApp() ? "" : `<button class="btn wide" id="spotlight">${esc(t("seen.buySpot", { price: money(state.meta.spotlight_price_cents) }))}</button>`}</div></div>

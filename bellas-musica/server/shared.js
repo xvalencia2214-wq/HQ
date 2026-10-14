@@ -522,9 +522,16 @@ export function markFeaturePaid(ctx, featureId) {
   if (!f || f.status === "paid") return f;
   db.tx(() => {
     db.run("UPDATE payments_feature SET status = 'paid' WHERE id = ?", f.id);
-    const col = { pro: "pro_until", spotlight: "spotlight_until" }[f.kind] || "promoted_until"; // Pro, Spotlight or Featured: 30 days, added to any time left
-    const g = db.get(`SELECT ${col} AS until FROM groups WHERE id = ?`, f.group_id);
-    db.run(`UPDATE groups SET ${col} = ? WHERE id = ?`, Math.max(now(), g.until) + 30 * 86400, f.group_id);
+    // Pro, Spotlight or Featured: 30 days, added to any time left. Spotlight includes Featured, so paid time never overlaps:
+    // Featured bought during a Spotlight starts when the Spotlight ends, and Featured days left when Spotlight is bought
+    // move to after it.
+    const g = db.get("SELECT pro_until, promoted_until, spotlight_until FROM groups WHERE id = ?", f.group_id), t = now(), DAYS30 = 30 * 86400;
+    if (f.kind === "pro") db.run("UPDATE groups SET pro_until = ? WHERE id = ?", Math.max(t, g.pro_until) + DAYS30, f.group_id);
+    else if (f.kind === "spotlight") {
+      const spotEnd = Math.max(t, g.spotlight_until), newEnd = spotEnd + DAYS30;
+      const featuredLeft = Math.max(0, g.promoted_until - spotEnd); // Featured days that were waiting after the current Spotlight
+      db.run("UPDATE groups SET spotlight_until = ?, promoted_until = ? WHERE id = ?", newEnd, featuredLeft ? newEnd + featuredLeft : g.promoted_until, f.group_id);
+    } else db.run("UPDATE groups SET promoted_until = ? WHERE id = ?", Math.max(t, g.promoted_until, g.spotlight_until) + DAYS30, f.group_id);
   });
   return db.get("SELECT * FROM payments_feature WHERE id = ?", f.id);
 }

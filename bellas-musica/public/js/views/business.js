@@ -3,7 +3,8 @@
 // each booking, and the pages a client, a helper or a family opens from a link.
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { t, lang } from "../i18n.js";
+import { t, lang, setWho } from "../i18n.js";
+import { catOfType } from "../cats.js";
 import { esc, money, fmtDate, toast, goto, sel, lenLabel, minutesOf, fmtPhone, tomorrowKey, payWays } from "../ui.js";
 
 const loc = () => (lang() === "es" ? "es-US" : "en-US");
@@ -315,6 +316,7 @@ export async function payLinkPage(app, token) {
   let l;
   try { l = (await api.get(`/api/pay-link/${encodeURIComponent(token)}`)).link; } catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
   document.title = `${l.group.name} · Bella's Música`;
+  setWho(catOfType(l.group.type));
   const user = state.user, next = encodeURIComponent("#/pay-link/" + token);
   const head = `<div class="pl-head">${l.group.photo ? `<img src="${esc(l.group.photo)}" alt="" class="pl-photo">` : ""}<div><h1>${esc(l.group.name)}</h1><div class="dim">${esc(t("type." + l.group.type))}</div></div></div>`;
   const details = `<div class="sum"><span>${esc(t("pl.for"))}</span><span>${esc(l.title)}</span></div>

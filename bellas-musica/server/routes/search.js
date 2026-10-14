@@ -1,4 +1,4 @@
-import { HttpError, addDays, int, isDate, isZip, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
+import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, safeJson, todayStr, getTimezone } from "../util.js";
 import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, TIMES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
@@ -129,10 +129,24 @@ export default function searchRoutes(ctx, add) {
 
   add("GET", "/api/search", ({ query }) => { const out = search(query); ctx.stats.count("search", out.origin.zip); return out; });
 
-  // The home page's "In the spotlight" strip: paid Spotlight vendors of any kind near a ZIP (the market's center by default).
+  // The home page's "In the spotlight" strip: paid Spotlight vendors of any kind near a ZIP (the market's center by default),
+  // best rated first. Only Spotlight listings are read, so it stays cheap however many vendors there are.
   add("GET", "/api/spotlight", ({ query }) => {
-    const zip = isZip(query.zip) ? query.zip : MARKET.center.zip;
-    return { results: search({ zip, category: "all" }, { limit: 50 }).results.filter((g) => g.spotlight).slice(0, 6) };
+    const origin = lookupZip(isZip(query.zip) ? query.zip : MARKET.center.zip) || lookupZip(MARKET.center.zip);
+    const nearby = zipsWithin(origin, 60);
+    const rows = nearby.length ? db.all(`SELECT * FROM groups WHERE ${LIVE_SQL} AND spotlight_until > ? AND zip IN (${nearby.map(() => "?").join(",")})`, now(), ...nearby) : [];
+    if (!rows.length) return { results: [] };
+    const ratings = ratingMap(db), photos = firstPhotos(db);
+    const minPrice = new Map(db.all(`SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL AND group_id IN (${rows.map(() => "?").join(",")}) GROUP BY group_id`, ...rows.map((g) => g.id)).map((r) => [r.group_id, r.m]));
+    const list = rows.map((g) => ({ g, r: ratingOf(g, ratings), z: lookupZip(g.zip) })).filter((x) => x.z && miles(origin, x.z) <= 60)
+      .sort((a, b) => bayes(b.r.rating, b.r.reviews) - bayes(a.r.rating, a.r.reviews)).slice(0, 6);
+    return {
+      results: list.map(({ g, r, z }) => {
+        const c = publicGroup(ctx, g, { rating: r, fields: { distance_miles: Math.round(miles(origin, z)), photo: photos.has(g.id) ? "/uploads/" + photos.get(g.id) : null, from_cents: fromCents(g, minPrice) } });
+        c.story = c.story.slice(0, 220); c.song_count = c.songs.length; delete c.songs;
+        return c;
+      })
+    };
   });
 
   // "Best of your city": the top-rated groups within 40 miles of a ZIP.

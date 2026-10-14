@@ -1,7 +1,7 @@
 // Bella's Música service worker: a friendly page when there's no signal, faster maps, and phone notifications.
 // Pages and data always come fresh from the server when online (nothing stale is ever shown); only the offline page,
 // the icons and the map library are kept on the phone.
-const CACHE = "bm-v1";
+const CACHE = "bm-v2"; // a new name drops everything the old version kept (the 3D scene was rebuilt)
 const KEEP = ["/offline.html", "/logo.svg", "/icon-192.png", "/style.css"];
 
 self.addEventListener("install", (e) => {

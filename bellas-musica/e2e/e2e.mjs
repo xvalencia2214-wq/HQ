@@ -41,7 +41,7 @@ try {
   await O.fill("#c-name", "E2E Mariachi"); await O.fill("#c-zip", "60608"); await O.fill("#c-rate", "300"); await O.fill("#c-story", "We started in a garage in Pilsen. <b>not bold</b>");
   await O.click("#cform button[type=submit]");
   await O.waitForSelector("#fill");
-  ok("a new group starts as a draft with the steps needed to publish", (await O.locator(".draft").innerText()).includes("Your listing is a draft") && (await O.locator(".draft li").count()) === 3 && await O.locator("#publish").isDisabled());
+  ok("a new group starts as a draft with the steps needed to publish", (await O.locator(".draft").innerText()).includes("Your listing is a draft") && (await O.locator(".draft li:not(.done)").count()) === 3 && await O.locator("#publish").isDisabled());
   await O.click("#fill");
   await O.waitForSelector(".day.open");
   ok("'open all weekends' opens dates and shows them", (await O.locator(".day.open").count()) >= 2);
@@ -68,7 +68,7 @@ try {
   await O.waitForSelector("#verr:not(:empty)");
   ok("non-YouTube/Vimeo link is refused", /YouTube, Vimeo, TikTok or Instagram/.test(await O.locator("#verr").innerText()));
   await O.goto(S.base + "/#/dashboard?tab=requests"); await O.waitForSelector("#publish:not([disabled])");
-  ok("once photo, story, events and dates are in, Publish is enabled", (await O.locator(".draft li").count()) === 0);
+  ok("once photo, story, events and dates are in, Publish is enabled", (await O.locator(".draft li:not(.done)").count()) === 0 && (await O.locator(".draft li.done").count()) >= 5);
   await O.click("#publish"); await O.waitForSelector(".statusline");
   ok("publishing makes the group live and shows the launch checklist", (await O.locator(".statusline").innerText()).includes("Live") && (await O.locator(".checklist").innerText()).includes("Get ready to launch") && (await O.locator(".checklist li").count()) >= 3);
 
