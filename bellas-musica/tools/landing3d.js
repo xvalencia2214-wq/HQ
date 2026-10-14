@@ -1,37 +1,39 @@
-// The 3D scene on the welcome page: a navy charro sombrero turned on a lathe (its profile spun around an axis), with a
-// gold band embroidered with vines, gold trim and a gold vine climbing round the brim, under a string of papel picado
-// that waves in the breeze. It follows the
-// pointer, turns with the scroll, bounces to the music and spins when tapped.
+// The 3D scene on the welcome page: a navy charro sombrero turned on a lathe (its profile spun around an axis): a smooth
+// rounded crown, a cream band embroidered with flowers and gold scrolls under a wavy braided gold cord, the knot with its
+// tassels on the side, and gold trim, under a string of papel picado that waves in the breeze. It follows the pointer,
+// turns with the scroll, bounces to the music and spins when tapped.
 // Bundled with only the parts of three.js it uses:  npm run build:landing  ->  public/vendor/landing3d.js
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, Vector2, Vector3, Color, Fog,
   LatheGeometry, CylinderGeometry, TorusGeometry, PlaneGeometry, SphereGeometry,
   MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial, Mesh, InstancedMesh, Object3D,
   HemisphereLight, DirectionalLight, PointLight, CanvasTexture, SRGBColorSpace, DoubleSide, PMREMGenerator, ACESFilmicToneMapping,
-  BufferGeometry, Float32BufferAttribute, LineBasicMaterial, Line, RepeatWrapping, Points, PointsMaterial,
-  CatmullRomCurve3, TubeGeometry
+  BufferGeometry, Float32BufferAttribute, LineBasicMaterial, Line, RepeatWrapping, Points, PointsMaterial
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 // ---- textures drawn on a canvas ----
 function bandTexture() {
-  const c = document.createElement("canvas"); c.width = 1024; c.height = 128;
+  // a cream band whose top edge waves up and down under a braided gold cord (above the wave is cut away), with navy
+  // flowers and gold scrolls stitched between the waves, like the "pita" embroidery of a charro hat
+  const W = 1024, H = 256, WAVES = 8, c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d");
-  const g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, "#f3d37a"); g.addColorStop(1, "#b8862a");
-  x.fillStyle = g; x.fillRect(0, 0, 1024, 128);
-  x.strokeStyle = "rgba(11,24,56,.7)"; x.lineWidth = 3; x.setLineDash([10, 8]);
-  for (const y of [14, 114]) { x.beginPath(); x.moveTo(0, y); x.lineTo(1024, y); x.stroke(); }
-  x.setLineDash([]);
-  // embroidered flowers and vines (the "pita" stitching on a charro hat band), in navy thread on the gold
-  for (let i = 0; i < 8; i++) {
-    const cx = 64 + i * 128;
-    x.strokeStyle = "#14285e"; x.lineWidth = 4;
-    x.beginPath(); x.moveTo(cx - 64, 64); x.bezierCurveTo(cx - 40, 30, cx - 20, 98, cx, 64); x.bezierCurveTo(cx + 20, 30, cx + 40, 98, cx + 64, 64); x.stroke();
-    for (let p = 0; p < 6; p++) {
-      const a = (p / 6) * Math.PI * 2;
-      x.fillStyle = "#14285e"; x.beginPath(); x.ellipse(cx + Math.cos(a) * 13, 64 + Math.sin(a) * 13, 9, 5, a, 0, Math.PI * 2); x.fill();
-    }
-    x.fillStyle = "#fff4cf"; x.beginPath(); x.arc(cx, 64, 7, 0, Math.PI * 2); x.fill();
+  const top = (px) => 64 - 30 * Math.cos((px / W) * WAVES * Math.PI * 2); // the wave: 34 at its peaks, 94 in its dips
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#fbf4e2"); g.addColorStop(1, "#e6d3a8");
+  x.fillStyle = g; x.beginPath(); x.moveTo(0, H);
+  for (let px = 0; px <= W; px += 4) x.lineTo(px, top(px));
+  x.lineTo(W, H); x.closePath(); x.fill();
+  const cord = (path, w) => { x.lineCap = "round"; x.lineJoin = "round"; x.strokeStyle = "#d4a53c"; x.lineWidth = w; x.beginPath(); path(); x.stroke();
+    x.strokeStyle = "rgba(122,87,16,.6)"; x.lineWidth = w; x.setLineDash([4, 7]); x.beginPath(); path(); x.stroke(); x.setLineDash([]); };
+  cord(() => { x.moveTo(0, top(0)); for (let px = 4; px <= W; px += 4) x.lineTo(px, top(px)); }, 16);
+  cord(() => { x.moveTo(0, H - 12); x.lineTo(W, H - 12); }, 18);
+  for (let i = 0; i < WAVES; i++) {
+    const cx = (i + 0.5) * (W / WAVES), cy = 168; // under each dip of the wave: a flower, with gold scrolls either side
+    x.strokeStyle = "#b8862a"; x.lineWidth = 5; x.lineCap = "round";
+    for (const s of [-1, 1]) { x.beginPath(); x.moveTo(cx + s * 22, cy + 6); x.bezierCurveTo(cx + s * 40, cy + 30, cx + s * 58, cy - 6, cx + s * 46, cy - 18); x.stroke(); x.beginPath(); x.arc(cx + s * 40, cy - 12, 7, 0, Math.PI * 1.5); x.stroke(); }
+    x.fillStyle = "#14285e";
+    for (let p = 0; p < 5; p++) { const a = (p / 5) * Math.PI * 2 - Math.PI / 2; x.beginPath(); x.arc(cx + Math.cos(a) * 13, cy + Math.sin(a) * 13, 10, 0, Math.PI * 2); x.fill(); }
+    x.fillStyle = "#e6c063"; x.beginPath(); x.arc(cx, cy, 7, 0, Math.PI * 2); x.fill();
   }
   const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = RepeatWrapping; t.repeat.set(2, 1);
   return t;
@@ -81,40 +83,29 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   // ---- the sombrero: a profile (radius, height) spun around the vertical axis ----
   const hat = new Group();
   const profile = [
-    [0.0, 2.18], [0.11, 2.25], [0.24, 2.28], [0.38, 2.19], [0.52, 1.94], [0.65, 1.52], [0.78, 1.02], [0.91, 0.56], [1.02, 0.32], // the tall crown, dented at the peak
+    [0.0, 2.2], [0.22, 2.18], [0.42, 2.1], [0.58, 1.94], [0.71, 1.66], [0.81, 1.28], [0.89, 0.88], [0.96, 0.52], [1.02, 0.32], // the tall, smoothly rounded crown
     [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32], [3.36, 0.5], [3.42, 0.62], [3.38, 0.7],          // the brim curling up at the edge
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
   const felt = new MeshPhysicalMaterial({ color: "#0c1a44", roughness: 0.62, metalness: 0.08, sheen: 0.8, sheenColor: new Color("#3a55a0"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
   const body = new Mesh(new LatheGeometry(profile, reduced || lowPower ? 64 : 128), felt);
   hat.add(body);
-  const band = new Mesh(new CylinderGeometry(0.985, 1.03, 0.36, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.65, metalness: 0.1 }));
-  band.position.y = 0.5; hat.add(band);
+  // the band wraps the bottom of the crown (from 0.32 up to 0.98), a hair outside the felt
+  const band = new Mesh(new CylinderGeometry(0.905, 1.04, 0.66, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.7, metalness: 0.05, transparent: true, alphaTest: 0.5, side: DoubleSide }));
+  band.position.y = 0.65; hat.add(band);
   const silver = new MeshPhysicalMaterial({ color: "#e0b04a", metalness: 1, roughness: 0.22, clearcoat: 1 }); // gold trim
   const trim = new Mesh(new TorusGeometry(3.36, 0.06, 16, 200), silver); trim.rotation.x = Math.PI / 2; trim.position.y = 0.66; hat.add(trim);
-  const trim2 = new Mesh(new TorusGeometry(1.02, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.68; hat.add(trim2);
+  const trim2 = new Mesh(new TorusGeometry(1.02, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.34; hat.add(trim2);
   // little gold studs (botonadura) around the brim
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
   for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27, Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
-  // one gold vine winding up and across the hat, from just outside the brim's curled edge to above the peak. It keeps at
-  // least 0.37 from the felt everywhere (checked against the profile above), so the vine and its leaves never cut into it.
-  const vinePts = [], VINE = 240;
-  const vineAt = (t) => { const a = -2.2 + t * Math.PI * 1.75, r = 3.75 * (1 - t) + 1.05 * t; return new Vector3(Math.cos(a) * r, 0.9 + t * 1.75, Math.sin(a) * r); };
-  for (let i = 0; i <= VINE; i++) vinePts.push(vineAt(i / VINE));
-  const vineCurve = new CatmullRomCurve3(vinePts);
-  hat.add(new Mesh(new TubeGeometry(vineCurve, reduced || lowPower ? 200 : 400, 0.045, 8, false), silver));
-  const LEAVES = 22, leafGeo = new SphereGeometry(0.15, 12, 8), leaves = new InstancedMesh(leafGeo, silver, LEAVES);
-  for (let i = 0; i < LEAVES; i++) {
-    const t = 0.04 + (i / LEAVES) * 0.92, p = vineCurve.getPoint(t), tan = vineCurve.getTangent(t), side = i % 2 ? -1 : 1;
-    dummy.position.copy(p).addScaledVector(new Vector3(-tan.z, 0.35, tan.x).normalize(), side * 0.14);
-    dummy.lookAt(p.clone().add(tan)); dummy.rotateY(side * 0.9); dummy.scale.set(0.45, 0.25, 1.35);
-    dummy.updateMatrix(); leaves.setMatrixAt(i, dummy.matrix);
+  // the knot on the side of the band, with two tassels hanging from it
+  const knot = new Mesh(new SphereGeometry(0.11, 16, 12), silver); knot.scale.set(0.8, 1.3, 0.6); knot.position.set(1.0, 0.62, 0.02); hat.add(knot);
+  for (const [dz, len] of [[-0.05, 0.3], [0.07, 0.24]]) {
+    const cord = new Mesh(new CylinderGeometry(0.012, 0.012, len, 6), silver); cord.position.set(1.07, 0.56 - len / 2, dz); hat.add(cord);
+    const tassel = new Mesh(new CylinderGeometry(0.025, 0.05, 0.1, 10), silver); tassel.position.set(1.07, 0.5 - len, dz); hat.add(tassel);
   }
-  hat.add(leaves);
-  const bloomGeo = new SphereGeometry(0.11, 12, 8), blooms = new InstancedMesh(bloomGeo, silver, 4);
-  [0.0, 0.33, 0.66, 1.0].forEach((t, i) => { dummy.position.copy(vineCurve.getPoint(t)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.75); dummy.updateMatrix(); blooms.setMatrixAt(i, dummy.matrix); });
-  hat.add(blooms);
   hat.position.set(2.9, -0.7, 0); hat.rotation.x = 0.32;
   scene.add(hat);
 

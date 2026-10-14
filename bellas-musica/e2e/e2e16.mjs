@@ -18,6 +18,7 @@ const ok = (name, cond) => { if (!cond) failed++; console.log(`${cond ? "PASS" :
 async function person(label, opts = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, ...opts });
   await ctx.route("**/tile.openstreetmap.org/**", (r) => r.abort());
+  ctx.setDefaultTimeout(60000); // the 3D scene runs on a software renderer here, which can keep a page busy for a while
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
   p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|GPU stall|WebGL/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
@@ -83,10 +84,12 @@ try {
   ok("Spanish: the whole page switches", /La música, la comida, toda la fiesta/.test(es) && /¿Quién toca en tu fiesta\?/.test(es));
   if (!/¿Quién toca en tu fiesta\?/.test(es)) console.log("   ", (es.match(/.{0,40}toca.{0,40}/) || [es.slice(0, 300)])[0]);
   await V.click("#lp-lang");
+  await V.context().close(); // done with this visitor: its 3D scene would otherwise keep the (software-rendered) browser busy
 
   // ---- reduce motion and a phone ----
   const R = await person("calm", { reducedMotion: "reduce", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await R.goto(S.base + "/"); await R.waitForSelector(".lp-h1");
+  await R.goto(S.base + "/");
+  await R.waitForSelector(".lp-h1");
   ok("reduce motion: no intro curtain and no custom cursor", (await R.locator(".lp-curtain, .cur-ring").count()) === 0);
   ok("reduce motion: the story text is fully readable at once", (await R.locator("#lp-mtext .w.lit").count()) === (await R.locator("#lp-mtext .w").count()));
   ok("phone: nothing wider than the screen", await R.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
