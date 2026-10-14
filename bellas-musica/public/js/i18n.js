@@ -193,13 +193,17 @@ export function setLang(l, { persist = true } = {}) {
 }
 
 // What a listing is called on the screen being drawn: a group (music), a food vendor, a venue... Strings say {who} and
-// {whos} (plural); the search page and a listing's page set the category, and every new screen starts with music.
-let WHO = "music";
-export const setWho = (category) => { WHO = DICT.en["who." + category] ? category : "music"; };
+// {whos} (plural). Each new screen starts with music (newScreen); a view that knows its listing's category sets it with
+// setWho, passing the screen it started on, so a view the user already left can't change the words of the next one.
+let WHO = "music", SCREEN = 0;
+export const newScreen = () => { WHO = "music"; return ++SCREEN; };
+export const currentScreen = () => SCREEN;
+export const setWho = (category, screen = SCREEN) => { if (screen === SCREEN) WHO = DICT.en["who." + category] ? category : "music"; };
 export function t(key, vars) {
   let s = DICT[current][key] ?? EN[key];
   if (s === undefined) { console.warn("missing translation:", key); return key; }
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  // the listing's name goes in first, so text people typed (passed in vars) is never changed
   if (s.includes("{who")) s = s.split("{whos}").join(DICT[current]["whos." + WHO]).split("{who}").join(DICT[current]["who." + WHO]);
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;
 }

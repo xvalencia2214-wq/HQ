@@ -35,11 +35,13 @@ export function firstOpenDate(db, groupId) {
   return null;
 }
 
-export function ratingMap(db) {
-  const m = new Map();
-  for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM reviews GROUP BY group_id")) m.set(r.group_id, { c: r.c, s: r.s });
+// Ratings by group: for every group, or only for the ids given (a handful of cards).
+const onlyIds = (ids) => (ids ? { sql: ` AND group_id IN (${ids.map(() => "?").join(",") || "''"})`, args: ids } : { sql: "", args: [] });
+export function ratingMap(db, ids = null) {
+  const m = new Map(), only = onlyIds(ids);
+  for (const r of db.all(`SELECT group_id, COUNT(*) c, SUM(rating) s FROM reviews WHERE 1 = 1${only.sql} GROUP BY group_id`, ...only.args)) m.set(r.group_id, { c: r.c, s: r.s });
   // reviews from past clients count toward the stars too (they are labelled on the page)
-  for (const r of db.all("SELECT group_id, COUNT(*) c, SUM(rating) s FROM client_reviews WHERE status = 'done' GROUP BY group_id")) {
+  for (const r of db.all(`SELECT group_id, COUNT(*) c, SUM(rating) s FROM client_reviews WHERE status = 'done'${only.sql} GROUP BY group_id`, ...only.args)) {
     const x = m.get(r.group_id) || { c: 0, s: 0 };
     m.set(r.group_id, { c: x.c + r.c, s: x.s + r.s });
   }
@@ -101,9 +103,9 @@ export function isBookable(ctx, g) {
   return ctx.stripe.live ? !g.demo && Boolean(g.stripe_ready) : true;
 }
 
-export function firstPhotos(db) {
-  const m = new Map();
-  for (const p of db.all("SELECT group_id, file FROM photos ORDER BY position, created_at")) if (!m.has(p.group_id)) m.set(p.group_id, p.file);
+export function firstPhotos(db, ids = null) {
+  const m = new Map(), only = onlyIds(ids);
+  for (const p of db.all(`SELECT group_id, file FROM photos WHERE 1 = 1${only.sql} ORDER BY position, created_at`, ...only.args)) if (!m.has(p.group_id)) m.set(p.group_id, p.file);
   return m;
 }
 
@@ -516,22 +518,28 @@ export async function transferCart(ctx, cartId) {
   }
 }
 
+// Paid placement time. Spotlight includes Featured, so they never overlap: Featured always runs after any Spotlight (bought
+// or given during one, it starts when the Spotlight ends), and Featured days waiting after a Spotlight move with it when the
+// Spotlight is extended or taken away. `days` = 0 clears that kind (the owner's Clear button).
+export function addPaidTime(db, groupId, kind, days) {
+  const g = db.get("SELECT pro_until, promoted_until, spotlight_until FROM groups WHERE id = ?", groupId), t = now(), add = days * 86400;
+  if (!g) return;
+  const spotEnd = Math.max(t, g.spotlight_until);
+  const waiting = Math.max(0, g.promoted_until - spotEnd); // Featured time that starts after the Spotlight
+  if (kind === "pro") db.run("UPDATE groups SET pro_until = ? WHERE id = ?", days ? Math.max(t, g.pro_until) + add : 0, groupId);
+  else if (kind === "spotlight") {
+    const newEnd = days ? spotEnd + add : 0;
+    db.run("UPDATE groups SET spotlight_until = ?, promoted_until = ? WHERE id = ?", newEnd, waiting ? Math.max(t, newEnd) + waiting : g.promoted_until, groupId);
+  } else db.run("UPDATE groups SET promoted_until = ? WHERE id = ?", days ? Math.max(spotEnd, g.promoted_until) + add : 0, groupId);
+}
+
 export function markFeaturePaid(ctx, featureId) {
   const { db } = ctx;
   const f = db.get("SELECT * FROM payments_feature WHERE id = ?", featureId);
   if (!f || f.status === "paid") return f;
   db.tx(() => {
     db.run("UPDATE payments_feature SET status = 'paid' WHERE id = ?", f.id);
-    // Pro, Spotlight or Featured: 30 days, added to any time left. Spotlight includes Featured, so paid time never overlaps:
-    // Featured bought during a Spotlight starts when the Spotlight ends, and Featured days left when Spotlight is bought
-    // move to after it.
-    const g = db.get("SELECT pro_until, promoted_until, spotlight_until FROM groups WHERE id = ?", f.group_id), t = now(), DAYS30 = 30 * 86400;
-    if (f.kind === "pro") db.run("UPDATE groups SET pro_until = ? WHERE id = ?", Math.max(t, g.pro_until) + DAYS30, f.group_id);
-    else if (f.kind === "spotlight") {
-      const spotEnd = Math.max(t, g.spotlight_until), newEnd = spotEnd + DAYS30;
-      const featuredLeft = Math.max(0, g.promoted_until - spotEnd); // Featured days that were waiting after the current Spotlight
-      db.run("UPDATE groups SET spotlight_until = ?, promoted_until = ? WHERE id = ?", newEnd, featuredLeft ? newEnd + featuredLeft : g.promoted_until, f.group_id);
-    } else db.run("UPDATE groups SET promoted_until = ? WHERE id = ?", Math.max(t, g.promoted_until, g.spotlight_until) + DAYS30, f.group_id);
+    addPaidTime(db, f.group_id, f.kind, 30); // Pro, Spotlight or Featured: 30 days, added to any time left
   });
   return db.get("SELECT * FROM payments_feature WHERE id = ?", f.id);
 }

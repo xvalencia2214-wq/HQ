@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { DICT } from "../public/js/i18n.js";
+import { DICT, t, setWho, newScreen, currentScreen } from "../public/js/i18n.js";
 import { EVENT_TYPES, GROUP_TYPES } from "../server/pricing.js";
 
 const dir = path.resolve("public/js");
@@ -47,4 +47,21 @@ test("every category has its own name for a listing ({who}/{whos}) and its own s
     for (const k of [`who.${c}`, `whos.${c}`, `hero.${c}`, `heroSub.${c}`]) { assert.ok(DICT.en[k], k); assert.ok(DICT.es[k], k); }
   // a sentence never starts with {who}, so the nouns can stay lower-case
   for (const lang of ["en", "es"]) for (const [k, v] of Object.entries(DICT[lang])) assert.ok(!/^\{whos?\}/.test(v), `${lang} ${k}`);
+});
+
+test("{who} follows the screen on show: a screen the user already left can't change it, and typed text is never touched", () => {
+  const first = newScreen();
+  setWho("venues", first);
+  assert.equal(t("g.request"), "Request this venue");
+  const second = newScreen(); // the user moved on before the old screen finished loading
+  assert.equal(t("g.request"), "Request this group");
+  setWho("food", first); // the old screen finishes late
+  assert.equal(t("g.request"), "Request this group");
+  setWho("food", second);
+  assert.equal(t("g.request"), "Request this food vendor");
+  assert.equal(currentScreen(), second);
+  // what people type goes in as it is, braces and all
+  assert.equal(t("q.balance", { x: 1 }), "Balance due to the food vendor");
+  assert.match(t("show.groupReport", { note: "they said {whos} and {who}" }), /they said \{whos\} and \{who\}/);
+  newScreen();
 });

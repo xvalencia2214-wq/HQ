@@ -46,7 +46,7 @@ export async function home(app, params) {
   const meta = state.meta;
   const moreOpen = ["song", "type", "max", "radius", "soon"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
   const cat = meta.categories[p.category] ? p.category : "music", music = cat === "music";
-  setWho(cat); // "groups" for music, "food vendors" for food...
+  setWho(cat); // "groups" for music, "food vendors" for food... (before any await: this screen is still the current one)
   // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
   const catHref = (c) => { const u = new URLSearchParams(); for (const k of ["zip", "event", "date", "guests", "radius", "view"]) if (p[k]) u.set(k, p[k]); if (c !== "music") u.set("category", c); return "#/?" + u.toString(); };
 

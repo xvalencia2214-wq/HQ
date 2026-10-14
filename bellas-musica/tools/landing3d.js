@@ -97,16 +97,17 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
   for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27, Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
-  // one gold vine winding up and across the hat, from below the brim's edge to above the peak, never touching it
+  // one gold vine winding up and across the hat, from just outside the brim's curled edge to above the peak. It keeps at
+  // least 0.37 from the felt everywhere (checked against the profile above), so the vine and its leaves never cut into it.
   const vinePts = [], VINE = 240;
-  const vineAt = (t) => { const a = -2.2 + t * Math.PI * 1.75, r = 3.65 * (1 - t) + 1.05 * t; return new Vector3(Math.cos(a) * r, -0.05 + t * 2.6, Math.sin(a) * r); };
+  const vineAt = (t) => { const a = -2.2 + t * Math.PI * 1.75, r = 3.75 * (1 - t) + 1.05 * t; return new Vector3(Math.cos(a) * r, 0.9 + t * 1.75, Math.sin(a) * r); };
   for (let i = 0; i <= VINE; i++) vinePts.push(vineAt(i / VINE));
   const vineCurve = new CatmullRomCurve3(vinePts);
   hat.add(new Mesh(new TubeGeometry(vineCurve, reduced || lowPower ? 200 : 400, 0.045, 8, false), silver));
   const LEAVES = 22, leafGeo = new SphereGeometry(0.15, 12, 8), leaves = new InstancedMesh(leafGeo, silver, LEAVES);
   for (let i = 0; i < LEAVES; i++) {
     const t = 0.04 + (i / LEAVES) * 0.92, p = vineCurve.getPoint(t), tan = vineCurve.getTangent(t), side = i % 2 ? -1 : 1;
-    dummy.position.copy(p).addScaledVector(new Vector3(-tan.z, 0.35, tan.x).normalize(), side * 0.16);
+    dummy.position.copy(p).addScaledVector(new Vector3(-tan.z, 0.35, tan.x).normalize(), side * 0.14);
     dummy.lookAt(p.clone().add(tan)); dummy.rotateY(side * 0.9); dummy.scale.set(0.45, 0.25, 1.35);
     dummy.updateMatrix(); leaves.setMatrixAt(i, dummy.matrix);
   }

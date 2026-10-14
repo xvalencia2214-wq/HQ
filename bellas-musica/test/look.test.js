@@ -69,3 +69,14 @@ test("spotlight: bought in test mode, first in search, on the home strip, twice 
     st = await pay(g5, "spotlight"); assert.ok(st.p - st.s > 29 * day, "a second Spotlight pushes the Featured days later again");
   } finally { await S.close(); }
 });
+
+test("the welcome page's 3D scene is loaded by an address that changes with the file, so phones never keep an old one", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const meta = (await client(S.base).get("/api/meta")).json;
+    assert.match(meta.landing3d, /^\/vendor\/landing3d\.js\?v=[0-9a-f]{10}$/);
+    const r = await fetch(S.base + meta.landing3d);
+    assert.equal(r.status, 200); assert.match(r.headers.get("content-type"), /javascript/);
+    assert.match(await r.text(), /mountSombrero/);
+  } finally { await S.close(); }
+});

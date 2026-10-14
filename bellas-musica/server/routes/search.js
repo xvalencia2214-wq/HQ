@@ -4,6 +4,9 @@ import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
 import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, isSpotlight, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
 import { upcomingHolidays } from "./specials.js";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 // Which music suits which event when a group hasn't said what it plays.
 const EVENT_FIT = {
@@ -18,6 +21,12 @@ const bayes = (rating, n) => (rating * n + 4.2 * 3) / (n + 3);
 
 export default function searchRoutes(ctx, add) {
   const { db, stripe, sms, config } = ctx;
+  // The welcome page's 3D scene, with a fingerprint of the file in its address: phones keep /vendor/ files for a week, so a
+  // rebuilt scene gets a new address and is fetched fresh, with nothing to remember to change.
+  const landing3d = (() => {
+    try { return "/vendor/landing3d.js?v=" + crypto.createHash("sha256").update(fs.readFileSync(path.join(config.publicDir, "vendor", "landing3d.js"))).digest("hex").slice(0, 10); }
+    catch { return "/vendor/landing3d.js"; }
+  })();
 
   function search(q, { defaultRadius = 60, limit = 20 } = {}) {
     if (!isZip(q.zip)) throw new HttpError(400, "Enter a 5-digit ZIP code");
@@ -61,8 +70,7 @@ export default function searchRoutes(ctx, add) {
       if (song && !matched.length) continue;
       const openForDate = date ? openSlots(db, g.id, date, { expire: false }) : null;
       if (date && !openForDate.length) continue;
-      // "Last-minute": an open slot in the next 7 days
-      const openSoon = (() => { for (let i = 1; i <= 7; i++) if (openSlots(db, g.id, addDays(todayStr(), i), { expire: false }).length) return addDays(todayStr(), i); return null; })();
+      const openSoon = openSoonOf(g);
       if (soon && !openSoon) continue;
       const events = safeJson(g.events, []);
       const fits = event ? (events.length ? events.includes(event) : (EVENT_FIT[event] || []).includes(g.type)) : false;
@@ -84,22 +92,28 @@ export default function searchRoutes(ctx, add) {
     return {
       origin: { zip: origin.zip, city: origin.city, state: origin.state, lat: origin.lat, lon: origin.lon },
       in_market: inMarket(origin.zip),
-      results: list.map((x) => {
-        const c = publicGroup(ctx, x.g, {
-          rating: x.r,
-          fields: {
-            distance_miles: Math.round(x.distance), photo: photos.has(x.g.id) ? "/uploads/" + photos.get(x.g.id) : null,
-            from_cents: fromCents(x.g, minPrice), fits_event: x.fits, matched_songs: x.matched.slice(0, 3),
-            open_slots: x.openForDate, open_soon: x.openSoon, lat: lookupZip(x.g.zip).lat, lon: lookupZip(x.g.zip).lon
-          }
-        });
-        c.story = c.story.slice(0, 220);
-        c.song_count = c.songs.length;
-        delete c.songs;
-        return c;
-      })
+      results: list.map((x) => card(x, photos, minPrice))
     };
   }
+
+  // A search card: the public listing, trimmed, with what the search worked out about it.
+  function card(x, photos, minPrice) {
+    const z = lookupZip(x.g.zip);
+    const c = publicGroup(ctx, x.g, {
+      rating: x.r,
+      fields: {
+        distance_miles: Math.round(x.distance), photo: photos.has(x.g.id) ? "/uploads/" + photos.get(x.g.id) : null,
+        from_cents: fromCents(x.g, minPrice), fits_event: x.fits || false, matched_songs: (x.matched || []).slice(0, 3),
+        open_slots: x.openForDate || null, open_soon: x.openSoon || null, lat: z.lat, lon: z.lon
+      }
+    });
+    c.story = c.story.slice(0, 220);
+    c.song_count = c.songs.length;
+    delete c.songs;
+    return c;
+  }
+  // "Last-minute": the first day with an open slot in the next 7 days
+  function openSoonOf(g) { for (let i = 1; i <= 7; i++) if (openSlots(db, g.id, addDays(todayStr(), i), { expire: false }).length) return addDays(todayStr(), i); return null; }
 
   add("GET", "/api/health", () => ({ ok: true }));
 
@@ -110,6 +124,7 @@ export default function searchRoutes(ctx, add) {
     payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, spotlight_price_cents: config.spotlightPriceCents, direct_fee_pct: config.directFeePct,
     hold_events: config.holdNewVendorEvents,
     founding: config.foundingSlots > 0 ? { left: foundingLeft(ctx.db, config), slots: config.foundingSlots, fee_pct: config.foundingFeePct, days: config.foundingDays } : null, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone(),
+    landing3d,
     play_url: config.androidPackage ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(config.androidPackage)}` : "", app_store_url: config.appStoreUrl
   }));
 
@@ -136,17 +151,11 @@ export default function searchRoutes(ctx, add) {
     const nearby = zipsWithin(origin, 60);
     const rows = nearby.length ? db.all(`SELECT * FROM groups WHERE ${LIVE_SQL} AND spotlight_until > ? AND zip IN (${nearby.map(() => "?").join(",")})`, now(), ...nearby) : [];
     if (!rows.length) return { results: [] };
-    const ratings = ratingMap(db), photos = firstPhotos(db);
-    const minPrice = new Map(db.all(`SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL AND group_id IN (${rows.map(() => "?").join(",")}) GROUP BY group_id`, ...rows.map((g) => g.id)).map((r) => [r.group_id, r.m]));
-    const list = rows.map((g) => ({ g, r: ratingOf(g, ratings), z: lookupZip(g.zip) })).filter((x) => x.z && miles(origin, x.z) <= 60)
+    const ids = rows.map((g) => g.id), ratings = ratingMap(db, ids), photos = firstPhotos(db, ids);
+    const minPrice = new Map(db.all(`SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL AND group_id IN (${ids.map(() => "?").join(",")}) GROUP BY group_id`, ...ids).map((r) => [r.group_id, r.m]));
+    const list = rows.map((g) => { const z = lookupZip(g.zip); return { g, r: ratingOf(g, ratings), distance: z ? miles(origin, z) : Infinity }; }).filter((x) => x.distance <= 60)
       .sort((a, b) => bayes(b.r.rating, b.r.reviews) - bayes(a.r.rating, a.r.reviews)).slice(0, 6);
-    return {
-      results: list.map(({ g, r, z }) => {
-        const c = publicGroup(ctx, g, { rating: r, fields: { distance_miles: Math.round(miles(origin, z)), photo: photos.has(g.id) ? "/uploads/" + photos.get(g.id) : null, from_cents: fromCents(g, minPrice) } });
-        c.story = c.story.slice(0, 220); c.song_count = c.songs.length; delete c.songs;
-        return c;
-      })
-    };
+    return { results: list.map((x) => card({ ...x, openSoon: openSoonOf(x.g) }, photos, minPrice)) };
   });
 
   // "Best of your city": the top-rated groups within 40 miles of a ZIP.

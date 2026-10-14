@@ -4,7 +4,7 @@
 // confirmed right away (the vendor already agreed). The fee is lower than for a client the site found.
 import crypto from "node:crypto";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr, withLock } from "../util.js";
-import { EVENT_TYPES, MAX_HOURS, POLICIES, SHORT_MINUTES, isTime } from "../pricing.js";
+import { EVENT_TYPES, MAX_HOURS, POLICIES, SHORT_MINUTES, categoryOf, isTime } from "../pricing.js";
 import { lookupZip } from "../geo.js";
 import { normalizePhone } from "../sms.js";
 import { dollarsToCents } from "./groups.js";
@@ -88,7 +88,7 @@ export default function payLinkRoutes(ctx, add) {
     const photo = db.get("SELECT file FROM photos WHERE group_id = ? ORDER BY position, created_at LIMIT 1", g.id);
     return {
       link: {
-        group: { id: g.id, name: g.name, type: g.type, photo: photo ? "/uploads/" + photo.file : null },
+        group: { id: g.id, name: g.name, type: g.type, category: categoryOf(g.type), photo: photo ? "/uploads/" + photo.file : null },
         client_name: l.client_name, title: l.title, date: l.date, time: l.time, minutes: l.minutes, event_type: l.event_type, guests: l.guests,
         address: l.address, note: l.note, total_cents: l.total_cents, deposit_cents: l.deposit_cents, balance_cents: l.total_cents - l.deposit_cents,
         policy: { key: g.cancel_policy, text: POLICIES[g.cancel_policy].text, rows: POLICIES[g.cancel_policy].rows.map(([days, pct]) => ({ days, pct })) },

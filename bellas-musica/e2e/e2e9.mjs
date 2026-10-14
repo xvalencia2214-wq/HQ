@@ -122,7 +122,7 @@ try {
   // ---- Spanish ----
   await go(C, `#/?zip=60608&category=rentals`); await C.waitForSelector(".catrow");
   await C.click("#navtoggle"); await C.click("#langbtn");
-  await C.waitForFunction(() => /Rentas/.test(document.body.innerText) && /Todo para tu fiesta/.test(document.body.innerText) && document.querySelector(".card"));
+  await C.waitForFunction(() => /Rentas/.test(document.body.innerText) && /Lugar para todos los que quieres/.test(document.body.innerText) && /Los mejores negocios de rentas/.test(document.body.innerText) && document.querySelector(".card"));
   ok("Spanish: categories, heading and vendor types are translated", (await text(C)).includes("Carpas") && (await text(C)).includes("Decoración"));
   await go(C, "#/party"); await C.waitForSelector("#pform");
   ok("Spanish: Plan a party is translated", (await text(C)).includes("Planea toda tu fiesta en un solo lugar"));

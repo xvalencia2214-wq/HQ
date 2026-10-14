@@ -1,18 +1,18 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { t, lang, setWho } from "../i18n.js";
-import { catOfType } from "../cats.js";
+import { t, lang, setWho, currentScreen } from "../i18n.js";
 import { esc, money, fmtDate, fmtPhone, lenLabel, minutesOf, toast } from "../ui.js";
 
 // A one-page summary of a confirmed booking that either side can print or save as a PDF, built from the booking record.
 export async function agreement(app, id, params) {
+  const screen = currentScreen();
   let b = null, asOwner = false;
   try { b = (await api.get("/api/my/bookings")).bookings.find((x) => x.id === id) || null; } catch { /* not a customer of it */ }
   if (!b && params.get("g")) { try { b = (await api.get(`/api/groups/${encodeURIComponent(params.get("g"))}/bookings`)).bookings.find((x) => x.id === id) || null; asOwner = Boolean(b); } catch { /* not the owner */ } }
   if (!b) { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
   if (b.status !== "confirmed") { app.innerHTML = `<div class="panel empty">${esc(t("agr.notConfirmed"))} <a href="#/bookings">${esc(t("bk.all"))}</a></div>`; return; }
   document.title = `${t("agr.title")} ${b.id} · Bella's Música`;
-  setWho(b.category || catOfType(b.group_type));
+  setWho(b.category, screen);
   const policy = (state.meta.policies[b.policy] || {})[lang()] || "";
   const customer = asOwner ? b.customer_name : state.user.name;
   const balanceWord = b.balance_cents <= 0 ? "" : b.balance_status === "paid" ? t("agr.balPaid") : b.balance_status === "offline" ? t("agr.balOffline") : t("agr.balDue");

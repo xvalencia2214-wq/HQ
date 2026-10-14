@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { t, lang, setWho } from "../i18n.js";
+import { t, lang, setWho, currentScreen } from "../i18n.js";
 import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons, payWays } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
@@ -9,11 +9,12 @@ import { heart, loadFavs, wireHearts } from "../fav.js";
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
 
 export async function group(app, id, params = new URLSearchParams()) {
+  const screen = currentScreen();
   let g;
   try { g = await api.get("/api/groups/" + encodeURIComponent(id)); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Música`;
-  setWho(g.category); // "Request this venue", "Message this food vendor"...
+  setWho(g.category, screen); // "Request this venue", "Message this food vendor"...
   const meta = state.meta, user = state.user;
   await loadFavs();
   // Private offers the group made this customer (if any).

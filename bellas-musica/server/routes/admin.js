@@ -5,7 +5,7 @@ import { hashPassword } from "../auth.js";
 import { backupStatus } from "../backups.js";
 import { hashClaim } from "./claim.js";
 import { GROUP_TYPES, balanceCents, balancePaidInApp } from "../pricing.js";
-import { refundBooking, refundBalance, releasePayoutLocked } from "../shared.js";
+import { addPaidTime, refundBooking, refundBalance, releasePayoutLocked } from "../shared.js";
 import { usd } from "../emails.js";
 
 // Owner-only tools. Anyone else gets a 404 so the page's existence isn't advertised.
@@ -178,7 +178,7 @@ export default function adminRoutes(ctx, add) {
     if (!db.get("SELECT 1 AS x FROM groups WHERE id = ?", params.id)) throw new HttpError(404, "Group not found");
     const days = int(body.days, "days", { min: 0, max: 365 });
     const spot = body.level === "spotlight";
-    db.run(`UPDATE groups SET ${spot ? "spotlight_until" : "promoted_until"} = ? WHERE id = ?`, days ? now() + days * 86400 : 0, params.id);
+    addPaidTime(db, params.id, spot ? "spotlight" : "feature", days);
     log(user, `${days ? "comp" : "clear"} ${spot ? "spotlight" : "featured"}`, params.id, days ? `${days} days` : "");
     return { ok: true };
   });

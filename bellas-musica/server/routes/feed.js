@@ -70,8 +70,9 @@ export default function feedRoutes(ctx, add) {
 
     // Build the stream by position. Every group appears once. Promoted groups take every 4th slot while there are other cards
     // to put between them, so a paying group with a big feed comes around several times; nobody repeats back to back.
-    // The promoted turns go round a list where each Spotlight group is in twice, spread out (smooth weighted round-robin:
-    // weight 2 for Spotlight, 1 for Featured, in the shuffled order), so a Spotlight group's two turns are far apart.
+    // The promoted turns go round a list where each Spotlight group is in twice, spread through each round (smooth weighted
+    // round-robin: weight 2 for Spotlight, 1 for Featured, in the shuffled order). With very few paying groups a Spotlight
+    // group can still take two promoted turns in a row where the rounds meet; those turns are 4 cards apart in the feed.
     const rotation = [];
     if (promoted.length) {
       const w = promoted.map((x) => (x.spotlight ? 2 : 1)), total = w.reduce((a, b) => a + b, 0), cur = promoted.map(() => 0);

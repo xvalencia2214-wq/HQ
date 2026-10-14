@@ -1,26 +1,26 @@
 import { api } from "../api.js";
 import { storeApp } from "../appmode.js";
 import { state } from "../state.js";
-import { t, lang, setWho } from "../i18n.js";
+import { t, lang, setWho, currentScreen } from "../i18n.js";
 import { esc, money, fmtDate, statusBadge, toast, today, dkey, sel, goto, fmtPhone, shareButtons, wireShare, stars, lenLabel, minutesOf } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
-import { CAT_ORDER, catLabel } from "../cats.js";
+import { CAT_ORDER, catLabel, catOfType } from "../cats.js";
 import { businessTab, bizBox, wireBiz, ownerOnly } from "./business.js";
 import { pushPanel } from "./app.js";
 
 // Type picker grouped by category (music, food, rentals...).
 const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
-const catOfType = (meta, type) => CAT_ORDER.find((c) => meta.categories[c].includes(type)) || "music";
 
 const TABS = ["requests", "calendar", "listing", "extras", "business", "media", "reviews", "payments", "messages"];
 
 export async function dashboard(app, params) {
+  const screen = currentScreen();
   const { groups } = await api.get("/api/my/groups");
   if (!groups.length) { createForm(app); return; }
   const g = groups.find((x) => x.id === params.get("g")) || groups[0];
   const tab = TABS.includes(params.get("tab")) ? params.get("tab") : "requests";
-  setWho(g.category); // "Reply from the venue"…
+  setWho(g.category, screen); // "Reply from the venue"…
   const link = (over) => { const q = new URLSearchParams({ g: g.id, tab, ...over }); return "#/dashboard?" + q.toString(); };
 
   app.innerHTML = `<div class="titlebar"><h1>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h1>
@@ -98,7 +98,7 @@ function createForm(app) {
   // choosing a type sets sensible defaults: a tent company sells packages, a mariachi is booked by the hour
   const typeSel = document.getElementById("c-type"), hourlyBox = document.getElementById("c-hourly");
   const syncRate = () => { document.getElementById("c-rate-w").hidden = !hourlyBox.checked; };
-  typeSel.onchange = () => { const c = catOfType(meta, typeSel.value); hourlyBox.checked = meta.hourly_by_default[c]; document.getElementById("c-mem-l").textContent = t(c === "music" ? "dash.members" : "dash.team"); syncRate(); };
+  typeSel.onchange = () => { const c = catOfType(typeSel.value); hourlyBox.checked = meta.hourly_by_default[c]; document.getElementById("c-mem-l").textContent = t(c === "music" ? "dash.members" : "dash.team"); syncRate(); };
   hourlyBox.onchange = syncRate;
   document.getElementById("cform").onsubmit = async (e) => {
     e.preventDefault();
