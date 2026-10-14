@@ -1,6 +1,6 @@
 # Bella's Música
 
-**Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). **App stores: `docs/app-stores.md`.** New visitors land on the welcome page (`#/welcome`); after editing `tools/landing3d.js` run `npm install && npm run build:landing`. Then `docs/go-live.md` and `docs/chicago-launch.md`.
+**Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). **App stores: `docs/app-stores.md`.** New visitors land on the welcome page (`#/welcome`); after editing `tools/landing3d.js` run `npm install && npm run build:landing`. Then `docs/go-live.md` and `docs/chicago-launch.md`. **What to improve next:** `docs/improvement-plan.md` (audit of Oct 14, 2026); the rules and checks for each area are project skills in `/.claude/skills/`.
 
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
