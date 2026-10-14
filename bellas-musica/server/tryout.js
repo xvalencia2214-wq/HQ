@@ -62,10 +62,12 @@ const base = `http://127.0.0.1:${port}`;
 const db = app.ctx.db;
 const PHOTO = fs.readFileSync(path.join(root, "public", "og.png")).toString("base64");
 
+// the private-preview password (the online practice copy): the setup talks to the server like a visitor, so it needs it too
+const PREVIEW_AUTH = process.env.PREVIEW_PASSWORD ? { Authorization: "Basic " + Buffer.from("setup:" + process.env.PREVIEW_PASSWORD).toString("base64") } : {};
 function person() {
   let cookie = "";
   const call = async (method, url, body) => {
-    const res = await fetch(base + url, { method, headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(cookie ? { Cookie: cookie } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const res = await fetch(base + url, { method, headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(cookie ? { Cookie: cookie } : {}), ...PREVIEW_AUTH }, body: body ? JSON.stringify(body) : undefined });
     const set = res.headers.get("set-cookie");
     if (set) cookie = set.split(";")[0];
     const json = await res.json().catch(() => null);

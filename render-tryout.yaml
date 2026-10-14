@@ -9,7 +9,6 @@ services:
     runtime: docker
     dockerfilePath: ./bellas-musica/Dockerfile
     dockerContext: ./bellas-musica
-    dockerCommand: sh -c "exec setpriv --reuid=node --regid=node --init-groups node --disable-warning=ExperimentalWarning server/tryout.js"
     region: ohio
     plan: free
     healthCheckPath: /api/health
@@ -18,3 +17,4 @@ services:
     envVars:
       - { key: PREVIEW_PASSWORD, sync: false }   # a password you choose: Safari asks for it (any name, this password)
       - { key: SESSION_SECRET, generateValue: true }
+      - { key: TRYOUT, value: "1" }                # start the test drive instead of the real site
