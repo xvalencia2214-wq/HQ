@@ -41,7 +41,7 @@ Many customers and most vendors read Spanish first, and many are older and use a
 ## Checklist for a change
 
 - [ ] Every new string exists in EN and ES; `npm test` is green.
-- [ ] Switch the language on the screen (sidebar toggle) and read it in Spanish on a phone-width window: nothing overflows, nothing is left in English.
+- [ ] Switch the language on the screen (the 🌐 row in the Menu) and read it in Spanish on a phone-width window: nothing overflows, nothing is left in English.
 - [ ] Notifications: added to `TEMPLATES` with `en` and `es`; the recipient's language is used, not the sender's.
 - [ ] New category, type or event: `t("type.*")` / `t("event.*")` and `ES_EVENTS` updated.
 - [ ] A native speaker reviews new copy: run `npm run spanish-sheet` and send `docs/spanish-review.md`.

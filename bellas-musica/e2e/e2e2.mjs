@@ -29,7 +29,7 @@ async function newPerson(label, viewport = { width: 1000, height: 1200 }) {
 const login = async (p, email, pw = PW) => {
   await p.goto(S.base + "/#/login"); await p.waitForSelector("#authform");
   await p.fill("#a-email", email); await p.fill("#a-pw", pw); await p.click("#authform button[type=submit]");
-  await p.waitForSelector("#nav a[data-r=account]");
+  await p.waitForSelector("#nav a[data-r=account]", { state: "attached" });
 };
 const shot = (p, n) => shots && p.screenshot({ path: path.join(shots, n), fullPage: true });
 let nav = 0;
@@ -54,7 +54,7 @@ try {
   await A.fill("#r-pw2", "brand new password"); await A.click("#rform button"); await A.waitForSelector("#authform");
   ok("reset works and sends the person to log in", A.url().includes("#/login"));
   await login(A, "pat@example.com", "brand new password");
-  ok("the new password logs in", (await A.locator("#nav a[data-r=account]").innerText()).includes("Pat"));
+  ok("the new password logs in", (await A.locator("#nav a[data-r=account]").textContent()).includes("Pat"));
   await A.goto(S.base + "/#/reset/" + rtok); await A.waitForSelector("#rform");
   await A.fill("#r-pw", "yet another password"); await A.fill("#r-pw2", "yet another password"); await A.click("#rform button");
   await A.waitForSelector("#rerr:not(:empty)");

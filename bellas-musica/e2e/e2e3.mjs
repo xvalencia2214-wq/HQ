@@ -82,7 +82,7 @@ try {
   await shot(D, "discover-desktop.png");
 
   // Spanish
-  await D.click("#langbtn"); await D.waitForSelector("text=Perfil y reservar");
+  await D.click("#navtoggle"); await D.click("#langbtn"); await D.waitForSelector("text=Perfil y reservar");
   ok("the feed is fully translated", (await D.locator("#app").innerText()).includes("Cerca de") && (await D.locator(".pill.promo").first().innerText()).includes("Promocionado"));
 } catch (e) {
   failed++; console.log("CRASH", e.message.split("\n").slice(0, 6).join(" | "));

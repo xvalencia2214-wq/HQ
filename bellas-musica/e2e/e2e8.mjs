@@ -104,7 +104,7 @@ try {
   await go(C, `#/group/${gid}`); await C.waitForSelector(".day[data-d]"); await C.click("#navtoggle"); await C.click("#langbtn");
   await C.waitForFunction(() => /Mínimo 3 horas/.test(document.body.innerText));
   ok("Spanish: minimum and add-ons are translated", await C.evaluate(() => /Mínimo 3 horas/.test(document.body.innerText) && /Extras/.test(document.body.innerText) && /Incluido/.test(document.body.innerText)));
-  await D.click("#langbtn"); await go(D, `#/dashboard?g=${gid}&tab=extras`); await D.waitForSelector("#aoform");
+  await D.click("#navtoggle"); await D.click("#langbtn"); await go(D, `#/dashboard?g=${gid}&tab=extras`); await D.waitForSelector("#aoform");
   ok("Spanish: the DJ's panel and quick-add buttons are translated", (await D.locator("#addons-panel").innerText()).includes("Agregar este extra") || (await D.locator("#aoform").innerText()).includes("Agregar este extra"));
 
   // ---- a group with no extras and the default minimum looks exactly as before ----

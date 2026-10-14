@@ -56,7 +56,7 @@ try {
   await O.fill("#k-name", "Serenata"); await O.fill("#k-desc", "3 songs"); await O.fill("#k-h", "1"); await O.fill("#k-p", "200");
   await O.click("#pkform button[type=submit]"); await O.waitForSelector("text=Serenata");
   await O.fill("#songs", "Cielito Lindo\nEl Rey\nLas Mañanitas"); await O.click("#sform2 button[type=submit]");
-  await O.waitForSelector("text=Saved");
+  await O.waitForSelector("#toast >> text=Saved ✓");
   await O.click(".tabs >> text=Media"); await O.waitForSelector("#file", { state: "attached" });
   await O.setInputFiles("#file", { name: "band.png", mimeType: "image/png", buffer: png() });
   await O.waitForSelector(".ph-item img");
@@ -119,7 +119,8 @@ try {
   // ---------------- manager accepts ----------------
   await O.goto(S.base + "/#/dashboard?tab=requests&again=1"); await O.waitForSelector(".req");
   await O.waitForFunction(() => document.querySelector("#nav a[data-r=dashboard] .dot"));
-  ok("manager sees a badge for the request and the unanswered message", Number(await O.locator("#nav a[data-r=dashboard] .dot").innerText()) >= 2);
+  ok("manager sees a badge for the request and the unanswered message", Number(await O.locator("#nav a[data-r=dashboard] .dot").textContent()) >= 2);
+  ok("the Menu button carries the count too, so it shows with the menu closed", await O.locator("#navtoggle .dot").isVisible() && Number(await O.locator("#navtoggle .dot").innerText()) >= 2);
   ok("requests tab shows a 'Needs your response' section", (await O.locator(".sec-h.hot").innerText()).includes("Needs your response"));
   ok("manager sees the request, phone hidden", (await O.locator(".req").innerText()).includes("Carlos Cliente") && !(await O.locator(".req").innerText()).includes("555"));
   await shot(O, "2-dashboard-requests.png");
@@ -145,7 +146,7 @@ try {
   ok("'Add to calendar' downloads a valid .ics", icsRes.status() === 200 && (await icsRes.text()).startsWith("BEGIN:VCALENDAR") && /text\/calendar/.test(icsRes.headers()["content-type"]));
   ok("customer sees Confirmed and the refund preview", (await C.locator(".req").innerText()).includes("Confirmed") && /get back \$/.test(await C.locator(".req").innerText()));
   await C.click("#navtoggle"); await C.click("#langbtn"); await C.waitForSelector("h1:has-text(\"Mis reservas\")"); if (await C.locator("#nav.open").count()) await C.click("#navtoggle"); // switching language closes the menu
-  ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").innerText()).includes("Buscar música"));
+  ok("Spanish toggle translates the page", (await C.locator(".req").innerText()).includes("Confirmada") && (await C.locator("#nav").textContent()).includes("Buscar música"));
   await shot(C, "3-bookings-es-phone.png");
   C.once("dialog", (d) => d.accept());
   await C.click("[data-cancel]"); await C.waitForSelector("text=Reembolsado");
@@ -167,7 +168,7 @@ try {
   // ---------------- account deletion ----------------
   const D = await newPerson("deleter");
   await D.goto(S.base + "/#/signup"); await D.fill("#a-name", "Dana Delete"); await D.fill("#a-email", "dana@example.com"); await D.fill("#a-pw", "a long password 3"); await D.click("#authform button[type=submit]");
-  await D.waitForSelector("#nav a[data-r=account]"); await D.goto(S.base + "/#/account"); await D.waitForSelector("#dform", { state: "attached" });
+  await D.waitForSelector("#nav a[data-r=account]", { state: "attached" }); await D.goto(S.base + "/#/account"); await D.waitForSelector("#dform", { state: "attached" });
   await D.click(".danger summary"); D.once("dialog", (d) => d.accept());
   await D.fill("#d-pw", "wrong password"); await D.click("#dform button"); await D.waitForSelector("#derr:not(:empty)");
   ok("deleting with the wrong password is refused", /Wrong password/.test(await D.locator("#derr").innerText()));

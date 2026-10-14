@@ -1,5 +1,5 @@
-// Browser end-to-end for the white-and-gold look and its features: the sidebar in sections on a wide screen, the big
-// Menu button on a phone, the Bigger text button, Spotlight (bought by a vendor, then shown first, on the home strip and
+// Browser end-to-end for the white-and-gold look and its features: the menu drawer that slides out from the left (on a
+// wide screen and on a phone) behind the button with three lines and the word Menu, the Bigger text button, Spotlight (bought by a vendor, then shown first, on the home strip and
 // on the group page), the Apple Pay note under the pay buttons, and the 48-hour rule in the terms.
 //   NODE_PATH=$(npm root -g) node e2e/e2e18.mjs [screenshotDir]
 import fs from "node:fs";
@@ -44,18 +44,27 @@ try {
   await go(W, "#/"); await W.waitForSelector("#sform");
   const look = await W.evaluate(() => { const b = getComputedStyle(document.body); return { bg: b.backgroundColor, ink: b.color }; });
   ok("the page is white with navy writing", look.bg === "rgb(253, 251, 246)" && look.ink === "rgb(11, 24, 56)");
-  // ---- the sidebar ----
-  ok("on a wide screen the menu is a sidebar, always showing, with no Menu button", await W.locator("#nav").isVisible() && !(await W.locator("#navtoggle").isVisible()));
-  ok("logged out, the sidebar has its sections in order", (await W.locator("#nav .nav-h").allInnerTexts()).map((x) => x.toLowerCase()).join("|") === "find and plan|for businesses|you");
+  // ---- the menu drawer ----
+  ok("on a wide screen too the menu waits behind a button with three lines and the word Menu", !(await W.locator("#nav").isVisible()) && (await W.locator("#navtoggle .burger i").count()) === 3 && (await W.locator("#navtoggle").innerText()).includes("Menu") && (await W.locator("#navtoggle").boundingBox()).height >= 47);
+  await W.click("#navtoggle");
+  await W.waitForFunction(() => document.getElementById("nav").getBoundingClientRect().left === 0);
+  const drawer = await W.locator("#nav").boundingBox();
+  ok("it slides out from the left, full height and narrow, over a dimmed page", drawer.y === 0 && Math.round(drawer.height) === 820 && drawer.width <= 330 && (await W.evaluate(() => getComputedStyle(document.getElementById("navshade")).opacity)) === "1" && (await W.locator("#navtoggle").getAttribute("aria-expanded")) === "true");
+  ok("logged out, the menu has its sections in order", (await W.locator("#nav .nav-h").allInnerTexts()).map((x) => x.toLowerCase()).join("|") === "find and plan|for businesses|you");
   const box = await W.locator("#nav a[data-r=home]").boundingBox();
   ok("each row is big enough to tap easily (48 px)", box && box.height >= 47);
   ok("the page you are on is marked", (await W.locator("#nav a.on").getAttribute("data-r")) === "home");
-  await shot(W, "e18-sidebar.png");
+  ok("the Close button has the keyboard, so Tab starts inside the menu", await W.evaluate(() => document.activeElement && document.activeElement.id === "navclose"));
+  await W.keyboard.press("Shift+Tab");
+  ok("Tab goes round inside the menu, not to the page behind it", await W.evaluate(() => document.getElementById("nav").contains(document.activeElement)));
+  await shot(W, "e18-drawer.png");
+  await W.mouse.click(1000, 400);
+  ok("tapping the dimmed page closes it and the page is left as it was", await until(async () => !(await W.locator("#nav").isVisible())) && (await W.locator("#navtoggle").getAttribute("aria-expanded")) === "false" && !(await W.evaluate(() => document.body.classList.contains("nav-open"))));
 
   // ---- the vendor buys Spotlight ----
   const V = await person("vendor");
   await login(V, "v18@example.com");
-  ok("logged in, the sidebar adds My party", (await V.locator("#nav .nav-h").allInnerTexts()).map((x) => x.toLowerCase()).join("|") === "find and plan|my party|for businesses|you");
+  ok("logged in, the menu adds My party", (await V.locator("#nav .nav-h").allTextContents()).map((x) => x.toLowerCase()).join("|") === "find and plan|my party|for businesses|you");
   await go(V, `#/dashboard?g=${gid}&tab=payments`); await V.waitForSelector("#spotlight");
   ok("Payments shows Featured and Spotlight side by side, with their prices", /Featured\s*\$49/.test(await text(V)) && /Spotlight\s*\$99/.test(await text(V)) && /Most seen/.test(await text(V)));
   await shot(V, "e18-get-seen.png");
@@ -83,21 +92,27 @@ try {
   const P = await person("phone", { width: 390, height: 844 }, true);
   await login(P, "f18@example.com");
   await go(P, "#/bookings"); await P.waitForSelector("#navtoggle");
-  ok("on a phone the menu is hidden behind a big Menu button with the word on it", !(await P.locator("#nav").isVisible()) && (await P.locator("#navtoggle").innerText()).includes("Menu") && (await P.locator("#navtoggle").boundingBox()).height >= 47);
+  ok("on a phone the menu is hidden behind the big Menu button with the word on it", !(await P.locator("#nav").isVisible()) && (await P.locator("#navtoggle").innerText()).includes("Menu") && (await P.locator("#navtoggle").boundingBox()).height >= 47);
   await P.evaluate(() => window.scrollTo(0, 400));
   await P.click("#navtoggle");
-  const menuBox = await P.locator("#nav").boundingBox(), headBox = await P.locator("header.top").boundingBox();
-  ok("Menu opens the same sections right under the header, even scrolled down", await P.locator("#nav").isVisible() && Math.abs(menuBox.y - (headBox.y + headBox.height)) < 3 && (await P.locator("#nav .nav-h").count()) === 4);
+  await P.waitForFunction(() => document.getElementById("nav").getBoundingClientRect().left === 0);
+  const menuBox = await P.locator("#nav").boundingBox();
+  ok("Menu slides the same sections out from the left, top to bottom, even scrolled down, leaving a strip of page to tap", await P.locator("#nav").isVisible() && menuBox.y === 0 && Math.round(menuBox.height) === 844 && menuBox.width < 390 - 40 && (await P.locator("#nav .nav-h").count()) === 4);
+  ok("the page behind does not scroll while the menu is open", await P.evaluate(() => getComputedStyle(document.body).overflow === "hidden"));
+  await P.evaluate(() => window.dispatchEvent(new Event("bm:attention"))); await P.waitForTimeout(600);
+  ok("the badges refreshing in the background leave the open menu open", await P.locator("#nav").isVisible() && (await P.locator("#navtoggle").getAttribute("aria-expanded")) === "true");
   await shot(P, "e18-phone-menu.png");
   await P.keyboard.press("Escape");
-  ok("Escape closes it", !(await P.locator("#nav").isVisible()) && (await P.locator("#navtoggle").getAttribute("aria-expanded")) === "false");
+  ok("Escape closes it and puts the keyboard back on the Menu button", await until(async () => !(await P.locator("#nav").isVisible())) && (await P.locator("#navtoggle").getAttribute("aria-expanded")) === "false" && await P.evaluate(() => document.activeElement.id === "navtoggle"));
+  await P.click("#navtoggle"); await P.click("#navclose");
+  ok("the Close button closes it too", await until(async () => !(await P.locator("#nav").isVisible())));
   await P.click("#navtoggle");
   const before = await P.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
   await P.click("#textbtn");
   const after = await P.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
   ok("Bigger text makes the writing bigger and shows it is on", after >= before * 1.15 && (await P.locator("#textbtn").getAttribute("aria-pressed")) === "true");
   await P.click("#nav a[data-r=home]"); await P.waitForSelector("#sform");
-  ok("tapping a row goes there and closes the menu", !(await P.locator("#nav").isVisible()));
+  ok("tapping a row goes there and closes the menu", await until(async () => !(await P.locator("#nav").isVisible())));
   await P.reload(); await P.waitForSelector("#sform");
   ok("bigger text is remembered on the device", await P.evaluate(() => document.documentElement.classList.contains("big")));
   await shot(P, "e18-phone-big.png");

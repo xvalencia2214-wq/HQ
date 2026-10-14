@@ -176,8 +176,9 @@ else. Or use a private (incognito) window for a second person at the same time.
 
 ## 7. New: the white-and-gold look
 
-- **The menu:** on an iPad held sideways (or a computer) it is a sidebar on the left, in sections: *Find and plan*,
-  *My party*, *For businesses*, *You*. On a phone or an iPad held upright, tap the big **Menu** button at the top.
+- **The menu:** tap the **Menu** button with three lines at the top left (on a phone, an iPad or a computer). The
+  menu slides out from the left side, in sections: *Find and plan*, *My party*, *For businesses*, *You*. Tap a row to
+  go there, or close it with **✕ Close**, by tapping the dimmed page beside it, or with Escape on a keyboard.
 - **Bigger text:** in the menu, under *You*. It stays on for that device until you tap it again.
 - **Spotlight:** log in as the mariachi (mariachi@prueba.com) → **For groups → Payments → Get seen more**. Featured
   ($49) and Spotlight ($99) side by side; buy Spotlight with the test button. Then log out and look at the home page

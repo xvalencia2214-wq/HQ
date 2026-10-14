@@ -22,7 +22,7 @@ async function person(label) {
   p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} ${x}`); });
   return p;
 }
-const login = async (p, email) => { await p.goto(S.base + "/#/login"); await p.waitForSelector("#authform"); await p.fill("#a-email", email); await p.fill("#a-pw", PW); await p.click("#authform button[type=submit]"); await p.waitForSelector("#nav a[data-r=account]"); };
+const login = async (p, email) => { await p.goto(S.base + "/#/login"); await p.waitForSelector("#authform"); await p.fill("#a-email", email); await p.fill("#a-pw", PW); await p.click("#authform button[type=submit]"); await p.waitForSelector("#nav a[data-r=account]", { state: "attached" }); };
 const go = (p, hash) => p.goto(`${S.base}/?n=${++nav}${hash}`);
 const shot = (p, n) => shots && p.screenshot({ path: path.join(shots, n), fullPage: true });
 

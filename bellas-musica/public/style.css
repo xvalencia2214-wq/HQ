@@ -681,14 +681,30 @@ details[open] > summary.btn { margin-bottom: 10px; }
 .spotstrip { margin: 0 0 16px; }
 .spotstrip h2 small { font-size: .8rem; font-weight: 600; margin-left: 6px; }
 
-/* ---- the menu: a sidebar in sections on wide screens (iPad landscape, computers), a big "Menu" button on phones.
-   Big rows with an icon and a word, so it is easy to read and to tap. ---- */
-.top-in { max-width: 1320px; }
+/* ---- the menu: a drawer that slides out from the left, on every screen, opened by the button with three lines and
+   the word "Menu". A dim layer covers the page behind it; tapping it, the ✕ or Escape closes it. Big rows with an icon
+   and a word, so it is easy to read and to tap. ---- */
+.top-in { justify-content: flex-start; }
 .shell { max-width: 1320px; margin: 0 auto; }
-.navtoggle { display: inline-flex; align-items: center; gap: 8px; background: var(--paper); border: 1.5px solid var(--gold-2); color: var(--ink); border-radius: 12px; font: 700 1.05rem var(--display); line-height: 1; padding: 10px 16px; min-height: 48px; }
-.navtoggle .nt-i { font-size: 1.3rem; }
-#nav { display: none; flex-direction: column; gap: 14px; padding: 14px 12px 22px; background: var(--paper); }
-#nav.open { display: flex; position: fixed; left: 0; right: 0; top: var(--toph, 72px); bottom: 0; z-index: 25; overflow-y: auto; border-top: 1px solid var(--line); box-shadow: 0 18px 40px rgba(11,24,56,.18); }
+.navtoggle { display: inline-flex; align-items: center; gap: 10px; flex: none; background: var(--paper); border: 1.5px solid var(--gold-2); color: var(--ink); border-radius: 12px; font: 700 1.05rem var(--display); line-height: 1; padding: 10px 14px; min-height: 48px; cursor: pointer; }
+.navtoggle:hover { background: rgba(201,150,43,.12); }
+.navtoggle .dot { margin-left: 0; }
+.burger { display: inline-flex; flex-direction: column; justify-content: space-between; width: 22px; height: 16px; flex: none; }
+.burger i { display: block; height: 2.5px; border-radius: 2px; background: currentColor; }
+#nav { display: flex; flex-direction: column; gap: 14px; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; width: min(320px, 86vw);
+  overflow-y: auto; overscroll-behavior: contain; background: var(--paper); border-right: 1px solid var(--line); box-shadow: 10px 0 40px rgba(11,24,56,.22);
+  padding: max(12px, env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  transform: translateX(-105%); visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s linear .28s; }
+#nav.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.navshade { position: fixed; inset: 0; z-index: 45; background: rgba(11,24,56,.45); opacity: 0; pointer-events: none; transition: opacity .28s; }
+body.nav-open .navshade { opacity: 1; pointer-events: auto; }
+body.nav-open { overflow: hidden; }
+.nav-top { display: flex; align-items: center; gap: 10px; padding: 2px 0 12px 4px; border-bottom: 1px solid var(--line); }
+.nav-top img { width: 40px; height: 40px; border-radius: 12px; flex: none; }
+.nav-top b { flex: 1; font: 800 1.15rem var(--display); color: var(--ink); }
+#nav .navclose { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; min-width: 48px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); font: 700 1rem var(--display); cursor: pointer; }
+#nav .navclose:hover { background: rgba(201,150,43,.14); }
+#nav .navclose .x { font-size: 1.15rem; line-height: 1; }
 .nav-sec { display: flex; flex-direction: column; gap: 2px; }
 .nav-h { margin: 0 0 4px; padding: 0 12px; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-ink); }
 #nav a, #nav .navbtn { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border-radius: 12px; color: var(--ink); text-decoration: none; font: 500 1.02rem var(--display); background: none; border: 0; text-align: left; width: 100%; cursor: pointer; }
@@ -699,16 +715,12 @@ details[open] > summary.btn { margin-bottom: 10px; }
 #nav a.cta { background: linear-gradient(135deg, #f2d681, #dcb04c); border: 1px solid #c9962b; font-weight: 700; }
 #nav .navbtn[aria-pressed="true"] { background: var(--cream-2); font-weight: 700; }
 #nav .navbtn[aria-pressed="true"] .nl::after { content: " ✓"; color: var(--good); }
-@media (min-width: 860px) {
-  .navtoggle { display: none; }
-  .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); column-gap: 8px; padding-left: 12px; }
-  #nav, #nav.open { display: flex; position: sticky; top: var(--toph, 80px); align-self: start; max-height: calc(100vh - var(--toph, 80px)); overflow-y: auto; box-shadow: none; z-index: 1;
-    margin: 16px 0; border: 1px solid var(--line); border-radius: var(--radius); }
-  .shell > main { margin: 0; max-width: 1060px; }
-}
-body.is-landing #nav { display: none !important; }
+@media (prefers-reduced-motion: reduce) { #nav, #nav.open, .navshade { transition: none; } }
+@media (max-width: 380px) { .navtoggle { padding: 10px 11px; gap: 8px; } }
+.empty .btn { white-space: normal; max-width: 100%; text-align: center; } /* a long "let vendors send quotes" link wraps instead of pushing the page sideways */
+body.is-landing #nav, body.is-landing .navshade { display: none !important; }
 body.is-landing .shell { display: block; max-width: none; padding: 0; }
-@media print { #nav, .navtoggle { display: none !important; } .shell { display: block; } }
+@media print { #nav, .navtoggle, .navshade { display: none !important; } .shell { display: block; } }
 
 /* bigger text, for anyone who wants it (the "Bigger text" button in the menu): everything sized in rem grows with it */
 body { font-size: 1.0625rem; }

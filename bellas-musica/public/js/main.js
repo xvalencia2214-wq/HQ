@@ -70,7 +70,8 @@ let viewCleanup = null; // a view that runs animations (the welcome page) leaves
 const bigText = () => document.documentElement.classList.contains("big");
 try { if (localStorage.getItem("bm_big") === "1") document.documentElement.classList.add("big"); } catch { /* private mode */ }
 
-// The menu, in sections: a sidebar on wide screens, the "Menu" button on phones. Each row is an icon and a word.
+// The menu, in sections, in a drawer that slides out from the left (see setNav). Each row is an icon and a word.
+let chromeAt = ""; // the page and language the menu was last drawn for
 function renderChrome() {
   const tag = document.getElementById("brandtag"); if (tag) tag.textContent = t("brand.tag"); // the line under the name, in the screen's language
   const u = state.user;
@@ -79,7 +80,9 @@ function renderChrome() {
   const managerCount = a ? a.manager.requests + a.manager.messages : 0;
   const link = (r, href, icon, label, extra = "", cls = "") => `<a href="${href}" data-r="${r}"${cls ? ` class="${cls}"` : ""}><span class="ni" aria-hidden="true">${icon}</span><span class="nl">${esc(label)}</span>${extra}</a>`;
   const section = (id, title, rows) => `<div class="nav-sec" role="group" aria-labelledby="nh-${id}"><p class="nav-h" id="nh-${id}">${esc(title)}</p>${rows}</div>`;
+  const was = document.activeElement, keep = was && document.getElementById("nav").contains(was) ? (was.id ? "#" + was.id : was.dataset.r ? `a[data-r="${was.dataset.r}"]` : "") : "";
   document.getElementById("nav").innerHTML =
+    `<div class="nav-top"><img src="logo.svg" alt="" width="40" height="40"><b>Bella's Fiestas</b><button type="button" id="navclose" class="navclose" aria-label="${esc(t("nav.close"))}"><span class="x" aria-hidden="true">✕</span><span>${esc(t("nav.close"))}</span></button></div>` +
     section("find", t("side.find"), link("home", "#/", "🔎", t("nav.find")) + link("quotes", "#/quotes", "✉️", t("nav.quotes")) + link("discover", "#/discover", "▶️", t("nav.discover")) + link("party", "#/party", "🎉", t("party.nav"))) +
     (u ? section("mine", t("side.mine"), link("saved", "#/saved", "♥", t("nav.saved")) + link("bookings", "#/bookings", "📅", t("nav.bookings")) + link("messages", "#/messages", "💬", t("nav.messages"), dot(a ? a.messages : 0))) : "") +
     section("biz", t("side.biz"), link("dashboard", "#/dashboard", "🎤", t("nav.groups"), dot(managerCount)) + (u && u.is_admin ? link("admin", "#/admin", "🛠️", t("nav.admin")) : "")) +
@@ -101,7 +104,14 @@ function renderChrome() {
   banner.textContent = t("banner.test");
   renderVerifyBanner();
   const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
-  nav.classList.remove("open"); tog.setAttribute("aria-expanded", "false"); tog.querySelector(".nt-l").textContent = t("nav.menu");
+  // a new page or language closes the menu; a refresh of the badges (every minute) leaves it as it is, keyboard and all
+  const where = location.hash + "|" + lang();
+  if (where !== chromeAt) { chromeAt = where; setNav(false, false); } else if (keep) nav.querySelector(keep)?.focus({ preventScroll: true });
+  tog.querySelector(".nt-l").textContent = t("nav.menu");
+  tog.querySelector(".dot")?.remove(); // the menu is tucked away, so its button carries the count of new requests and messages
+  if (a && a.messages + managerCount > 0) tog.insertAdjacentHTML("beforeend", dot(a.messages + managerCount));
+  document.getElementById("navclose").onclick = () => setNav(false);
+  nav.querySelectorAll("a[href]").forEach((a) => a.addEventListener("click", () => setNav(false, false))); // also when the row is the page you are already on
   const cur0 = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] || "home", cur = cur0 === "my-party" ? "party" : cur0;
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
@@ -173,15 +183,30 @@ async function route() {
   }
 }
 
-// The sidebar sits under the header and the phone menu opens just below it: both need the header's height.
-const setTopH = () => { const h = document.querySelector("header.top"); if (h) document.documentElement.style.setProperty("--toph", Math.round(h.getBoundingClientRect().bottom) + "px"); };
-new ResizeObserver(setTopH).observe(document.querySelector("header.top"));
-document.getElementById("navtoggle").onclick = () => {
-  setTopH();
-  const nav = document.getElementById("nav"), open = nav.classList.toggle("open");
-  document.getElementById("navtoggle").setAttribute("aria-expanded", String(open));
-};
-document.addEventListener("keydown", (e) => { const nav = document.getElementById("nav"); if (e.key === "Escape" && nav.classList.contains("open")) { nav.classList.remove("open"); const tog = document.getElementById("navtoggle"); tog.setAttribute("aria-expanded", "false"); tog.focus(); } });
+// The menu is a drawer that slides out from the left. Open, it holds the keyboard (Tab stays inside, Escape closes) and
+// the page behind it is dimmed and does not scroll; closed, it is hidden from taps, Tab and screen readers.
+function setNav(open, focus = true) {
+  const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
+  if (nav.classList.contains("open") === open) return;
+  nav.classList.toggle("open", open);
+  document.body.classList.toggle("nav-open", open);
+  tog.setAttribute("aria-expanded", String(open));
+  if (open) requestAnimationFrame(() => document.getElementById("navclose")?.focus({ preventScroll: true }));
+  else if (focus) tog.focus({ preventScroll: true });
+}
+document.getElementById("navtoggle").onclick = () => setNav(!document.getElementById("nav").classList.contains("open"));
+document.getElementById("navshade").onclick = () => setNav(false);
+document.addEventListener("keydown", (e) => {
+  const nav = document.getElementById("nav");
+  if (!nav.classList.contains("open")) return;
+  if (e.key === "Escape") { e.preventDefault(); setNav(false); return; }
+  if (e.key !== "Tab") return;
+  const all = [...nav.querySelectorAll("a[href], button")];
+  const first = all[0], last = all[all.length - 1];
+  if (!nav.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 window.addEventListener("bm:unauth", () => {
   if (!state.user) return;
   setUser(null);

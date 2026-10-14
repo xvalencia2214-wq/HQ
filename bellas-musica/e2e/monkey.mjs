@@ -44,7 +44,7 @@ async function walk(who, email, viewport) {
       const roll = R();
       if (roll < 0.22) { await p.goto(`${S.base}/?m=${i}${pick(routes)}`); await p.waitForTimeout(150); continue; }
       // the clickable things on the page right now, minus the ones we never press
-      const els = await p.$$("#app button:not([disabled]), #app a[href], #app summary, #nav a, #app .day:not([disabled]), #app .slot");
+      const els = await p.$$("#app button:not([disabled]), #app a[href], #app summary, #navtoggle, #nav a, #app .day:not([disabled]), #app .slot");
       const safe = [];
       for (const el of els) { const txt = ((await el.innerText().catch(() => "")) || "").toLowerCase(); const href = (await el.getAttribute("href").catch(() => "")) || ""; if (/log out|delete my account|^delete|download/.test(txt) || /\/ics|\.csv|^http/.test(href)) continue; if (await el.isVisible().catch(() => false)) safe.push(el); }
       if (roll < 0.55 && safe.length) { await pick(safe).click({ timeout: 1500, trial: false }).catch(() => {}); }

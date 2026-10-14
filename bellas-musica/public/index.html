@@ -17,14 +17,14 @@
 <body>
 <header class="top">
   <div class="top-in">
+    <button type="button" id="navtoggle" class="navtoggle" aria-expanded="false" aria-controls="nav"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="nt-l">Menu</span></button>
     <a class="brand" href="#/"><img src="logo.svg" alt="" width="54" height="54"><span>Bella's Fiestas<small id="brandtag">Music and everything for your fiesta</small></span></a>
-    <button type="button" id="navtoggle" class="navtoggle" aria-expanded="false" aria-controls="nav"><span class="nt-i" aria-hidden="true">☰</span><span class="nt-l">Menu</span></button>
   </div>
   <div class="bunting alt" aria-hidden="true"></div>
   <div id="banner" class="banner" hidden></div>
   <div id="vbanner" class="banner verify" hidden></div>
 </header>
-<div class="shell"><nav id="nav" aria-label="Main"></nav><main id="app"></main></div>
+<div class="shell"><nav id="nav" aria-label="Main"></nav><div id="navshade" class="navshade" aria-hidden="true"></div><main id="app"></main></div>
 <footer id="foot"></footer>
 <script src="vendor/leaflet/leaflet.js"></script>
 <script type="module" src="js/main.js"></script>

@@ -1,4 +1,4 @@
-// Strings for the white-and-gold look: the sidebar and its sections, bigger text, Apple Pay at checkout, Spotlight
+// Strings for the white-and-gold look: the menu and its sections, bigger text, Apple Pay at checkout, Spotlight
 // (the top paid placement) and the late-cancel rule. Merged into the main dictionaries by i18n.js.
 export const EN6 = {
   "pay.ways": "Pay with Apple Pay, Google Pay or any card. Secure checkout by Stripe.", "pay.card": "Card",
@@ -14,7 +14,7 @@ export const EN6 = {
   "show.checkedInVendor": "Checked in at the party",
   "g.reviewsOne": "{n} review", "land.live.reviewsOne": "{n} review", "card.membersOne": "{n} musician", "fav.countOne": "{n} group", "rq.sentOne": "Sent to {n} group. Replies will show here.",
   "pl.daysNOne": "{n} day", "sp.inDaysOne": "in {n} day", "sp.openOne": "{n} time open ({from} – {to})", "dash.guestsOne": "{n} guest", "g.uptoOne": "up to {n} guest", "gl.invitedOne": "{n} person invited", "g.editPage": "Edit your page", "pub.basics": "Name, type and ZIP code", "pub.done": "done",
-  "side.find": "Find and plan", "side.mine": "My party", "side.biz": "For businesses", "side.you": "You", "side.bigText": "Bigger text",
+  "side.find": "Find and plan", "side.mine": "My party", "side.biz": "For businesses", "side.you": "You", "side.bigText": "Bigger text", "nav.close": "Close",
   "card.spotlight": "Spotlight", "spot.strip": "In the spotlight", "spot.paid": "Promoted",
   "seen.title": "Get seen more", "seen.text": "Pay for a better spot and more families see you first. Both last 30 days and add to any time you have left. Paid spots are always labelled.",
   "seen.feat": "Featured", "seen.spot": "Spotlight", "seen.best": "Most seen",
@@ -37,7 +37,7 @@ export const ES6 = {
   "show.checkedInVendor": "Llegada registrada en la fiesta",
   "g.reviewsOne": "{n} reseña", "land.live.reviewsOne": "{n} reseña", "card.membersOne": "{n} músico", "fav.countOne": "{n} grupo", "rq.sentOne": "Enviado a {n} grupo. Las respuestas aparecerán aquí.",
   "pl.daysNOne": "{n} día", "sp.inDaysOne": "en {n} día", "sp.openOne": "{n} horario libre ({from} – {to})", "dash.guestsOne": "{n} invitado", "g.uptoOne": "hasta {n} invitado", "gl.invitedOne": "{n} persona invitada", "g.editPage": "Editar tu página", "pub.basics": "Nombre, tipo y código postal", "pub.done": "listo",
-  "side.find": "Buscar y planear", "side.mine": "Mi fiesta", "side.biz": "Para negocios", "side.you": "Tú", "side.bigText": "Letra más grande",
+  "side.find": "Buscar y planear", "side.mine": "Mi fiesta", "side.biz": "Para negocios", "side.you": "Tú", "side.bigText": "Letra más grande", "nav.close": "Cerrar",
   "card.spotlight": "En la mira", "spot.strip": "En la mira", "spot.paid": "Promocionado",
   "seen.title": "Que te vean más", "seen.text": "Paga por un mejor lugar y más familias te ven primero. Los dos duran 30 días y se suman al tiempo que te quede. Los lugares pagados siempre van marcados.",
   "seen.feat": "Destacado", "seen.spot": "En la mira", "seen.best": "El más visto",
