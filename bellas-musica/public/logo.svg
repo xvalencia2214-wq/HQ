@@ -1,52 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a navy charro sombrero with a gold-embroidered band">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a navy charro sombrero seen from the side, with gold stitching on its rolled brim">
 <defs>
 <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8a"/><stop offset=".5" stop-color="#d4a53c"/><stop offset="1" stop-color="#a87a1f"/></linearGradient>
 <radialGradient id="bg" cx="50%" cy="35%" r="80%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f7f1e3"/></radialGradient>
-<linearGradient id="crown" x1="0" y1="0" x2="1" y2=".25"><stop offset="0" stop-color="#2c4a94"/><stop offset=".45" stop-color="#1b336f"/><stop offset="1" stop-color="#0a1636"/></linearGradient>
-<linearGradient id="brim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22397c"/><stop offset=".55" stop-color="#162b60"/><stop offset="1" stop-color="#0c1a40"/></linearGradient>
-<linearGradient id="lip" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a5aa8" stop-opacity="0"/><stop offset="1" stop-color="#4c6cba"/></linearGradient>
-<linearGradient id="band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf4e2"/><stop offset="1" stop-color="#ead9b2"/></linearGradient>
-<g id="flower"><g fill="#14285e"><circle cx="0" cy="-2" r="1.5"/><circle cx="1.9" cy="-.6" r="1.5"/><circle cx="1.2" cy="1.6" r="1.5"/><circle cx="-1.2" cy="1.6" r="1.5"/><circle cx="-1.9" cy="-.6" r="1.5"/></g><circle r="1" fill="#e6c063"/></g>
+<linearGradient id="crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b4891"/><stop offset=".35" stop-color="#1a3170"/><stop offset="1" stop-color="#0b1838"/></linearGradient>
+<linearGradient id="brimtop" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1c3270"/><stop offset=".5" stop-color="#132654"/><stop offset="1" stop-color="#22397c"/></linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a2f68"/><stop offset="1" stop-color="#081230"/></linearGradient>
 </defs>
 <rect width="128" height="128" rx="30" fill="url(#bg)"/>
 <rect x="3" y="3" width="122" height="122" rx="27" fill="none" stroke="url(#gold)" stroke-width="2.4"/>
-<g transform="translate(64 66) scale(.88) translate(-65 -64)">
-<!-- the brim: very wide, seen from a little above, curling up at the back on the right -->
-<path d="M6 88 C7 78 34 69 60 65 C76 62 86 52 94 42 C101 33 113 29 120 32 C127 35 128 48 125 60 C122 71 118 78 112 84 C99 97 72 104 42 102.5 C20 101 6 95.5 6 88 Z" fill="#081230"/>
-<path d="M6 86 C7 76 34 67 60 63 C76 60 86 50 94 40 C101 31 113 27 120 30 C127 33 128 46 125 58 C122 69 118 76 112 82 C99 95 72 102 42 100.5 C20 99 6 93.5 6 86 Z" fill="url(#brim)" stroke="url(#gold)" stroke-width="1.2"/>
-<!-- the raised lip at the back right -->
-<path d="M94 40 C101 31 113 27 120 30 C127 33 128 46 125 58 C122 69 118 76 112 82 C108 86 104 89 100 91 C110 82 116 70 117.5 58 C118.5 48 112 41 103 40.5 C99.5 40.3 96.5 40.2 94 40 Z" fill="url(#lip)" opacity=".85"/>
-<path d="M9 88 C12 95 26 99 42 99.6 C70 101 100 95 112.5 85.5" fill="none" stroke="url(#gold)" stroke-width=".7" opacity=".7"/>
-<!-- the crown: tall and smoothly rounded, leaning a little -->
-<path d="M39 78 C37.5 62 39.5 44 46 33 C50 26 55 22.5 61 22.5 C67.5 22.5 73 27 76.5 34 C81.5 45 82.5 62 81 78 C72 83.5 48 83.5 39 78 Z" fill="url(#crown)"/>
-<path d="M50 31 C46 39 44 50 43.6 60" fill="none" stroke="#5a78c4" stroke-width="2.2" stroke-linecap="round" opacity=".45"/>
-<!-- the embroidered band: cream, with a wavy top edge -->
-<path d="M39.2 65.5 C42.5 58.5 46 58.5 49.2 63.4 C52.2 68 56.2 68 59.4 61.4 C62.4 55.4 66.6 55.4 69.6 61.2 C72.6 66.6 76.8 66.4 80.8 60 L81 78 C72 83.5 48 83.5 39 78 Z" fill="url(#band)"/>
-<!-- gold scrolls and navy flowers stitched across the band -->
-<g fill="none" stroke="#b8862a" stroke-width=".9" stroke-linecap="round">
-<path d="M41.5 74.5 C41.5 71 45.5 70.5 45.5 73.2 C45.5 75 43.3 75 43.5 73.5"/>
-<path d="M51.5 76.6 C51 73.5 54.6 72.6 55 75.2 C55.2 76.8 53.2 77 53.3 75.6"/>
-<path d="M66 76.6 C66.5 73.5 62.9 72.6 62.5 75.2 C62.3 76.8 64.3 77 64.2 75.6"/>
-<path d="M76.5 73.6 C77 70.4 73.4 69.6 73 72.2 C72.8 73.8 74.8 74 74.7 72.6"/>
-<path d="M44 68 C47 70.5 50 70 52 72.5 M58 74 C60 72 62 72 63.5 73.6 M68 72.5 C70 70 73 70.5 75 68.6"/>
+<g transform="translate(64 67) scale(.92) translate(-65.5 -64)">
+<!-- the brim from the side: a canoe that curls up a little at the front and sweeps up high at the back -->
+<path d="M10 64 C22 70 38 72 52 72.5 C74 73 98 66 112 52 C116 48 119 44 121 39 C124 46 121 64 110 76 C96 90 74 96 56 96 C36 96 18 90 10 78 C7 74 7.5 67 10 64 Z" fill="url(#brimtop)"/>
+<!-- its top surface catches the light behind the crown -->
+<path d="M12 66 C26 71 42 73 56 73 C80 73 100 64 114 49 C111 58 102 68 90 74 C74 80 46 81 24 76 C17 74 13 70 12 66 Z" fill="#2c4b98" opacity=".55"/>
+<!-- the crown: wide, with a broad rounded top -->
+<path d="M41 78 C40 64 40.5 50 42.2 42 C43.6 33 50 25.5 64 25.5 C78 25.5 84.4 33 85.8 42 C87.5 50 88 64 87 78 Z" fill="url(#crown)"/>
+<path d="M45 40 C46.5 32.5 53 28.5 64 28.5 C75 28.5 81.5 32.5 83 40 C79 44.5 72 42 64 45 C56 42 49 44.5 45 40 Z" fill="#4a68b4" opacity=".5"/>
+<!-- the band, braided, round the base of the crown -->
+<path d="M40.6 70 C50 72.5 78 72.5 87.4 70 L87.2 78.5 C78 81 50 81 40.8 78.5 Z" fill="url(#gold)"/>
+<path d="M41 74.3 C50 76.6 78 76.6 87 74.3" fill="none" stroke="#7a5710" stroke-width="1" stroke-dasharray="1.4 1.4"/>
+<!-- the knot on the front, with its cord looping up the crown -->
+<g fill="none" stroke="url(#gold)" stroke-width="1.5" stroke-linecap="round">
+<path d="M64 72 C58 66 58 61 64 57 C70 53 70 48 64 44.5 C58 48 58 53 64 57 C70 61 70 66 64 72"/>
 </g>
-<use href="#flower" transform="translate(48.5 69.5)"/>
-<use href="#flower" transform="translate(59.6 70.2) scale(1.15)"/>
-<use href="#flower" transform="translate(71 68.6)"/>
-<!-- the braided cord: along the wavy top edge and the base of the band -->
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-<path d="M39.2 65.5 C42.5 58.5 46 58.5 49.2 63.4 C52.2 68 56.2 68 59.4 61.4 C62.4 55.4 66.6 55.4 69.6 61.2 C72.6 66.6 76.8 66.4 80.8 60" stroke="url(#gold)" stroke-width="2.4"/>
-<path d="M39.2 65.5 C42.5 58.5 46 58.5 49.2 63.4 C52.2 68 56.2 68 59.4 61.4 C62.4 55.4 66.6 55.4 69.6 61.2 C72.6 66.6 76.8 66.4 80.8 60" stroke="#7a5710" stroke-width="2.4" stroke-dasharray=".8 1.4" opacity=".55"/>
-<path d="M39 78 C48 83.5 72 83.5 81 78" stroke="url(#gold)" stroke-width="2.4"/>
-<path d="M39 78 C48 83.5 72 83.5 81 78" stroke="#7a5710" stroke-width="2.4" stroke-dasharray=".8 1.4" opacity=".55"/>
-</g>
-<!-- the knot on the side, with two tassels -->
-<g transform="translate(81.5 69)">
-<ellipse cx="0" cy="0" rx="3.4" ry="5.4" fill="url(#gold)" stroke="#8a6414" stroke-width=".6"/>
-<path d="M-2.6 -3 L2.6 3 M2.6 -3 L-2.6 3 M-3 0 L3 0" stroke="#8a6414" stroke-width=".6"/>
-<path d="M-.5 5 C0 8 -.5 10 0 12.5 M1 5 C2.5 8 3.5 10 4.5 12" fill="none" stroke="url(#gold)" stroke-width="1.2" stroke-linecap="round"/>
-<path d="M-1.6 12 L1.6 12 L1.1 16 L-1.1 16 Z" fill="url(#gold)"/><path d="M3 11.6 L6.2 11.8 L5.6 15.6 L3.4 15.4 Z" fill="url(#gold)"/>
-<circle cx="0" cy="11.6" r="1.1" fill="#14285e"/><circle cx="4.6" cy="11.4" r="1.1" fill="#14285e"/>
+<circle cx="64" cy="43.2" r="3" fill="none" stroke="url(#gold)" stroke-width="1.6"/>
+<circle cx="64" cy="74.5" r="3.6" fill="url(#gold)" stroke="#7a5710" stroke-width=".7"/>
+<circle cx="64" cy="74.5" r="1.3" fill="#7a5710"/>
+<!-- the rolled edge along the front of the brim, stitched with gold loops -->
+<path d="M10 64 C8 70 10 76 13 79 C22 89 40 95 56 95.6 C76 96 98 90 110 77 C120 66 124 52 121 39 C123 45 123 54 119 62 C114 72 104 82 90 87 C74 92 50 92 34 88 C22 85 14 79 11 72 C10.4 69.5 10.2 66.5 10 64 Z" fill="url(#rim)"/>
+<path d="M10 64 C8 70 10 76 13 79 C22 89 40 95 56 95.6 C76 96 98 90 110 77 C120 66 124 52 121 39" fill="none" stroke="url(#gold)" stroke-width="1"/>
+<path d="M11 72 C14 79 22 85 34 88 C50 92 74 92 90 87 C104 82 114 72 119 62 C122.6 55 123 47 121 39" fill="none" stroke="url(#gold)" stroke-width=".9"/>
+<g fill="none" stroke="url(#gold)" stroke-width="1">
+<ellipse cx="11.84" cy="71.50" rx="1.45" ry="3.3" transform="rotate(160.9 11.84 71.50)"/>
+<ellipse cx="15.98" cy="75.79" rx="1.45" ry="3.3" transform="rotate(151.3 15.98 75.79)"/>
+<ellipse cx="20.72" cy="79.37" rx="1.45" ry="3.3" transform="rotate(143.0 20.72 79.37)"/>
+<ellipse cx="25.81" cy="82.25" rx="1.45" ry="3.3" transform="rotate(136.1 25.81 82.25)"/>
+<ellipse cx="31.37" cy="84.60" rx="1.45" ry="3.3" transform="rotate(130.0 31.37 84.60)"/>
+<ellipse cx="37.02" cy="86.37" rx="1.45" ry="3.3" transform="rotate(124.9 37.02 86.37)"/>
+<ellipse cx="42.81" cy="87.66" rx="1.45" ry="3.3" transform="rotate(120.4 42.81 87.66)"/>
+<ellipse cx="48.81" cy="88.54" rx="1.45" ry="3.3" transform="rotate(116.3 48.81 88.54)"/>
+<ellipse cx="54.63" cy="89.00" rx="1.45" ry="3.3" transform="rotate(112.7 54.63 89.00)"/>
+<ellipse cx="60.70" cy="89.10" rx="1.45" ry="3.3" transform="rotate(109.2 60.70 89.10)"/>
+<ellipse cx="66.69" cy="88.84" rx="1.45" ry="3.3" transform="rotate(105.6 66.69 88.84)"/>
+<ellipse cx="72.54" cy="88.15" rx="1.45" ry="3.3" transform="rotate(100.9 72.54 88.15)"/>
+<ellipse cx="78.43" cy="86.93" rx="1.45" ry="3.3" transform="rotate(95.6 78.43 86.93)"/>
+<ellipse cx="83.99" cy="85.22" rx="1.45" ry="3.3" transform="rotate(90.1 83.99 85.22)"/>
+<ellipse cx="89.52" cy="82.89" rx="1.45" ry="3.3" transform="rotate(84.1 89.52 82.89)"/>
+<ellipse cx="94.82" cy="79.95" rx="1.45" ry="3.3" transform="rotate(77.9 94.82 79.95)"/>
+<ellipse cx="99.57" cy="76.61" rx="1.45" ry="3.3" transform="rotate(71.8 99.57 76.61)"/>
+<ellipse cx="104.05" cy="72.68" rx="1.45" ry="3.3" transform="rotate(65.7 104.05 72.68)"/>
+<ellipse cx="108.12" cy="68.29" rx="1.45" ry="3.3" transform="rotate(59.9 108.12 68.29)"/>
+<ellipse cx="111.77" cy="63.47" rx="1.45" ry="3.3" transform="rotate(54.5 111.77 63.47)"/>
+<ellipse cx="114.91" cy="58.45" rx="1.45" ry="3.3" transform="rotate(49.6 114.91 58.45)"/>
+<ellipse cx="117.67" cy="53.12" rx="1.45" ry="3.3" transform="rotate(45.2 117.67 53.12)"/>
+<ellipse cx="119.98" cy="47.74" rx="1.45" ry="3.3" transform="rotate(41.3 119.98 47.74)"/>
 </g>
 </g>
 </svg>

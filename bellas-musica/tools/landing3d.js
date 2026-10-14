@@ -88,13 +88,13 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
   const felt = new MeshPhysicalMaterial({ color: "#0c1a44", roughness: 0.62, metalness: 0.08, sheen: 0.8, sheenColor: new Color("#3a55a0"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
-  // A lathe is the same all the way round; a charro brim is not: its back sweeps up. Every point of the brim is lifted,
+  // A lathe is the same all the way round; a charro brim is not: its back sweeps up high and its front a little. Every point of the brim is lifted,
   // more the farther out and the nearer the back it is (nothing within the crown moves), and the trim and studs follow.
   const BACK = -Math.PI / 2; // the back of the hat: -z, away from the camera at the start
   const lift = (x, z) => {
     const r = Math.hypot(x, z); if (r <= 1.25) return 0;
-    const out = Math.min(1, (r - 1.25) / 2.15), back = (1 + Math.cos(Math.atan2(z, x) - BACK)) / 2;
-    return 2.5 * out * out * out * back * back;
+    const out = Math.min(1, (r - 1.25) / 2.15), back = (1 + Math.cos(Math.atan2(z, x) - BACK)) / 2, front = 1 - back;
+    return out * out * out * (2.5 * back * back + 0.7 * front * front); // high at the back, a little at the front, like a canoe
   };
   const curl = (geo) => { const p = geo.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i))); geo.computeVertexNormals(); return geo; };
   const body = new Mesh(curl(new LatheGeometry(profile, reduced || lowPower ? 96 : 160)), felt);
