@@ -10,7 +10,7 @@ const B = "Bella's Música";
 
 // Event types are stored in English. In Spanish emails they are written as a plain lowercase noun with no article
 // ("boda", "cumpleaños"), because the nouns differ in gender: the templates say "tu boda", "su quinceañera", never "un boda".
-const ES_EVENTS = { Wedding: "boda", "Quinceañera": "quinceañera", Birthday: "cumpleaños", Anniversary: "aniversario", Serenata: "serenata", "Corporate / Restaurant": "evento corporativo o de restaurante", Other: "evento" };
+const ES_EVENTS = { Wedding: "boda", "Quinceañera": "quinceañera", Birthday: "cumpleaños", Anniversary: "aniversario", Serenata: "serenata", Baptism: "bautizo", "First Communion": "primera comunión", Graduation: "graduación", "Baby shower": "baby shower", "Funeral / Memorial": "funeral o misa", "Corporate / Restaurant": "evento corporativo o de restaurante", Other: "evento" };
 export const eventLabel = (e, lang) => (lang === "es" ? ES_EVENTS[e] || String(e).toLowerCase() : e);
 
 // A booking's length: "3 hr" / "3 h", or "20 min" for a short set.

@@ -33,10 +33,12 @@ if (landing) history.replaceState(null, "", "/#/" + (landing[1] === "g" ? "group
 // /chicago/<neighborhood>[/<event>] pages are for search engines and shared links; inside the app they open a search for that place and event.
 const hoodLanding = /^\/chicago\/([\w-]+)(?:\/([\w-]+))?\/?$/.exec(location.pathname);
 if (hoodLanding) {
-  const EVENT_NAMES = { quinceanera: "Quinceañera", wedding: "Wedding", birthday: "Birthday", serenata: "Serenata", anniversary: "Anniversary", corporate: "Corporate / Restaurant" };
+  const EVENT_NAMES = { quinceanera: "Quinceañera", wedding: "Wedding", birthday: "Birthday", serenata: "Serenata", anniversary: "Anniversary", corporate: "Corporate / Restaurant", baptism: "Baptism", "first-communion": "First Communion", graduation: "Graduation", "baby-shower": "Baby shower", funeral: "Funeral / Memorial" };
+  const CATEGORY_OF = { catering: "food", decorations: "decor", rentals: "rentals", "photo-video": "photo", "party-services": "services", venues: "venues" }; // the other vendors' pages
   const meta0 = await fetch("/api/meta").then((r) => r.json()).catch(() => null);
   const hood = meta0 && meta0.market.neighborhoods.find((n) => n.id === hoodLanding[1]);
-  history.replaceState(null, "", "/#/" + (hood ? `?zip=${hood.zip}${EVENT_NAMES[hoodLanding[2]] ? "&event=" + encodeURIComponent(EVENT_NAMES[hoodLanding[2]]) : ""}` : "chicago"));
+  const extra = EVENT_NAMES[hoodLanding[2]] ? "&event=" + encodeURIComponent(EVENT_NAMES[hoodLanding[2]]) : CATEGORY_OF[hoodLanding[2]] ? "&category=" + CATEGORY_OF[hoodLanding[2]] : "";
+  history.replaceState(null, "", "/#/" + (hood ? `?zip=${hood.zip}${extra}` : "chicago"));
 }
 
 

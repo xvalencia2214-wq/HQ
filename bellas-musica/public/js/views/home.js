@@ -8,7 +8,9 @@ import { heart, loadFavs, wireHearts } from "../fav.js";
 import { catChips, catLabel } from "../cats.js";
 import { holidayBanner } from "./business.js";
 
-const FIELDS = ["zip", "event", "date", "guests", "song", "type", "max", "sort", "radius", "category", "soon"];
+const FIELDS = ["zip", "event", "date", "guests", "q", "song", "type", "max", "sort", "radius", "category", "soon"];
+// "Up to" price steps that make sense for each kind of vendor (a hall costs more than a balloon arch).
+const PRICE_STEPS = { music: [250, 350, 500, 900], food: [400, 800, 1500, 3000], rentals: [200, 400, 800, 1500], decor: [200, 400, 800, 1500], photo: [300, 600, 1000, 2000], services: [150, 300, 600, 1000], venues: [800, 1500, 3000, 6000] };
 
 // What the customer already told us, carried into the group page so they don't have to type it twice.
 const carry = (p) => new URLSearchParams(Object.entries({ event: p.event, guests: p.guests, date: p.date, zip: p.zip }).filter(([, v]) => v)).toString();
@@ -45,7 +47,7 @@ export async function home(app, params) {
   const p = Object.fromEntries(params);
   const view = p.view === "map" ? "map" : "list";
   const meta = state.meta;
-  const moreOpen = ["song", "type", "max", "radius", "soon"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
+  const moreOpen = ["q", "song", "type", "max", "radius", "soon"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
   const cat = meta.categories[p.category] ? p.category : "music", music = cat === "music";
   setWho(cat); // "groups" for music, "food vendors" for food... (before any await: this screen is still the current one)
   // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
@@ -60,9 +62,10 @@ export async function home(app, params) {
       <div class="row"><div><label for="s-date">${esc(t("f.date"))}</label><input id="s-date" type="date" min="${tomorrowKey()}" value="${esc(p.date || "")}"></div>
       <div><label for="s-guests">${esc(t("f.guests"))}</label><input id="s-guests" type="number" min="1" max="5000" inputmode="numeric" placeholder="100" value="${esc(p.guests || "")}"></div></div>
       <details class="more"${moreOpen ? " open" : ""}><summary>${esc(t("f.more"))}</summary>
+        <div class="row"><div><label for="s-q">${esc(t("f.name"))}</label><input id="s-q" maxlength="60" placeholder="${esc(t("f.namePh"))}" value="${esc(p.q || "")}" autocomplete="off"></div></div>
         <div class="row">${music ? `<div><label for="s-song">${esc(t("f.song"))}</label><input id="s-song" maxlength="60" placeholder="Las Mañanitas" value="${esc(p.song || "")}"></div>` : ""}
         <div><label for="s-type">${esc(t("f.type"))}</label><select id="s-type"><option value="">${esc(t("f.any"))}</option>${meta.categories[cat].map((x) => `<option value="${esc(x)}"${sel(x, p.type)}>${esc(t("type." + x))}</option>`).join("")}</select></div></div>
-        <div class="row"><div><label for="s-max">${esc(t(music ? "f.max" : "f.maxAny"))}</label><select id="s-max"><option value="">${esc(t("f.any"))}</option>${[250, 350, 500, 900].map((v) => `<option value="${v}"${sel(v, p.max)}>${esc(t("f.upTo", { price: money(v * 100) }))}</option>`).join("")}</select></div>
+        <div class="row"><div><label for="s-max">${esc(t(music ? "f.max" : "f.maxAny"))}</label><select id="s-max"><option value="">${esc(t("f.any"))}</option>${(PRICE_STEPS[cat] || PRICE_STEPS.music).map((v) => `<option value="${v}"${sel(v, p.max)}>${esc(t("f.upTo", { price: money(v * 100) }))}</option>`).join("")}</select></div>
         <div><label for="s-radius">${esc(t("f.radius"))}</label><select id="s-radius">${[[10, ""], [25, ""], [60, ""], [100, ""], [200, ""]].map(([n]) => `<option value="${n}"${sel(n, p.radius || 60)}>${esc(t("f.miles", { n }))}</option>`).join("")}</select></div></div>
         <label class="chk"><input type="checkbox" id="s-soon" value="1"${p.soon === "1" ? " checked" : ""}> <span>⚡ ${esc(t("f.soon"))}</span></label>
         <div class="row"><div><label for="s-sort">${esc(t("f.sort"))}</label><select id="s-sort">${[["rating", "sort.rating"], ["price", "sort.price"], ["distance", "sort.distance"]].map(([v, k]) => `<option value="${v}"${sel(v, p.sort || "rating")}>${esc(t(k))}</option>`).join("")}</select></div></div>
@@ -118,14 +121,32 @@ export async function home(app, params) {
   const viewLink = (v) => { const u = new URLSearchParams(location.hash.split("?")[1] || ""); if (v === "map") u.set("view", "map"); else u.delete("view"); return "#/?" + u.toString(); };
   const filtered = FIELDS.some((k) => k !== "zip" && k !== "category" && p[k]);
   const clearHref = `#/?zip=${encodeURIComponent(data.origin.zip)}${music ? "" : "&category=" + encodeURIComponent(cat)}`;
-  const ctx = carry(p);
+  const ctx = carry(p), quotesCtx = ctx + (music ? "" : `${ctx ? "&" : ""}category=${encodeURIComponent(cat)}`); // Get quotes for this kind of vendor
+  // Only unpaid cards carry a rank (#1, #2...): a paid spot is labelled, never ranked.
+  let organic = 0;
+  const cards = (list) => list.map((g) => groupCard(g, g.spotlight || g.promoted ? null : organic++, ctx)).join("");
   box.innerHTML = `<div class="titlebar"><h2>${esc(t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
     <div class="seg"><a href="${esc(viewLink("list"))}" class="${view === "list" ? "on" : ""}">${esc(t("home.list"))}</a><a href="${esc(viewLink("map"))}" class="${view === "map" ? "on" : ""}">${esc(t("home.map"))}</a></div></div>
-    <div class="links">${music ? `<a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>` : ""}${filtered ? `<a href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<a href="#/quotes?${esc(ctx)}">✉ ${esc(t("rq.cta"))}</a>` : ""}<a href="#/party?${esc(ctx)}">🎉 ${esc(t("party.cta"))}</a></div>` +
-    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<br><a class="btn small ghost" href="#/quotes?${esc(ctx)}">${esc(t("rq.cta"))}</a>` : ""}</div>`
+    <div class="links">${music ? `<a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>` : ""}${filtered ? `<a href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}<a href="#/quotes?${esc(quotesCtx)}">✉ ${esc(t("rq.cta"))}</a><a href="#/party?${esc(ctx)}">🎉 ${esc(t("party.cta"))}</a></div>` +
+    (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}<br><a class="btn small ghost" href="#/quotes?${esc(quotesCtx)}">${esc(t("rq.cta"))}</a></div>`
       : view === "map" ? `<div id="map" class="map" role="region" aria-label="${esc(t("home.map"))}"></div><div class="legend">${esc(t("map.note"))}</div>`
-        : `<div class="grid">${data.results.map((g, i) => groupCard(g, i, ctx)).join("")}</div>`);
+        : `<div class="grid" id="resgrid">${cards(data.results)}</div>${data.more ? `<p class="dim small center" id="showing">${esc(t("home.showing", { n: data.results.length, total: data.total }))}</p><button type="button" class="btn ghost wide" id="showmore">${esc(t("home.showMore"))}</button>` : ""}`);
   wireShare(box); wireHearts(box);
+  // "Show more": the next page of the same search, added below
+  let page = 0, shown = data.results.length;
+  const moreBtn = document.getElementById("showmore");
+  if (moreBtn) moreBtn.onclick = async () => {
+    moreBtn.disabled = true;
+    try {
+      const next = await api.get(`/api/search?${sp.toString()}&page=${page + 1}`);
+      page = next.page; shown += next.results.length;
+      const tmp = document.createElement("div"); tmp.innerHTML = cards(next.results);
+      wireShare(tmp); wireHearts(tmp);
+      document.getElementById("resgrid").append(...tmp.children);
+      document.getElementById("showing").textContent = t("home.showing", { n: shown, total: next.total });
+      if (!next.more) { moreBtn.remove(); document.getElementById("showing").remove(); } else moreBtn.disabled = false;
+    } catch (e) { toast(e.message, "error"); moreBtn.disabled = false; }
+  };
   if (!data.results.length && !data.in_market) box.appendChild(waitlistBox(data.origin.zip, `${data.origin.city}, ${data.origin.state}`));
   if (data.results.length && view === "map") drawMap(document.getElementById("map"), data.results, data.origin);
 }

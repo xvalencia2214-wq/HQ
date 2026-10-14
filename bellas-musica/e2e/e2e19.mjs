@@ -78,6 +78,27 @@ try {
   await E.click("#bookbtn");
   ok("#2 a booking mistake reads in Spanish too", await until(async () => /Escribe un número de teléfono válido/.test(await E.locator("#bookerr").innerText())));
   await shot(E, "e19-spanish-error.png");
+
+  // ---- batch 2: finding vendors ----
+  const more = [];
+  for (let i = 0; i < 21; i++) { const o = client(S.base); await o.signup(`b19-${i}@example.com`, `Dueño ${i}`); more.push(await makeGroup(o, { name: `Grupo Extra ${i}`, rate: 200 + i * 5, dates: [d] })); }
+  S.db.run("UPDATE groups SET spotlight_until = ? WHERE id = ?", Math.floor(Date.now() / 1000) + 864000, more[20]);
+  const C = await person("customer");
+  await go(C, "#/?zip=60608"); await C.waitForSelector("#resgrid .card");
+  ok("#6 the first page shows 20 vendors and a Show more button", (await C.locator("#resgrid .card").count()) === 20 && await C.locator("#showmore").isVisible() && /Showing 20 of 2[0-9]/.test(await C.locator("#showing").innerText()));
+  ok("#12 the paid card is labelled and carries no rank; the first unpaid card is #1", await C.locator("#resgrid .card").first().locator(".rank").count() === 0 && /Spotlight/.test(await C.locator("#resgrid .card").first().innerText()) && (await C.locator("#resgrid .card").nth(1).locator(".rank").innerText()) === "#1");
+  await C.click("#showmore");
+  ok("#6 Show more adds the rest below (22 in all), and goes away at the end", await until(async () => (await C.locator("#resgrid .card").count()) === 22 && (await C.locator("#showmore").count()) === 0));
+  ok("#6 ranks carry on after the paid card: the last card is #21", (await C.locator("#resgrid .card").last().locator(".rank").innerText()) === "#21");
+  await shot(C, "e19-show-more.png");
+  await go(C, "#/?zip=60608&q=diecinueve"); await C.waitForSelector("#resgrid .card");
+  ok("#8 search by name finds the one vendor, and the name box shows it", (await C.locator("#resgrid .card").count()) === 1 && /Mariachi Diecinueve/.test(await C.locator("#resgrid").innerText()) && (await C.inputValue("#s-q")) === "diecinueve");
+  ok("#7 the event list has Baptism, First Communion, Graduation, Baby shower and Funeral", /Baptism[\s\S]*First Communion[\s\S]*Graduation[\s\S]*Baby shower[\s\S]*Funeral/.test(await C.locator("#s-event").textContent()));
+  await go(C, "#/?zip=60608&category=food"); await C.waitForSelector(".links");
+  ok("#9 Get quotes is offered for food vendors too, in their words, and opens for food", /Let food vendors send you quotes/.test(await C.locator(".links").innerText()) && await until(async () => /category=food/.test((await C.locator(".links a[href^='#/quotes']").first().getAttribute("href")) || "")));
+  ok("#10 the price steps fit the kind of vendor (food goes up to $3,000)", /\$3,000/.test(await C.locator("#s-max").textContent()) && !/\$900/.test(await C.locator("#s-max").textContent()));
+  await spanish(C); await go(C, "#/?zip=60608");
+  ok("#7 #6 in Spanish: Bautizo in the list and 'Ver más'", await until(async () => /Bautizo/.test(await C.locator("#s-event").textContent()) && /Ver más/.test(await text(C))));
 } catch (e) {
   failed++; console.log("FAIL (crashed)", e.stack || e);
 } finally {

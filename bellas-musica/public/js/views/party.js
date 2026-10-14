@@ -58,7 +58,7 @@ export async function party(app, params) {
       <div class="savebox">${p.date && p.zip ? (state.user ? `<button type="button" class="btn" id="psave">💾 ${esc(t("pp.save"))}</button>` : `<a class="btn" href="#/signup?next=${encodeURIComponent(location.hash)}">💾 ${esc(t("pp.loginSave"))}</a>`) + `<p class="dim small">${esc(t("pp.saveHint"))}</p>` : ""}</div></div>
     <div id="party-results"></div>`;
 
-  const TPL_EVENT = { quince: "Quinceañera", wedding: "Wedding", birthday: "Birthday", graduation: "Other", bautizo: "Other", backyard: "Birthday" };
+  const TPL_EVENT = { quince: "Quinceañera", wedding: "Wedding", birthday: "Birthday", graduation: "Graduation", bautizo: "Baptism", backyard: "Birthday" };
   document.getElementById("p-tpl").onchange = (e) => {
     const k = e.target.value; if (!TEMPLATES[k]) return;
     need = [...TEMPLATES[k].needs]; saveNeed(need); drawNeeds();

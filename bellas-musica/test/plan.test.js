@@ -91,3 +91,66 @@ test("#5 Stripe: account.updated pauses a vendor and tells them; a dispute is re
     assert.equal(await recheckAccounts(S.ctx), 0, "checked once a day");
   } finally { await S.close(); await F.close(); }
 });
+
+// #6 Show more, #8 search by name, #10 honest "from" prices, #12 fair paid spots, #7 new events, #11 pages for every kind of vendor.
+test("discovery: pages of results, name search, honest prices, paid spots that respect the family's sort, new events, category pages", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const d = inDays(25);
+    const ids = [];
+    for (let i = 0; i < 24; i++) {
+      const o = client(S.base); await o.signup(`m${i}@example.com`, `Owner ${i}`);
+      ids.push(await makeGroup(o, { name: i === 7 ? "Mariachi Los Gallos de Jalisco" : `Grupo Número ${i}`, rate: 200 + i * 10, dates: [d] }));
+    }
+    const c = client(S.base);
+    // #6 two pages, nothing twice
+    const p0 = (await c.get("/api/search?zip=60608")).json, p1 = (await c.get("/api/search?zip=60608&page=1")).json;
+    assert.equal(p0.results.length, 20); assert.equal(p0.total, 24); assert.equal(p0.more, true);
+    assert.equal(p1.results.length, 4); assert.equal(p1.more, false);
+    assert.equal(new Set([...p0.results, ...p1.results].map((g) => g.id)).size, 24);
+    // #8 by name, accents and case ignored, in any category
+    const o2 = client(S.base); await o2.signup("taco@example.com", "Taco Owner");
+    const tacos = await makeGroup(o2, { name: "Tacos El Güero", dates: [d] });
+    S.db.run("UPDATE groups SET type = 'Food truck', hourly = 0 WHERE id = ?", tacos);
+    S.db.run("INSERT INTO packages (group_id, name, description, hours, price_cents) VALUES (?, 'Taco party', '', 2, 65000)", tacos);
+    assert.deepEqual((await c.get("/api/search?zip=60608&q=gallos")).json.results.map((g) => g.id), [ids[7]]);
+    assert.deepEqual((await c.get("/api/search?zip=60608&q=GUERO")).json.results.map((g) => g.id), [tacos]);
+    // #10 "from" is what can really be booked: $250/hour with a 3-hour minimum starts at $750
+    S.db.run("UPDATE groups SET rate_cents = 25000, min_hours = 3 WHERE id = ?", ids[0]);
+    const card = (await c.get("/api/search?zip=60608&q=Número 0")).json.results[0];
+    assert.equal(card.from_cents, 75000);
+    assert.ok(!(await c.get("/api/search?zip=60608&max=500")).json.results.some((g) => g.id === ids[0]), "a $750 minimum is not 'up to $500'");
+    // #12 two paid listings, both expensive
+    const future = Math.floor(Date.now() / 1000) + 86400 * 10;
+    S.db.run("UPDATE groups SET spotlight_until = ? WHERE id = ?", future, ids[23]);
+    S.db.run("UPDATE groups SET promoted_until = ? WHERE id IN (?, ?)", future, ids[22], ids[21]);
+    const best = (await c.get("/api/search?zip=60608")).json.results.map((g) => g.id);
+    assert.equal(best[0], ids[23]); assert.ok(best.slice(1, 3).includes(ids[22]) && best.slice(1, 3).includes(ids[21]), "best match: every paid spot first");
+    const cheap = (await c.get("/api/search?zip=60608&sort=price")).json.results;
+    assert.equal(cheap[0].id, ids[23], "lowest price: Spotlight still first"); assert.ok([ids[22], ids[21]].includes(cheap[1].id));
+    assert.equal(cheap.slice(2).filter((g) => g.promoted || g.spotlight).length, 0, "only 2 paid on top");
+    const rest = cheap.slice(2).map((g) => g.from_cents);
+    assert.deepEqual(rest, [...rest].sort((a, b) => a - b), "everyone else in price order");
+    assert.ok(cheap.slice(2).length >= 18);
+    // #7 the new events: searchable and bookable
+    for (const e of ["Baptism", "First Communion", "Graduation", "Baby shower", "Funeral / Memorial"]) assert.equal((await c.get(`/api/search?zip=60608&event=${encodeURIComponent(e)}`)).status, 200, e);
+    await c.signup("bautizo@example.com", "Familia Bautizo");
+    const q = await c.post("/api/quote", bookingBody(ids[1], d, { event: "Baptism" }));
+    assert.equal(q.status, 200);
+    const { eventLabel } = await import("../server/emails.js");
+    assert.equal(eventLabel("Baptism", "es"), "bautizo"); assert.equal(eventLabel("Funeral / Memorial", "es"), "funeral o misa");
+    // #11 a catering page for Pilsen, English and Spanish, in the sitemap
+    S.db.run("UPDATE groups SET zip = '60608' WHERE id = ?", tacos);
+    S.db.run(`UPDATE groups SET events = '["Baptism","Wedding"]' WHERE id = ?`, ids[1]);
+    const en = await fetch(S.base + "/chicago/pilsen/catering"), es = await fetch(S.base + "/es/chicago/pilsen/comida");
+    const enHtml = await en.text(), esHtml = await es.text();
+    assert.equal(en.status, 200); assert.match(enHtml, /Catering and food in Pilsen/); assert.match(enHtml, /Tacos El Güero/); assert.doesNotMatch(enHtml, /Los Gallos/);
+    assert.match(esHtml, /Comida para fiestas en Pilsen/); assert.match(esHtml, /lang="es"/);
+    assert.doesNotMatch(enHtml, /noindex/);
+    const empty = await (await fetch(S.base + "/chicago/pilsen/venues")).text();
+    assert.match(empty, /noindex/, "no venue yet: served but not indexed");
+    const map = await (await fetch(S.base + "/sitemap.xml")).text();
+    assert.match(map, /\/chicago\/pilsen\/catering</); assert.match(map, /\/es\/chicago\/pilsen\/comida</); assert.doesNotMatch(map, /pilsen\/venues</);
+    assert.match(map, /\/chicago\/pilsen\/baptism</, "music for the new events too");
+  } finally { await S.close(); }
+});

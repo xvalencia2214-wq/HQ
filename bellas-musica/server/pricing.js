@@ -16,7 +16,9 @@ export const isTime = (s) => { const m = timeMin(s); return m >= 0 && m % TIME_S
 // Short sets (a serenata, mañanitas) can be shorter than an hour.
 export const SHORT_MINUTES = [15, 20, 30, 45];
 export const MAX_CAPACITY = 20;     // how many bookings a listing can serve at the same time (trucks, crews, lineups)
-export const EVENT_TYPES = ["Wedding", "Quinceañera", "Birthday", "Anniversary", "Serenata", "Corporate / Restaurant", "Other"];
+// The family occasions people hire for. Bautizos, primeras comuniones, graduations, baby showers and funerals (mariachi at
+// the misa or the burial) are everyday reasons to hire music, food and decorations.
+export const EVENT_TYPES = ["Wedding", "Quinceañera", "Birthday", "Baptism", "First Communion", "Graduation", "Baby shower", "Anniversary", "Serenata", "Funeral / Memorial", "Corporate / Restaurant", "Other"];
 // Everything a party needs, in one place. Music came first; the other categories use the same listings, calendar, deposits,
 // reviews and chat. A listing's category follows from its type ("Other" stays music, as it always was).
 export const CATEGORIES = {

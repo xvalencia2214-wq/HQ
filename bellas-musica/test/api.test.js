@@ -64,7 +64,7 @@ test("search: zip, filters, event, guests, song (accent-insensitive), date, limi
   assert.equal((await c.get("/api/search?zip=60608&radius=10&type=Conjunto")).json.results.length, 0); // no conjunto within 10 miles of Pilsen
   assert.ok((await c.get("/api/search?zip=60608&type=Banda")).json.results.length >= 2);
   { const m = (await c.get("/api/search?zip=60608&type=Mariachi")).json.results; assert.ok(m.length >= 3 && m.every((g) => g.type === "Mariachi")); }
-  assert.ok((await c.get("/api/search?zip=60608&max=340")).json.results.every((g) => g.rate_cents <= 34000));
+  { const cheap = (await c.get("/api/search?zip=60608&max=340")).json.results; assert.ok(cheap.length && cheap.every((g) => g.from_cents <= 34000)); } // the least it can be booked for
   const big = (await c.get("/api/search?zip=60608&guests=450")).json.results;
   assert.ok(big.length && big.every((g) => g.max_guests >= 450));
   const songs = (await c.get("/api/search?zip=60608&song=mananitas")).json.results;

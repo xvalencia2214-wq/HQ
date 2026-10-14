@@ -38,6 +38,9 @@ export async function group(app, id, params = new URLSearchParams()) {
   }
 
   const music = g.category === "music";
+  // the least it can be booked for: the cheapest package, or the hourly price times the minimum hours
+  const least = Math.min(...g.packages.map((p) => p.price_cents), g.hourly ? g.rate_cents * Math.max(1, g.min_hours) : Infinity);
+  const fromPrice = Number.isFinite(least) ? least : g.rate_cents;
   const fact = (k, v) => `<div class="fact"><span>${esc(t(k))}</span><strong>${v}</strong></div>`;
   const gallery = g.photos.length ? `<div class="gallery"><img id="hero-img" src="${esc(g.photos[0].url)}" alt="${esc(g.name)}">${g.photos.length > 1 ? `<div class="thumbs">${g.photos.map((p, i) => `<button type="button" class="thumb" data-i="${i}" aria-label="${esc(t("g.photo", { n: i + 1 }))}"><img src="${esc(p.url)}" alt=""></button>`).join("")}</div>` : ""}</div>` : "";
   const video = g.video ? `<div class="video${["tiktok", "instagram"].includes(g.video.provider) ? " tall" : ""}"><iframe src="${esc(g.video.url)}" title="${esc(g.name)}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : "";
@@ -69,7 +72,7 @@ export async function group(app, id, params = new URLSearchParams()) {
     <div class="panel" id="bookpanel"><h2>${esc(t(music ? "g.request" : "g.requestAny"))}</h2><div id="bookbox"></div></div>
     <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="quotebox"></div><div id="chatbox"></div></div>
   </aside></div>
-  ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(g.packages.length ? Math.min(...g.packages.map((p) => p.price_cents)) : g.rate_cents) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
+  ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(fromPrice) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
   wireShare(app); wireHearts(app);
   app.querySelectorAll(".thumb").forEach((b) => { b.onclick = () => { document.getElementById("hero-img").src = g.photos[Number(b.dataset.i)].url; }; });
 

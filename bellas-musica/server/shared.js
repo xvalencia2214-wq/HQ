@@ -87,8 +87,12 @@ export function feePctFor(g, config) {
 export const reachMiles = (g) => (g.travel_fee_cents > 0 ? Math.max(g.travel_miles * 2, g.travel_miles + 30) : g.travel_miles);
 export const reaches = (g, distance) => distance <= reachMiles(g);
 
-// The "from" price on cards: the cheapest package, else the hourly price (for listings that can be booked by the hour).
-export const fromCents = (g, minPrice) => minPrice.get(g.id) ?? (g.hourly !== 0 ? g.rate_cents : 0);
+// The "from" price on cards: the least a customer can really book for. The cheapest package, or the hourly price times the
+// listing's minimum hours (a $250/hour group with a 3-hour minimum starts at $750), whichever is lower.
+export const fromCents = (g, minPrice) => {
+  const pkg = minPrice.get(g.id), hourly = g.hourly !== 0 ? g.rate_cents * Math.max(1, g.min_hours || 1) : null;
+  return pkg == null ? hourly ?? 0 : hourly == null ? pkg : Math.min(pkg, hourly);
+};
 
 // Founding vendors: the first real listings to go live lock in a lower fee for a while. Called when a listing is first
 // published; the slot number is handed out inside one transaction so two listings can never get the same one.

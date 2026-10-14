@@ -14,10 +14,16 @@ const EVENT_FIT = {
   "Wedding": ["Mariachi", "Banda", "Grupera", "DJ", "Trío romántico"],
   "Quinceañera": ["Banda", "Mariachi", "Grupera", "DJ"],
   "Anniversary": ["Trío romántico", "Mariachi"],
-  "Corporate / Restaurant": ["Conjunto", "Trío romántico", "Mariachi", "DJ", "Norteño"]
+  "Corporate / Restaurant": ["Conjunto", "Trío romántico", "Mariachi", "DJ", "Norteño"],
+  "Baptism": ["Trío romántico", "Mariachi", "DJ"],
+  "First Communion": ["Trío romántico", "Mariachi", "DJ"],
+  "Graduation": ["DJ", "Banda", "Norteño", "Grupera", "Mariachi"],
+  "Baby shower": ["DJ", "Trío romántico", "Mariachi"],
+  "Funeral / Memorial": ["Mariachi", "Trío romántico"]
 };
 const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const bayes = (rating, n) => (rating * n + 4.2 * 3) / (n + 3);
+const PAID_ON_TOP = 2; // paid listings shown first when the family sorts by price or distance
 
 export default function searchRoutes(ctx, add) {
   const { db, stripe, sms, config } = ctx;
@@ -34,8 +40,9 @@ export default function searchRoutes(ctx, add) {
     if (!origin) throw new HttpError(404, "We don't recognize that ZIP code");
     const radius = q.radius ? int(q.radius, "radius", { min: 5, max: 250 }) : defaultRadius;
     const type = q.type ? oneOf(q.type, "type", GROUP_TYPES) : "";
-    // Music unless asked otherwise ("all" = every kind of vendor); a type implies its category.
-    const category = type ? categoryOf(type) : q.category ? oneOf(q.category, "category", ["all", ...Object.keys(CATEGORIES)]) : "music";
+    const name = q.q ? norm(str(q.q, "q", { max: 60 })) : ""; // a vendor someone heard about at a party: "Los Gallos"
+    // Music unless asked otherwise ("all" = every kind of vendor); a type implies its category; a name looks everywhere.
+    const category = type ? categoryOf(type) : q.category ? oneOf(q.category, "category", ["all", ...Object.keys(CATEGORIES)]) : name ? "all" : "music";
     const event = q.event ? oneOf(q.event, "event", EVENT_TYPES) : "";
     const maxPrice = q.max ? int(q.max, "max", { min: 1, max: 100000 }) * 100 : 0;
     const guests = q.guests ? int(q.guests, "guests", { min: 1, max: 5000 }) : 0;
@@ -45,13 +52,14 @@ export default function searchRoutes(ctx, add) {
     const sort = q.sort ? oneOf(q.sort, "sort", ["rating", "price", "distance"]) : "rating";
     const soon = q.soon === "1";
     const cap = Math.min(int(q.limit ?? limit, "limit", { min: 1, max: 50 }), 50);
+    const page = q.page ? int(q.page, "page", { min: 0, max: 50 }) : 0; // "Show more" asks for the next page
 
     expirePending(db);
     const ratings = ratingMap(db), photos = firstPhotos(db);
     const minPrice = new Map(db.all("SELECT group_id, MIN(price_cents) m FROM packages WHERE private_customer_id IS NULL GROUP BY group_id").map((r) => [r.group_id, r.m]));
 
-    // Price filters and sorting compare the hourly price, or the cheapest package for listings booked by package only.
-    const priceKey = (g) => (g.hourly !== 0 ? g.rate_cents : fromCents(g, minPrice));
+    // Price filters and sorting compare the least a customer can book for (the card's "from" price).
+    const priceKey = (g) => fromCents(g, minPrice);
     let list = [];
     // Only groups whose ZIP is inside the radius can match, so let SQL skip everything else.
     const nearby = zipsWithin(origin, radius);
@@ -64,6 +72,7 @@ export default function searchRoutes(ctx, add) {
       if (!reaches(g, distance)) continue; // beyond the vendor's own travel area
       if (type && g.type !== type) continue;
       if (category !== "all" && categoryOf(g.type) !== category) continue;
+      if (name && !norm(g.name).includes(name)) continue;
       if (maxPrice && priceKey(g) > maxPrice) continue;
       if (guests && g.max_guests < guests) continue;
       const songs = safeJson(g.songs, []);
@@ -78,22 +87,29 @@ export default function searchRoutes(ctx, add) {
       const r = ratingOf(g, ratings);
       list.push({ g, distance, r, fits, matched, openForDate, openSoon, score: bayes(r.rating, r.reviews) });
     }
-    list.sort((a, b) => {
-      const sa = isSpotlight(a.g), sb = isSpotlight(b.g);
-      if (sa !== sb) return sa ? -1 : 1;
-      const pa = isPromoted(a.g), pb = isPromoted(b.g);
-      if (pa !== pb) return pa ? -1 : 1;
+    // Paid placement, always labelled: on "Best match" Spotlight then Featured come first. When the family chose "Lowest
+    // price" or "Closest", that choice is respected: at most PAID_ON_TOP paid listings go first, everyone else keeps the order asked for.
+    const paidRank = (x) => (isSpotlight(x.g) ? 2 : isPromoted(x.g) ? 1 : 0);
+    const chosen = (a, b) => {
       if (event && a.fits !== b.fits) return a.fits ? -1 : 1;
-      if (sort === "price") return priceKey(a.g) - priceKey(b.g);
+      if (sort === "price") return priceKey(a.g) - priceKey(b.g) || a.distance - b.distance;
       if (sort === "distance") return a.distance - b.distance;
       return b.score - a.score || b.r.reviews - a.r.reviews;
-    });
-    list = list.slice(0, cap);
+    };
+    if (sort === "rating") list.sort((a, b) => paidRank(b) - paidRank(a) || chosen(a, b));
+    else {
+      list.sort(chosen);
+      const top = list.filter((x) => paidRank(x)).sort((a, b) => paidRank(b) - paidRank(a) || chosen(a, b)).slice(0, PAID_ON_TOP);
+      list = [...top, ...list.filter((x) => !top.includes(x))];
+    }
+    const total = list.length;
+    list = list.slice(page * cap, page * cap + cap);
 
     return {
       origin: { zip: origin.zip, city: origin.city, state: origin.state, lat: origin.lat, lon: origin.lon },
       in_market: inMarket(origin.zip),
-      results: list.map((x) => card(x, photos, minPrice))
+      results: list.map((x) => card(x, photos, minPrice)),
+      page, total, more: total > (page + 1) * cap
     };
   }
 
@@ -144,7 +160,7 @@ export default function searchRoutes(ctx, add) {
     return z;
   });
 
-  add("GET", "/api/search", ({ query }) => { const out = search(query); ctx.stats.count("search", out.origin.zip); return out; });
+  add("GET", "/api/search", ({ query }) => { const out = search(query); if (!out.page) ctx.stats.count("search", out.origin.zip); return out; });
 
   // The home page's "In the spotlight" strip: paid Spotlight vendors of any kind near a ZIP (the market's center by default),
   // best rated first. Only Spotlight listings are read, so it stays cheap however many vendors there are.
