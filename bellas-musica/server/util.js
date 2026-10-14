@@ -105,6 +105,11 @@ export function createLimiter({ windowMs, max }) {
       h.n += 1;
       if (hits.size > 5000) for (const [k, v] of hits) if (t - v.start > windowMs) hits.delete(k);
       return h.n <= max;
+    },
+    // Already over the limit? (Looks without counting: for limits on failures only.)
+    blocked(key) {
+      const h = hits.get(key);
+      return Boolean(h && Date.now() - h.start <= windowMs && h.n >= max);
     }
   };
 }

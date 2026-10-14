@@ -680,6 +680,8 @@ export function openDb(config) {
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`);
+  // Files already copied to the off-site bucket (and when the last run finished: name '_last_ok').
+  db.exec("CREATE TABLE IF NOT EXISTS offsite_files (name TEXT PRIMARY KEY, size INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL)");
   // Lookups by listing that grow with the marketplace (search cards, ratings, the vendor page).
   db.exec("CREATE INDEX IF NOT EXISTS idx_reviews_group ON reviews(group_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_photos_group ON photos(group_id, position)");

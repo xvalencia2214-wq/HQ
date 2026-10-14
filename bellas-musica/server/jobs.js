@@ -1,4 +1,5 @@
 import { recheckAccounts } from "./stripe-events.js";
+import { offsiteBackup } from "./offsite.js";
 import { todayStr, addDays, now, getTimezone } from "./util.js";
 import { usd } from "./emails.js";
 import { balanceLeft } from "./pricing.js";
@@ -143,7 +144,7 @@ export async function releaseHeldPayouts(ctx) {
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); releaseHeldPayouts(ctx).catch((e) => ctx.alert("Held payouts failed: " + e.message, "job")); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); recheckAccounts(ctx).catch((e) => ctx.alert("Payout account check failed: " + e.message, "job")); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); releaseHeldPayouts(ctx).catch((e) => ctx.alert("Held payouts failed: " + e.message, "job")); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); recheckAccounts(ctx).catch((e) => ctx.alert("Payout account check failed: " + e.message, "job")); backupIfNeeded(ctx); offsiteBackup(ctx).catch((e) => ctx.alert("Off-site backup failed: " + e.message, "offsite")); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }

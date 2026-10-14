@@ -198,3 +198,78 @@ test("vendor dashboard: Today (requests, next party, money to come), seen in sea
     assert.equal((await c.get(`/api/groups/${gid}`)).json.today, undefined);
   } finally { await S.close(); }
 });
+
+// #18 off-site backups: signed like Amazon's own examples, sent once, restorable onto an empty disk.
+test("#18 off-site backups: AWS signature examples, database + photos sent once, restore on a new disk", async () => {
+  const { signV4, offsiteBackup, restoreFromOffsite } = await import("../server/offsite.js");
+  const AK = "AKIAIOSFODNN7EXAMPLE", SK = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", empty = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  // AWS's published examples (Signature Version 4, "Examples: Signature Calculations in AWS Signature Version 4", S3)
+  const get = signV4({ method: "GET", url: "https://examplebucket.s3.amazonaws.com/test.txt", headers: { range: "bytes=0-9" }, payloadHash: empty, keyId: AK, secret: SK, region: "us-east-1", amzDate: "20130524T000000Z" });
+  assert.match(get.authorization, /Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41$/);
+  assert.match(get.authorization, /SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,/);
+  const put = signV4({ method: "PUT", url: "https://examplebucket.s3.amazonaws.com/test%24file.text", headers: { date: "Fri, 24 May 2013 00:00:00 GMT", "x-amz-storage-class": "REDUCED_REDUNDANCY" }, payloadHash: "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072", keyId: AK, secret: SK, region: "us-east-1", amzDate: "20130524T000000Z" });
+  assert.match(put.authorization, /Signature=98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd$/);
+
+  // a stand-in bucket
+  const http = await import("node:http");
+  const objects = new Map(), auths = [];
+  const bucket = http.createServer(async (req, res) => {
+    const chunks = []; for await (const c of req) chunks.push(c);
+    auths.push(req.headers.authorization || "");
+    if (!/^AWS4-HMAC-SHA256 Credential=key123\/\d{8}\/auto\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]+, Signature=[0-9a-f]{64}$/.test(req.headers.authorization || "")) { res.writeHead(403); return res.end("bad auth"); }
+    const key = decodeURIComponent(req.url.replace(/^\/bk\//, ""));
+    if (req.method === "PUT") { objects.set(key, Buffer.concat(chunks)); res.writeHead(200); return res.end(); }
+    if (req.method === "GET" && objects.has(key)) { res.writeHead(200); return res.end(objects.get(key)); }
+    res.writeHead(404); res.end("NoSuchKey");
+  });
+  await new Promise((r) => bucket.listen(0, r));
+  const url = `http://127.0.0.1:${bucket.address().port}/bk`;
+  const env = { BACKUP_S3_URL: url, BACKUP_S3_KEY_ID: "key123", BACKUP_S3_SECRET: "s3cret" };
+  const S = await startApp({ DEMO_SEED: "0", ...env });
+  const alerts = []; S.ctx.alert = (m) => alerts.push(m);
+  try {
+    const owner = client(S.base); await owner.signup("bk@example.com", "Backup Owner");
+    const gid = await makeGroup(owner, { name: "Mariachi Respaldo", dates: [inDays(9)] }); // with a photo
+    const photo = S.db.get("SELECT file FROM photos WHERE group_id = ?", gid).file;
+    const r1 = await offsiteBackup(S.ctx);
+    assert.deepEqual(alerts, []);
+    assert.ok(r1.sent >= 2);
+    const dayKey = [...objects.keys()].find((k) => /^db\/bellas-\d{4}-\d{2}-\d{2}\.db$/.test(k));
+    assert.ok(dayKey, "the day's database copy"); assert.ok(objects.has(`uploads/${photo}`), "the photo");
+    assert.equal((await offsiteBackup(S.ctx)).sent, 0, "nothing sent twice");
+    // restore onto an empty disk: the listing and its photo come back
+    const fs = await import("node:fs"), os = await import("node:os"), path = await import("node:path");
+    const { loadConfig } = await import("../server/config.js");
+    const fresh = fs.mkdtempSync(path.join(os.tmpdir(), "bm-restore-"));
+    const cfg = loadConfig({ DATA_DIR: fresh, ...env });
+    const out = await restoreFromOffsite(cfg, dayKey.slice(10, 20), () => {});
+    assert.ok(out.files >= 1);
+    assert.ok(fs.existsSync(path.join(cfg.uploadDir, photo)));
+    const { DatabaseSync } = await import("node:sqlite");
+    const restored = new DatabaseSync(path.join(fresh, "app.db"));
+    assert.equal(restored.prepare("SELECT name FROM groups WHERE id = ?").get(gid).name, "Mariachi Respaldo");
+    restored.close();
+    await assert.rejects(restoreFromOffsite(cfg, "yesterday"), /Give the day/);
+    // the bucket refusing is alerted, not a crash
+    objects.clear(); S.db.run("DELETE FROM offsite_files");
+    S.ctx.config.offsite = { ...S.ctx.config.offsite, secret: "", keyId: "" };
+    assert.equal((await offsiteBackup(S.ctx)).sent, 0, "not configured: nothing to do");
+    S.ctx.config.offsite = { ...S.ctx.config.offsite, keyId: "wrong", secret: "x" };
+    await offsiteBackup(S.ctx);
+    assert.ok(alerts.some((a) => /Off-site backup FAILED/.test(a)));
+  } finally { await S.close(); bucket.close(); }
+});
+
+// #19 indexes, #20 one network guessing passwords across accounts.
+test("#19 #20 indexes by listing; wrong passwords from one network are limited across accounts", async () => {
+  const S = await startApp({ DEMO_SEED: "0", RATE_LOGIN_IP: "5" });
+  try {
+    const idx = S.db.all("SELECT name FROM sqlite_master WHERE type = 'index'").map((r) => r.name);
+    for (const n of ["idx_reviews_group", "idx_photos_group", "idx_packages_group"]) assert.ok(idx.includes(n), n);
+    const real = client(S.base); await real.signup("real@example.com", "Real Person");
+    const attacker = client(S.base);
+    for (let i = 0; i < 5; i++) assert.equal((await attacker.post("/api/auth/login", { email: `victim${i}@example.com`, password: "guess-guess" })).status, 401);
+    const blocked = await attacker.post("/api/auth/login", { email: "real@example.com", password: "correct horse battery" });
+    assert.equal(blocked.status, 429); assert.match(blocked.json.error, /from this network/);
+  } finally { await S.close(); }
+});

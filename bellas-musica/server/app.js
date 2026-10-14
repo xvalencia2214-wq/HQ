@@ -91,6 +91,7 @@ export function createApp(config) {
   const ctx = { config, db, stripe, sms, push, email, alert, stats, limiters: {
     api: createLimiter({ windowMs: 60_000, max: L.api }),
     auth: createLimiter({ windowMs: 15 * 60_000, max: L.auth }),
+    loginFails: createLimiter({ windowMs: 15 * 60_000, max: config.loginFailsPerIp }), // wrong passwords from one network, any account
     register: createLimiter({ windowMs: 60 * 60_000, max: L.register }),
     forgot: createLimiter({ windowMs: 60 * 60_000, max: L.forgot }),
     waitlist: createLimiter({ windowMs: 60 * 60_000, max: L.waitlist }),

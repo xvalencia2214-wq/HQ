@@ -44,10 +44,11 @@ export default function authRoutes(ctx, add) {
 
   add("POST", "/api/auth/login", async ({ req, res, body, ip }) => {
     const email = str(body.email, "Email", { required: true, max: 254 }).toLowerCase();
+    if (limiters.loginFails.blocked(ip)) throw new HttpError(429, "Too many login attempts from this network. Try again in 15 minutes.");
     if (!limiters.auth.check(`${ip}|${email}`)) throw new HttpError(429, "Too many login attempts. Try again in 15 minutes.");
     const u = db.get("SELECT * FROM users WHERE email = ?", email);
     const ok = await verifyPassword(typeof body.password === "string" ? body.password : "", u ? u.pass_hash : DUMMY_HASH);
-    if (!u || !ok) throw new HttpError(401, "Wrong email or password");
+    if (!u || !ok) { limiters.loginFails.check(ip); throw new HttpError(401, "Wrong email or password"); } // only failures count here
     startSession(res, req, u.id);
     return { user: pub(u) };
   });

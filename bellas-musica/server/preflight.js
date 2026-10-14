@@ -34,6 +34,7 @@ export async function runPreflight(config) {
   if (config.sentryDsn) out.push(parseDsn(config.sentryDsn) ? ok("SENTRY_DSN is set", "errors are sent to Sentry") : warn("SENTRY_DSN", "is set but is not a valid Sentry DSN (it looks like https://KEY@HOST/PROJECTNUMBER): Sentry is off"));
   out.push(config.alertWebhook ? ok("ALERT_WEBHOOK_URL is set") : (config.sentryDsn && parseDsn(config.sentryDsn) ? ok("ALERT_WEBHOOK_URL", "empty, but Sentry will tell you") : warn("ALERT_WEBHOOK_URL", "empty: you will not be told when something breaks")));
   out.push(config.backupDir ? ok("BACKUP_DIR", `${config.backupDir} (keeps ${config.backupKeep} days)`) : warn("BACKUP_DIR", "empty: no automatic database backups"));
+  out.push(config.offsite.url && config.offsite.keyId && config.offsite.secret ? ok("BACKUP_S3_URL", `off-site copies to ${config.offsite.url.replace(/^https?:\/\//, "").split("/")[0]}`) : warn("BACKUP_S3_URL", "empty: backups stay on the same disk as the database (set BACKUP_S3_URL, BACKUP_S3_KEY_ID, BACKUP_S3_SECRET)"));
 
   // ---- Stripe ----
   if (!config.stripeKey) out.push(warn("Stripe", "STRIPE_SECRET_KEY is empty: payments are SIMULATED (fine for testing, no real money moves)"));

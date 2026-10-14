@@ -9,6 +9,7 @@
     "tryout": "node --disable-warning=ExperimentalWarning server/tryout.js",
     "preflight": "node --disable-warning=ExperimentalWarning server/preflight.js",
     "backup": "node --disable-warning=ExperimentalWarning server/backup.js",
+    "restore": "node --disable-warning=ExperimentalWarning server/restore.js",
     "admin": "node --disable-warning=ExperimentalWarning server/admin.js",
     "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
     "spanish-sheet": "node --disable-warning=ExperimentalWarning server/i18n-sheet.js",

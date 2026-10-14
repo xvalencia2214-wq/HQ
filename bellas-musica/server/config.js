@@ -79,6 +79,11 @@ export function loadConfig(env = process.env) {
     alertWebhook: env.ALERT_WEBHOOK_URL || "",  // Slack/Discord/any JSON webhook: told when something breaks
     backupDir: env.BACKUP_DIR ? path.resolve(env.BACKUP_DIR) : "", // daily database copies go here (empty = off)
     backupKeep: int(env.BACKUP_KEEP, 14),
+    // Off-site copies (database, photos, documents) in an S3-compatible bucket somewhere else: Cloudflare R2, Amazon S3,
+    // Backblaze B2. BACKUP_S3_URL is the bucket's address, e.g. https://<account>.r2.cloudflarestorage.com/bellas-backups
+    offsite: { url: env.BACKUP_S3_URL || "", keyId: env.BACKUP_S3_KEY_ID || "", secret: env.BACKUP_S3_SECRET || "", region: env.BACKUP_S3_REGION || "auto" },
+    // Failed logins from one network, across every account (slows down password guessing); per 15 minutes
+    loginFailsPerIp: int(env.RATE_LOGIN_IP, 30),
     // Who is sending (shown in email footers; commercial email must include a postal address)
     businessName: env.BUSINESS_NAME || "Bella's Música",
     businessAddress: env.BUSINESS_ADDRESS || "",
