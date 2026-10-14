@@ -11,6 +11,7 @@ services:
     dockerContext: ./bellas-musica
     region: ohio
     plan: free
+    dockerCommand: ./start.sh                    # the image's normal start (replaces an older setting)
     healthCheckPath: /api/health
     buildFilter:
       paths: ["bellas-musica/**", "render-tryout.yaml"]
