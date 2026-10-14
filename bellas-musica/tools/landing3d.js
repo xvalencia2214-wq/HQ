@@ -1,8 +1,8 @@
-// The 3D scene on the welcome page: the logo's black and gold sombrero, seen from the side (front of the brim swept up, a dented
-// crown peaking toward the front, a gold flower), turned on a lathe (its profile spun around an
-// axis): a smooth rounded crown in black felt, a gold band embroidered with black flowers and scrolls under a wavy braided
-// gold cord, the knot with its tassels on the side, a gold zigzag around the brim, and gold trim, under a string of papel picado that waves in the breeze. It follows the pointer,
-// sways side-on like the logo, follows the pointer, turns with the scroll, bounces to the music and spins once round when tapped.
+// The 3D scene on the welcome page: the logo's black and gold sombrero, seen from the side. It is turned on a lathe (a profile
+// spun around an axis), then shaped like the logo: the front of the brim sweeps up while the back stays low, and the crown's top
+// dips behind the middle and peaks toward the front. Black felt, a braided gold band with the knot and tassels, a gold flower
+// on the crown, a gold zigzag on the brim's edge, gold trim and studs, under a string of papel picado waving in the breeze.
+// It sways side-on, follows the pointer, turns with the scroll, bounces to the music and spins once round when tapped.
 // Bundled with only the parts of three.js it uses:  npm run build:landing  ->  public/vendor/landing3d.js
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, Vector2, Vector3, Color, Fog,
