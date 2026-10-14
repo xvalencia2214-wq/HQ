@@ -503,7 +503,7 @@ async function pastClientPanel({ g, body }) {
   const box = document.createElement("div"); box.className = "panel"; box.id = "pastrev";
   box.innerHTML = `<h2 class="sec">💬 ${esc(t("pr.title"))}</h2><p>${esc(t("pr.text", { max: data.max }))}</p><p class="dim small">${esc(t("pr.count", { done: data.done, max: data.max }))}</p>
     ${data.done >= data.max ? `<p class="note">${esc(t("pr.max", { max: data.max }))}</p>` : `<form id="prinv"><div class="row"><div><label for="pi-name">${esc(t("pr.name"))}</label><input id="pi-name" name="name" required minlength="2" maxlength="60"></div>
-      <div><label for="pi-email">${esc(t("pr.email"))}</label><input id="pi-email" name="email" type="email" maxlength="120"></div></div><div class="dim small">${esc(t("pr.emailHint"))}</div>
+      <div><label for="pi-email">${esc(t("pr.email"))}</label><input id="pi-email" name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="120"></div></div><div class="dim small">${esc(t("pr.emailHint"))}</div>
       <div class="row"><div><label for="pi-event">${esc(t("pr.event"))}</label><select id="pi-event" name="event">${state.meta.events.map((x) => `<option value="${esc(x)}">${esc(t("event." + x))}</option>`).join("")}</select></div>
       <div><label for="pi-when">${esc(t("pr.when"))}</label><input id="pi-when" name="when" type="month" max="${thisMonth}" value="${thisMonth}" required></div></div>
       <div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("pr.create"))}</button></form>`}

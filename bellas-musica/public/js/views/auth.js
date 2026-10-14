@@ -13,8 +13,8 @@ export function authView(app, mode, params) {
   app.innerHTML = `<div class="panel narrow"><h1>${esc(t(signup ? "auth.signupTitle" : "auth.loginTitle"))}</h1>
     <form id="authform" novalidate>
       ${signup ? `<label for="a-name">${esc(t("auth.name"))}</label><input id="a-name" name="name" required maxlength="80" autocomplete="name">` : ""}
-      <label for="a-email">${esc(t("auth.email"))}</label><input id="a-email" name="email" type="email" required maxlength="254" autocomplete="email">
-      <label for="a-pw">${esc(t("auth.password"))}</label><input id="a-pw" name="password" type="password" required minlength="8" maxlength="200" autocomplete="${signup ? "new-password" : "current-password"}">
+      <label for="a-email">${esc(t("auth.email"))}</label><input id="a-email" name="email" type="email" required maxlength="254" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <label for="a-pw">${esc(t("auth.password"))}</label><input id="a-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="${signup ? "new-password" : "current-password"}">
       ${signup ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>
       <label for="a-phone">${esc(t("auth.phone"))}</label><input id="a-phone" name="phone" inputmode="tel" maxlength="20" autocomplete="tel">
       <label class="chk"><input type="checkbox" name="sms"> <span>${esc(t("auth.smsConsent"))}</span></label>` : ""}
@@ -51,13 +51,13 @@ export function accountView(app) {
     <div class="dim small">${esc(t(u.email_verified ? "acct.verified" : "acct.unverified"))}</div>
     <div id="perr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("common.save"))}</button></form></div>
     <div class="panel"><h2 class="sec">${esc(t("acct.password"))}</h2><form id="wform">
-    <label for="w-cur">${esc(t("acct.current"))}</label><input id="w-cur" name="current" type="password" autocomplete="current-password" required>
-    <label for="w-new">${esc(t("acct.new"))}</label><input id="w-new" name="next" type="password" minlength="8" autocomplete="new-password" required>
+    <label for="w-cur">${esc(t("acct.current"))}</label><input id="w-cur" name="current" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password" required>
+    <label for="w-new">${esc(t("acct.new"))}</label><input id="w-new" name="next" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="8" autocomplete="new-password" required>
     <div id="werr" class="err" role="alert"></div><button class="btn" type="submit">${esc(t("acct.change"))}</button></form>
     <p class="dim small">${esc(t("acct.others"))}</p></div></div>
     <div class="panel"><h2 class="sec">🔔 ${esc(t("push.title"))}</h2><div id="pushbox"></div></div>
     <details class="panel danger"><summary>${esc(t("acct.delete"))}</summary><p class="dim">${esc(t("acct.deleteWarn"))}</p>
-    <form id="dform"><label for="d-pw">${esc(t("acct.deletePw"))}</label><input id="d-pw" name="password" type="password" autocomplete="current-password" required>
+    <form id="dform"><label for="d-pw">${esc(t("acct.deletePw"))}</label><input id="d-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password" required>
     <div id="derr" class="err" role="alert"></div><button class="btn dangerbtn" type="submit">${esc(t("acct.deleteBtn"))}</button></form></details>`;
   pushPanel(document.getElementById("pushbox"));
   document.getElementById("pform").onsubmit = async (e) => {

@@ -9,7 +9,7 @@ export function waitlistBox(zip, city) {
   const box = document.createElement("div");
   box.className = "panel waitlist";
   box.innerHTML = `<h2 class="sec">${esc(t("wl.title", { market: m.name }))}</h2><p>${esc(t("wl.text", { city }))}</p>
-    <form novalidate><div class="row"><div><label for="w-email">${esc(t("wl.email"))}</label><input id="w-email" name="email" type="email" required maxlength="254" autocomplete="email" value="${esc(state.user ? state.user.email : "")}"></div>
+    <form novalidate><div class="row"><div><label for="w-email">${esc(t("wl.email"))}</label><input id="w-email" name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="254" autocomplete="email" value="${esc(state.user ? state.user.email : "")}"></div>
     <div><label for="w-kind">${esc(t("wl.iam"))}</label><select id="w-kind" name="kind"><option value="customer">${esc(t("wl.customer"))}</option><option value="group">${esc(t("wl.group"))}</option></select></div></div>
     <div class="err" role="alert"></div><button class="btn" type="submit">${esc(t("wl.join"))}</button> <a class="btn ghost" href="#/chicago">${esc(t("wl.seeMarket", { market: m.name }))}</a></form>`;
   box.querySelector("form").onsubmit = async (e) => {

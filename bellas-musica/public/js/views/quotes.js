@@ -58,8 +58,8 @@ export async function quotes(app, params) {
     const stepText = t("rq.step", { i: i + 1, n: steps.length });
     const acct = st.account ? `<p class="dim small">${esc(t("rq.privacy"))}</p>${mode === "signup"
       ? `<label for="f-name">${esc(t("auth.name"))}</label><input id="f-name" name="name" required maxlength="80" autocomplete="name">`
-      : ""}<label for="f-email">${esc(t("auth.email"))}</label><input id="f-email" name="email" type="email" required maxlength="254" autocomplete="email">
-      <label for="f-pw">${esc(t("auth.password"))}</label><input id="f-pw" name="password" type="password" required minlength="8" maxlength="200" autocomplete="${mode === "signup" ? "new-password" : "current-password"}">
+      : ""}<label for="f-email">${esc(t("auth.email"))}</label><input id="f-email" name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="254" autocomplete="email">
+      <label for="f-pw">${esc(t("auth.password"))}</label><input id="f-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="${mode === "signup" ? "new-password" : "current-password"}">
       ${mode === "signup" ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>` : ""}<p><button type="button" class="linkbtn-dark" id="swap">${esc(t(mode === "signup" ? "rq.hasAcct" : "rq.newAcct"))}</button></p>` : "";
     document.getElementById("wizbox").innerHTML = `<form id="wiz" novalidate><div class="wiz-top"><div class="ring" style="--p:${pct}" aria-hidden="true"><span>${pct}%</span></div><div class="wiz-step" role="status">${esc(stepText)}</div></div>
       <h2 id="wiz-h" class="wiz-h">${esc(t(st.key === "hours" && a.category !== "music" ? "rq.q.hoursAny" : "rq.q." + st.key))}</h2>${HINTS.has(st.key) ? `<p class="dim small">${esc(t("rq.h." + st.key))}</p>` : ""}

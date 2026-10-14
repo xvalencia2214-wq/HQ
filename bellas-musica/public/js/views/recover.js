@@ -8,7 +8,7 @@ export function forgotView(app) {
   const sim = state.meta.email !== "resend";
   app.innerHTML = `<div class="panel narrow"><h1>${esc(t("rec.forgotTitle"))}</h1><p class="dim">${esc(t("rec.forgotSub"))}</p>
     ${sim ? `<div class="note">${esc(t("rec.simNote"))}</div>` : ""}
-    <form id="fform" novalidate><label for="f-email">${esc(t("auth.email"))}</label><input id="f-email" name="email" type="email" required maxlength="254" autocomplete="email">
+    <form id="fform" novalidate><label for="f-email">${esc(t("auth.email"))}</label><input id="f-email" name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="254" autocomplete="email">
     <div id="ferr" class="err" role="alert"></div><button class="btn wide" type="submit">${esc(t("rec.send"))}</button></form>
     <p class="dim"><a href="#/login">${esc(t("rec.backLogin"))}</a></p></div>`;
   document.getElementById("fform").onsubmit = async (e) => {
@@ -23,9 +23,9 @@ export function forgotView(app) {
 
 export function resetView(app, token) {
   app.innerHTML = `<div class="panel narrow"><h1>${esc(t("rec.resetTitle"))}</h1>
-    <form id="rform" novalidate><label for="r-pw">${esc(t("rec.newPw"))}</label><input id="r-pw" name="password" type="password" required minlength="8" maxlength="200" autocomplete="new-password">
+    <form id="rform" novalidate><label for="r-pw">${esc(t("rec.newPw"))}</label><input id="r-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="new-password">
     <div class="dim small">${esc(t("auth.pwHint"))}</div>
-    <label for="r-pw2">${esc(t("rec.confirmPw"))}</label><input id="r-pw2" name="again" type="password" required minlength="8" maxlength="200" autocomplete="new-password">
+    <label for="r-pw2">${esc(t("rec.confirmPw"))}</label><input id="r-pw2" name="again" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="new-password">
     <div id="rerr" class="err" role="alert"></div><button class="btn wide" type="submit">${esc(t("rec.resetBtn"))}</button></form></div>`;
   document.getElementById("rform").onsubmit = async (e) => {
     e.preventDefault();
