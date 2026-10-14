@@ -10,6 +10,7 @@ import { maskContact } from "./messages.js";
 import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 import { accountStatus, applyAccount } from "../stripe-events.js";
+import { priceInsight, todayBox } from "../vendor-insights.js";
 
 const MAX_GROUPS_PER_USER = 5;
 const MAX_PHOTOS = 10;
@@ -73,6 +74,10 @@ export default function groupRoutes(ctx, add) {
   // Everything the owner may see about their own group (adds private fields).
   function manageView(g) {
     const detail = groupDetail(ctx, g);
+    const unread = db.get(
+      `SELECT COUNT(DISTINCT m.customer_id) c FROM messages m
+       LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'group'
+       WHERE m.group_id = ? AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, g.id).c;
     return {
       ...detail,
       checklist: checklist(g, detail),
@@ -81,13 +86,12 @@ export default function groupRoutes(ctx, add) {
       founding_no: g.founding_no || 0, founding_until: g.founding_until || 0,
       stripe: { mode: stripe.mode, connected: Boolean(g.stripe_account_id), ready: Boolean(g.stripe_ready) },
       is_owner: true,
-      stats_30d: { views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
+      stats_30d: { seen: ctx.stats.total("search_seen", 30, g.id), views: ctx.stats.total("group_view", 30, g.id), requests: ctx.stats.total("booking_paid", 30, g.id), confirmed: ctx.stats.total("booking_confirmed", 30, g.id), feed_views: ctx.stats.total("feed_view", 30, g.id), feed_taps: ctx.stats.total("feed_tap", 30, g.id) },
       open_offers: db.all("SELECT p.id, p.name, p.hours, p.price_cents, p.expires_at, u.name AS customer FROM packages p JOIN users u ON u.id = p.private_customer_id WHERE p.group_id = ? AND p.expires_at > ? ORDER BY p.id DESC", g.id, now()).map((o) => ({ ...o, customer: o.customer.split(" ")[0] })),
       pending_requests: db.get("SELECT COUNT(*) c FROM bookings WHERE group_id = ? AND status = 'requested'", g.id).c,
-      unread_threads: db.get(
-        `SELECT COUNT(DISTINCT m.customer_id) c FROM messages m
-         LEFT JOIN thread_reads r ON r.group_id = m.group_id AND r.customer_id = m.customer_id AND r.side = 'group'
-         WHERE m.group_id = ? AND m.sender = 'customer' AND m.id > COALESCE(r.last_id, 0)`, g.id).c
+      unread_threads: unread,
+      today: todayBox(db, g, unread),
+      price_insight: priceInsight(db, g)
     };
   }
 

@@ -66,6 +66,8 @@ try {
   ok("#3 now the button pays the deposit", /Pay deposit/.test(await G.locator("#bookbtn").innerText()));
   await G.click("#bookbtn");
   ok("#3 and the deposit can be paid", await until(async () => /#\/pay\/booking\//.test(G.url())));
+  const paidId = decodeURIComponent(G.url()).split("#/pay/booking/")[1].split("?")[0];
+  ok("#3 the simulated payment goes through", (await G.evaluate(async (id) => (await fetch(`/api/bookings/${id}/simulate-pay`, { method: "POST" })).status, paidId)) === 200);
 
   // ---- #2 errors in Spanish ----
   const E = await person("spanish");
@@ -99,6 +101,41 @@ try {
   ok("#10 the price steps fit the kind of vendor (food goes up to $3,000)", /\$3,000/.test(await C.locator("#s-max").textContent()) && !/\$900/.test(await C.locator("#s-max").textContent()));
   await spanish(C); await go(C, "#/?zip=60608");
   ok("#7 #6 in Spanish: Bautizo in the list and 'Ver más'", await until(async () => /Bautizo/.test(await C.locator("#s-event").textContent()) && /Ver más/.test(await text(C))));
+
+  // ---- batch 3: the vendor's dashboard ----
+  const V = await person("vendor");
+  await login(V, "v19@example.com");
+  await go(V, `#/dashboard?g=${gid}&tab=requests`); await V.waitForSelector("#todaybox");
+  ok("#13 the Today box comes first, with the request waiting and its deadline", /Today/.test(await V.locator("#todaybox").innerText()) && /1 request waiting for your answer · answer by/.test(await V.locator("#todaybox").innerText()));
+  ok("#14 'Seen in search' is the first number", /Seen in search/.test(await V.locator(".tiles .tile").first().innerText()) && Number(await V.locator(".tiles .tile").first().locator(".tile-v").innerText()) >= 1);
+  await V.click("button[data-act=accept]");
+  ok("#13 once accepted, the Today box shows the next party and the balance to collect", await until(async () => /Next party/.test(await V.locator("#todaybox").innerText()) && /to collect at your parties/.test(await V.locator("#todaybox").innerText())));
+  await V.evaluate(() => window.scrollTo(0, 0)); await shot(V, "e19-today.png");
+  // #15 three other real mariachis nearby
+  for (const [i, rate] of [[1, 250], [2, 400], [3, 650]]) { const o = client(S.base); await o.signup(`pi19-${i}@example.com`, `Precio ${i}`); await makeGroup(o, { name: `Mariachi Precio ${i}`, rate, dates: [d] }); }
+  await go(V, `#/dashboard?g=${gid}&tab=listing`); await V.waitForSelector("#priceinsight");
+  ok("#15 the Profile tab says what mariachis nearby charge, and where this one stands", /Mariachi listings near you usually start between \$\d+ and \$\d+ \(\d+ listings\)/.test(await V.locator("#priceinsight").innerText()) && /Yours starts at \$300/.test(await V.locator("#priceinsight").innerText()));
+  // #17 quick replies in Messages, in either language
+  await G.evaluate(async (id) => fetch(`/api/groups/${id}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "¿Cuánto cobran por 2 horas?" }) }), gid);
+  await go(V, `#/dashboard?g=${gid}&tab=messages`); await V.waitForSelector(".thread");
+  await V.locator(".thread").first().click(); await V.waitForSelector(".quick");
+  await V.locator(".quick [data-q]").first().click();
+  ok("#17 a quick reply fills the box (English)", /Our prices are on our page/.test(await V.inputValue("#rin")));
+  await V.click(".quick [data-ql=es]"); await V.locator(".quick [data-q]").nth(1).click();
+  ok("#17 and in Spanish with one tap", /estamos libres ese día/.test(await V.inputValue("#rin")));
+  await V.click("#rform button[type=submit]");
+  ok("#17 it sends like any message", await until(async () => /estamos libres ese día/.test(await V.locator("#convchat .chat").innerText())));
+  // #16 on a phone, five tabs and a second row
+  const P = await person("vendor-phone", { width: 390, height: 844 }, true);
+  await login(P, "v19@example.com");
+  await go(P, `#/dashboard?g=${gid}&tab=media`); await P.waitForSelector(".tabs-grouped");
+  ok("#16 on a phone the dashboard shows 5 big tabs, not 9", await P.locator(".tabs-grouped").isVisible() && !(await P.locator(".tabs-full").isVisible()) && (await P.locator(".tabs-grouped a").count()) === 5);
+  ok("#16 'My page' is on, with Profile, Packages, Media and Reviews below it", /My page/.test(await P.locator(".tabs-grouped a.on").innerText()) && (await P.locator(".tabs-sub a").allInnerTexts()).length === 4 && /Media|Fotos/.test(await P.locator(".tabs-sub a.on").innerText()));
+  const tb = await P.locator(".tabs-grouped a").first().boundingBox();
+  ok("#16 the tabs are easy to tap (44 px)", tb && tb.height >= 44);
+  await shot(P, "e19-phone-tabs.png");
+  await P.locator(".tabs-grouped a").nth(3).click();
+  ok("#16 'Money & tools' opens Payments", await until(async () => /tab=payments/.test(P.url())));
 } catch (e) {
   failed++; console.log("FAIL (crashed)", e.stack || e);
 } finally {

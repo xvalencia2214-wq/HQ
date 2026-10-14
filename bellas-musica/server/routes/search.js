@@ -160,7 +160,12 @@ export default function searchRoutes(ctx, add) {
     return z;
   });
 
-  add("GET", "/api/search", ({ query }) => { const out = search(query); if (!out.page) ctx.stats.count("search", out.origin.zip); return out; });
+  add("GET", "/api/search", ({ query }) => {
+    const out = search(query);
+    if (!out.page) ctx.stats.count("search", out.origin.zip);
+    ctx.stats.countMany("search_seen", out.results.map((g) => g.id)); // each vendor sees how often it shows up in searches
+    return out;
+  });
 
   // The home page's "In the spotlight" strip: paid Spotlight vendors of any kind near a ZIP (the market's center by default),
   // best rated first. Only Spotlight listings are read, so it stays cheap however many vendors there are.

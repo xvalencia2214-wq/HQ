@@ -7,6 +7,12 @@ export function createStats(db) {
     count(key, ref = "") {
       db.run("INSERT INTO stats_daily (day, key, ref, n) VALUES (?, ?, ?, 1) ON CONFLICT(day, key, ref) DO UPDATE SET n = n + 1", todayStr(), key, String(ref).slice(0, 80));
     },
+    // One more for each subject at once (every vendor on a page of search results), in one transaction.
+    countMany(key, refs) {
+      if (!refs.length) return;
+      const day = todayStr(), st = db.raw.prepare("INSERT INTO stats_daily (day, key, ref, n) VALUES (?, ?, ?, 1) ON CONFLICT(day, key, ref) DO UPDATE SET n = n + 1");
+      db.tx(() => { for (const r of refs) st.run(day, key, String(r).slice(0, 80)); });
+    },
     // Total for a key over the last `days` days, optionally for one subject.
     total(key, days = 30, ref) {
       const since = new Date(); since.setDate(since.getDate() - days);

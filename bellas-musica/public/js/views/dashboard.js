@@ -13,6 +13,8 @@ import { pushPanel } from "./app.js";
 const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
 
 const TABS = ["requests", "calendar", "listing", "extras", "business", "media", "reviews", "payments", "messages"];
+// On a phone the nine tabs become five, the bigger ones opening a second row: fewer, larger choices.
+const TAB_GROUPS = [["requests", ["requests"]], ["calendar", ["calendar"]], ["page", ["listing", "extras", "media", "reviews"]], ["money", ["payments", "business"]], ["messages", ["messages"]]];
 
 export async function dashboard(app, params) {
   const screen = currentScreen();
@@ -22,14 +24,18 @@ export async function dashboard(app, params) {
   const tab = TABS.includes(params.get("tab")) ? params.get("tab") : "requests";
   setWho(g.category, screen); // "Reply from the venue"…
   const link = (over) => { const q = new URLSearchParams({ g: g.id, tab, ...over }); return "#/dashboard?" + q.toString(); };
+  const dot = (k) => (k === "requests" && g.pending_requests ? `<span class="dot">${g.pending_requests}</span>` : k === "messages" && g.unread_threads ? `<span class="dot">${g.unread_threads}</span>` : "");
 
   app.innerHTML = `<div class="titlebar"><h1>${esc(g.name)} <small class="dim">${esc(t("dash.title"))}</small></h1>
     <div class="seg">${groups.length > 1 ? `<select id="gpick" aria-label="${esc(t("dash.pick"))}">${groups.map((x) => `<option value="${esc(x.id)}"${sel(x.id, g.id)}>${esc(x.name)}${x.my_role === "manager" ? ` (${esc(t("team.manager"))})` : ""}</option>`).join("")}</select>` : ""}<a href="#/dashboard?new=1" id="newg">+ ${esc(t("dash.add"))}</a><a href="#/group/${esc(g.id)}">${esc(t("dash.view"))}</a></div></div>
     ${g.stripe.mode === "stripe" && !g.stripe.ready ? `<div class="note warn">${esc(t("dash.needPayout"))} <a href="${esc(link({ tab: "payments" }))}">${esc(t("dash.setUp"))}</a></div>` : ""}
     ${statusBanner(g)}
+    ${tab === "requests" && g.status !== "draft" ? todayCard(g) : ""}
     <div id="pushnudge" hidden></div>
     ${g.status === "draft" ? "" : checklistCard(g, link)}
-    <div class="tabs" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${k === "requests" && g.pending_requests ? `<span class="dot">${g.pending_requests}</span>` : ""}${k === "messages" && g.unread_threads ? `<span class="dot">${g.unread_threads}</span>` : ""}</a>`).join("")}</div>
+    <div class="tabs tabs-full" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${dot(k)}</a>`).join("")}</div>
+    <div class="tabs tabs-grouped" role="tablist">${TAB_GROUPS.map(([k, tabs]) => `<a role="tab" class="${tabs.includes(tab) ? "on" : ""}" href="${esc(link({ tab: tabs[0] }))}">${esc(t(tabs.length > 1 ? "tabg." + k : "tab." + k))}${dot(k)}</a>`).join("")}</div>
+    ${(() => { const grp = TAB_GROUPS.find(([, tabs]) => tabs.includes(tab))[1]; return grp.length > 1 ? `<div class="tabs tabs-sub" role="tablist">${grp.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}</a>`).join("")}</div>` : ""; })()}
     <div id="tabbody"></div>`;
   wireShare(app);
   pushPanel(document.getElementById("pushnudge"), { compact: true });
@@ -39,6 +45,40 @@ export async function dashboard(app, params) {
   const ctx = { g, body, refresh };
   wireStatus(app, g, refresh);
   await ({ requests, calendar: calTab, listing, extras, business: businessTab, media, reviews, payments, messages }[tab])(ctx);
+}
+
+// "Today": the next gig, what's waiting for an answer, and money still to come, before anything else.
+function todayCard(g) {
+  const d = g.today, link = (tab) => `#/dashboard?g=${encodeURIComponent(g.id)}&tab=${tab}`;
+  if (!d) return "";
+  const when = (ts) => new Date(ts * 1000).toLocaleString(lang() === "es" ? "es-US" : "en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+  const rows = [];
+  if (d.requests_waiting) rows.push(`<a class="today-row hot" href="${esc(link("requests"))}"><span>⏳</span><span>${esc(t(d.requests_waiting === 1 ? "today.reqOne" : "today.req", { n: d.requests_waiting }))} · ${esc(t("today.answerBy", { when: when(d.answer_by) }))}</span></a>`);
+  if (d.next_gig) rows.push(`<a class="today-row" href="${esc(link("requests"))}"><span>📅</span><span>${esc(t("today.next"))}: <strong>${esc(fmtDate(d.next_gig.date))} · ${esc(d.next_gig.time)}</strong> · ${esc(t("event." + d.next_gig.event))} · ${esc(d.next_gig.customer)} (${esc(t(d.next_gig.guests === 1 ? "dash.guestsOne" : "dash.guests", { n: d.next_gig.guests }))})</span></a>`);
+  if (d.unread_messages) rows.push(`<a class="today-row" href="${esc(link("messages"))}"><span>💬</span><span>${esc(t(d.unread_messages === 1 ? "today.msgOne" : "today.msg", { n: d.unread_messages }))}</span></a>`);
+  if (d.to_collect_cents || d.held_cents) rows.push(`<a class="today-row" href="${esc(link("payments"))}"><span>💵</span><span>${d.to_collect_cents ? esc(t("today.collect", { amount: money(d.to_collect_cents) })) : ""}${d.to_collect_cents && d.held_cents ? " · " : ""}${d.held_cents ? esc(t("today.held", { amount: money(d.held_cents) })) : ""}</span></a>`);
+  return `<div class="panel today" id="todaybox"><h2 class="sec">${esc(t("today.title"))}</h2>${rows.length ? rows.join("") : `<p class="dim">${esc(t("today.calm"))}</p>`}${d.gigs_30d ? `<p class="dim small">${esc(t(d.gigs_30d === 1 ? "today.gigsOne" : "today.gigs", { n: d.gigs_30d }))}</p>` : ""}</div>`;
+}
+
+// Replies vendors send again and again, in both languages: a tap fills the box, the vendor edits and sends.
+function quickReplies(g) {
+  const music = g.category === "music";
+  return [
+    { label: t("qr.price"), en: "Thanks for writing! Our prices are on our page, and the total shows as soon as you pick a date. Tell me your date, place and number of guests and I'll confirm.", es: "¡Gracias por escribir! Nuestros precios están en nuestra página y el total aparece en cuanto eliges la fecha. Dime tu fecha, lugar y número de invitados y te confirmo." },
+    { label: t("qr.dates"), en: "Good news: we're free that day. You can book right on our page to hold the date with a deposit.", es: "Buenas noticias: estamos libres ese día. Puedes reservar en nuestra página para apartar la fecha con un depósito." },
+    { label: t("qr.travel"), en: "Yes, we go to your area. If it's past our free miles, the travel fee shows in the total before you pay.", es: "Sí vamos a tu zona. Si queda más lejos de nuestras millas sin costo, el costo de viaje aparece en el total antes de pagar." },
+    music
+      ? { label: t("qr.songs"), en: "Yes, we play it! Send me the list of songs you'd like and we'll have them ready.", es: "¡Sí la tocamos! Mándame la lista de canciones que quieras y las tenemos listas." }
+      : { label: t("qr.details"), en: "Yes, we can do that. Send me the details and we'll have everything ready.", es: "Sí, podemos hacerlo. Mándame los detalles y tenemos todo listo." },
+    { label: t("qr.thanks"), en: "Thank you for choosing us! See you on the big day.", es: "¡Gracias por elegirnos! Nos vemos en el gran día." }
+  ];
+}
+
+// "Mariachis near you usually start at $X–$Y": shown next to the price fields.
+function priceInsightNote(g) {
+  const p = g.price_insight;
+  if (!p) return "";
+  return `<p class="note small" id="priceinsight">📊 ${esc(t("pi.text", { type: t("type." + p.type), low: money(p.low_cents), high: money(p.high_cents), n: p.count }))} ${esc(t("pi.yours", { price: money(p.yours_cents) }))}</p>`;
 }
 
 // Draft / paused / live: what customers can see right now, and the one button that changes it.
@@ -145,8 +185,10 @@ async function requests({ g, body, refresh }) {
       ${b.can_mark_balance_offline && b.date >= dkey(today()) ? `<button class="btn ghost small" data-off="${b.balance_status === "offline" ? "undo" : "mark"}" data-id="${esc(b.id)}" data-amount="${b.balance_cents}">${esc(t(b.balance_status === "offline" ? "bal.undoOffline" : "bal.markOffline"))}</button> ` : ""}
       ${b.status === "confirmed" && b.date > dkey(today()) ? `<button class="btn ghost small" data-act="cancel" data-id="${esc(b.id)}">${esc(t("bk.cancel"))}</button>` : ""}</div><div class="biz-slot"></div></div>`;
   const st30 = g.stats_30d;
+  // what the numbers say, in one sentence: few open the page (photo, price), or many look and nobody books (price, dates)
+  const tip = st30.seen >= 20 && st30.views < st30.seen * 0.08 ? "stat.tipOpen" : st30.views >= 20 && !st30.requests ? "stat.tipBook" : "";
   body.innerHTML = `<div class="panel"><h2 class="sec">${esc(t("tab.requests"))}</h2>
-    <div class="tiles small" aria-label="${esc(t("stat.title"))}">${[["stat.views", st30.views], ["stat.feedViews", st30.feed_views], ["stat.feedTaps", st30.feed_taps], ["stat.requests", st30.requests], ["stat.confirmed", st30.confirmed]].map(([k, v]) => `<div class="tile"><div class="tile-l">${esc(t(k))} · ${esc(t("stat.title"))}</div><div class="tile-v">${v}</div></div>`).join("")}</div>${bookings.length
+    <div class="tiles small" aria-label="${esc(t("stat.title"))}">${[["stat.seen", st30.seen], ["stat.views", st30.views], ["stat.feedViews", st30.feed_views], ["stat.feedTaps", st30.feed_taps], ["stat.requests", st30.requests], ["stat.confirmed", st30.confirmed]].map(([k, v]) => `<div class="tile"><div class="tile-l">${esc(t(k))} · ${esc(t("stat.title"))}</div><div class="tile-v">${v}</div></div>`).join("")}</div>${tip ? `<p class="note small" id="stattip">💡 ${esc(t(tip))}</p>` : ""}${bookings.length
     ? sections.filter(([, list]) => list.length).map(([key, list, hot]) => `<div class="sec-h${hot ? " hot" : ""}"><strong>${esc(t(key))}</strong><span class="count">${list.length}</span></div>${list.map(row).join("")}`).join("")
     : `<div class="empty">${esc(t("dash.noReq"))}</div>`}</div>`;
   const slotForm = (btn, html, onSubmit) => {
@@ -300,6 +342,7 @@ function listing({ g, body, refresh }) {
     <label class="chk"><input type="checkbox" id="l-hourly" name="hourly"${g.hourly ? " checked" : ""}> <span>${esc(t("dash.hourly"))}</span></label><div class="dim small">${esc(t("dash.hourlyHint"))}</div>
     <div class="row"><div id="l-rate-w"${g.hourly ? "" : " hidden"}><label for="l-rate">${esc(t("dash.rate"))}</label><input id="l-rate" name="rate" type="number" min="50" max="5000" step="5" value="${g.rate_cents ? g.rate_cents / 100 : ""}"></div>
     <div><label for="l-guests">${esc(t("dash.maxGuests"))}</label><input id="l-guests" name="max_guests" type="number" min="1" max="5000" value="${g.max_guests}"></div></div>
+    ${priceInsightNote(g)}
     <div id="l-minh-w"${g.hourly ? "" : " hidden"}><label for="l-minh">${esc(t("dash.minHours"))}</label><select id="l-minh" name="min_hours">${[1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${h === g.min_hours ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select><div class="dim small">${esc(t("dash.minHoursHint"))}</div></div>
     <label for="l-story">${esc(t("g.story"))}</label><textarea id="l-story" name="story" maxlength="800">${esc(g.story)}</textarea>
     <label>${esc(t("dash.eventsDo"))}</label><div class="chips">${meta.events.map((e) => `<label class="chk chip"><input type="checkbox" name="ev" value="${esc(e)}"${g.events.includes(e) ? " checked" : ""}> <span>${esc(t("event." + e))}</span></label>`).join("")}</div>
@@ -339,7 +382,7 @@ function listing({ g, body, refresh }) {
 function extras({ g, body, refresh }) {
   const have = new Set(g.addons.map((a) => a.name.toLowerCase()));
   const presets = (state.meta.addon_presets[g.type] || state.meta.addon_presets._ || []).filter((p) => !have.has(p.en.toLowerCase()) && !have.has(p.es.toLowerCase()));
-  body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2>
+  body.innerHTML = `<div class="two"><div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2>${priceInsightNote(g)}
     ${g.packages.map((p) => `<div class="pkg"><div><strong>${esc(p.name)}</strong><br><span class="dim">${esc(p.description)} · ${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button class="btn ghost small" data-del="${p.id}">${esc(t("common.delete"))}</button></div></div>`).join("") || `<div class="dim">${esc(t("dash.noPkg"))}</div>`}
     <form id="pkform"><h3>${esc(t("dash.addPkg"))}</h3><label for="k-name">${esc(t("dash.pkgName"))}</label><input id="k-name" name="name" required maxlength="60" placeholder="${esc(t("dash.pkgEx"))}">
     <label for="k-desc">${esc(t("dash.pkgDesc"))}</label><input id="k-desc" name="description" maxlength="200">
@@ -575,7 +618,7 @@ async function messages({ g, body, refresh }) {
         <form novalidate><label for="of-name">${esc(t("off.name"))}</label><input id="of-name" name="name" required maxlength="60" placeholder="${esc(t("off.namePh"))}">
         <div class="row"><div><label for="of-h">${esc(t("off.hours"))}</label><input id="of-h" name="hours" type="number" min="1" max="12" value="3" required></div><div><label for="of-p">${esc(t("off.price"))}</label><input id="of-p" name="price" type="number" min="20" max="50000" required></div></div>
         <label for="of-n">${esc(t("off.note"))}</label><input id="of-n" name="note" maxlength="200"><div class="err" role="alert"></div><button class="btn small" type="submit">${esc(t("off.submit"))}</button></form></details>`;
-      renderChat(document.getElementById("convchat"), { messages: ms, mine: "group", formId: "rform", inputId: "rin", send: (text) => api.post(`/api/groups/${gid}/threads/${cid}`, { text }) });
+      renderChat(document.getElementById("convchat"), { messages: ms, mine: "group", formId: "rform", inputId: "rin", quick: quickReplies(g), send: (text) => api.post(`/api/groups/${gid}/threads/${cid}`, { text }) });
       conv.querySelector("details form").onsubmit = async (e) => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(e.target)), err = conv.querySelector("details .err"); err.textContent = "";

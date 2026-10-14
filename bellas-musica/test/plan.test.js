@@ -154,3 +154,47 @@ test("discovery: pages of results, name search, honest prices, paid spots that r
     assert.match(map, /\/chicago\/pilsen\/baptism</, "music for the new events too");
   } finally { await S.close(); }
 });
+
+// #13 Today box, #14 seen in search, #15 price insight.
+test("vendor dashboard: Today (requests, next party, money to come), seen in search, typical prices nearby", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    const d1 = inDays(10), d2 = inDays(12);
+    const owner = client(S.base); await owner.signup("today@example.com", "Toño Today");
+    const gid = await makeGroup(owner, { name: "Mariachi Hoy", rate: 300, dates: [d1, d2] });
+    const mine = async () => (await owner.get("/api/my/groups")).json.groups.find((g) => g.id === gid);
+    let g = await mine();
+    assert.deepEqual({ ...g.today, answer_by: 0 }, { next_gig: null, requests_waiting: 0, answer_by: 0, unread_messages: 0, gigs_30d: 0, to_collect_cents: 0, held_cents: 0 });
+    assert.equal(g.price_insight, null, "fewer than 3 others nearby: nothing to say");
+    // a family books two dates; one is accepted
+    const fam = client(S.base); await fam.signup("hoyfam@example.com", "Rosa Familia");
+    const b1 = (await fam.post("/api/bookings", bookingBody(gid, d1))).json.booking; await fam.post(`/api/bookings/${b1.id}/simulate-pay`);
+    const b2 = (await fam.post("/api/bookings", bookingBody(gid, d2))).json.booking; await fam.post(`/api/bookings/${b2.id}/simulate-pay`);
+    await fam.post(`/api/groups/${gid}/messages`, { text: "Hola, ¿tocan El Rey?" });
+    g = await mine();
+    assert.equal(g.today.requests_waiting, 2); assert.ok(g.today.answer_by > Date.now() / 1000);
+    assert.equal(g.today.unread_messages, 1);
+    await owner.patch(`/api/bookings/${b1.id}`, { action: "accept" });
+    g = await mine();
+    assert.equal(g.today.requests_waiting, 1);
+    assert.equal(g.today.next_gig.id, b1.id); assert.equal(g.today.next_gig.customer, bookingBody(gid, d1).name.split(" ")[0]); assert.equal(g.today.gigs_30d, 1);
+    assert.equal(g.today.to_collect_cents, b1.total_cents - b1.deposit_cents);
+    // #14 each search that shows the listing counts once
+    const c = client(S.base);
+    for (let i = 0; i < 3; i++) await c.get("/api/search?zip=60608");
+    await c.get("/api/search?zip=60608&q=nobody-by-this-name");
+    assert.equal((await mine()).stats_30d.seen, 3);
+    // #15 three other real mariachis within 30 miles, one far away and a different type: they don't count
+    for (const [i, rate, zip, type] of [[1, 250, "60623", "Mariachi"], [2, 400, "60632", "Mariachi"], [3, 600, "60609", "Mariachi"], [4, 100, "61820", "Mariachi"], [5, 90, "60608", "Banda"]]) {
+      const o = client(S.base); await o.signup(`pi${i}@example.com`, `Owner ${i}`);
+      const id = await makeGroup(o, { name: `Price ${i}`, rate, zip, dates: [d1] });
+      if (type !== "Mariachi") S.db.run("UPDATE groups SET type = ? WHERE id = ?", type, id);
+    }
+    const p = (await mine()).price_insight;
+    assert.equal(p.count, 3); assert.equal(p.type, "Mariachi");
+    assert.equal(p.low_cents, 25000); assert.equal(p.median_cents, 40000); assert.equal(p.high_cents, 60000);
+    assert.equal(p.yours_cents, 30000);
+    // a helper sees the same box; a stranger sees nothing of it
+    assert.equal((await c.get(`/api/groups/${gid}`)).json.today, undefined);
+  } finally { await S.close(); }
+});

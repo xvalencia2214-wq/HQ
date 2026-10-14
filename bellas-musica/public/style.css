@@ -718,3 +718,21 @@ html.big { font-size: 118.75%; }
 .setup-steps { margin: 8px 0 10px; padding-left: 1.4em; display: grid; gap: 4px; }
 .setup-steps li.done { color: var(--good); }
 .setup-steps li.done::marker { color: var(--good); }
+
+/* Vendor dashboard: the Today box, and the tabs grouped into five on a phone */
+.today .today-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--ink); min-height: 44px; }
+.today .today-row.hot { border-color: var(--gold-2); background: #fff8e6; font-weight: 600; }
+.today .today-row:hover { border-color: var(--gold-2); }
+.tabs-grouped, .tabs-sub { display: none; }
+@media (max-width: 700px) {
+  .tabs-full { display: none; }
+  .tabs-grouped { display: flex; }
+  .tabs-grouped a { flex: 1 1 auto; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .tabs-sub { display: flex; margin-top: -8px; border-bottom: 0; }
+  .tabs-sub a { border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 40px; }
+  .tabs-sub a.on { border-color: var(--gold-ink); background: #fff8e6; }
+}
+.quick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+.quick .chip { min-height: 40px; border: 1px solid var(--line); font: inherit; color: var(--ink); cursor: pointer; padding: 6px 12px; }
+.quick .qlang { margin-left: auto; display: flex; gap: 4px; }
+.quick .chip.on { border-color: var(--gold-ink); background: #fff8e6; font-weight: 600; }
