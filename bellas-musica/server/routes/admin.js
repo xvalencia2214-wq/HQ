@@ -55,6 +55,9 @@ export default function adminRoutes(ctx, add) {
         return { total: db.get("SELECT COUNT(*) c FROM waitlist").c, by_city: [...by.values()].sort((a, b) => b.customers + b.groups - a.customers - a.groups).slice(0, 15) };
       })(),
       texts_30d: { sent: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 1 AND created_at > ?", d30).c, failed: one("SELECT COUNT(*) c FROM sms_log WHERE error != '' AND created_at > ?", d30).c, logged_only: one("SELECT COUNT(*) c FROM sms_log WHERE sent = 0 AND error = '' AND created_at > ?", d30).c },
+      // chargebacks still open in Stripe (answer before due_by), and the last ones decided
+      disputes: db.all(`SELECT d.id, d.booking_id, d.amount_cents, d.reason, d.status, d.due_by, d.created_at, g.name AS group_name FROM disputes d LEFT JOIN groups g ON g.id = d.group_id
+        ORDER BY d.status IN ('won','lost','warning_closed') , d.created_at DESC LIMIT 20`),
       noshow_reports: db.all(
         `SELECT b.id, g.name AS group_name, u.name AS customer, u.email AS customer_email, b.date, b.time, b.deposit_cents, b.total_cents, b.balance_status, b.balance_parts_cents, b.noshow_note, b.noshow_reply, b.noshow_at, b.refund_cents, b.balance_refund_cents
          FROM bookings b JOIN groups g ON g.id = b.group_id JOIN users u ON u.id = b.customer_id WHERE b.noshow_status = 'reported' ORDER BY b.noshow_at`

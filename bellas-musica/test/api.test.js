@@ -156,8 +156,11 @@ test("bookings: quote, hold, double-booking, pay, accept, refunds by policy, pri
   assert.equal(q.json.quote.total_cents, 60000); assert.equal(q.json.quote.deposit_cents, 15000);
   assert.equal(q.json.quote.platform_fee_cents, undefined);
   assert.equal(q.json.policy.key, "moderate");
-  const farQ = await cust.post("/api/quote", bookingBody(gid, far, { eventZip: "77003" })); // Houston is far from Chicago
+  const farQ = await cust.post("/api/quote", bookingBody(gid, far, { eventZip: "60060" })); // Mundelein, 33 miles: past the free 20, inside the paid range
   assert.equal(farQ.json.quote.travel_fee_cents, 6000);
+  const houston = await cust.post("/api/quote", bookingBody(gid, far, { eventZip: "77003" })); // beyond any travel this group offers
+  assert.equal(houston.status, 400);
+  assert.match(houston.json.error, /travel area/);
 
   assert.equal((await client(S.base).post("/api/bookings", bookingBody(gid, far))).status, 401);
   assert.equal((await cust.post("/api/bookings", bookingBody(gid, far, { acceptPolicy: false }))).status, 400);

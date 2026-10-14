@@ -2,7 +2,7 @@ import { HttpError, addDays, int, isDate, isZip, now, oneOf, str, safeJson, toda
 import { ADDON_PRESETS, CATEGORIES, EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_HOURS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, TIMES, categoryOf } from "../pricing.js";
 import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
-import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, isSpotlight, openSlots, publicGroup, ratingMap, ratingOf, LIVE_SQL } from "../shared.js";
+import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, isSpotlight, openSlots, publicGroup, ratingMap, ratingOf, reaches, LIVE_SQL } from "../shared.js";
 import { upcomingHolidays } from "./specials.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -61,6 +61,7 @@ export default function searchRoutes(ctx, add) {
       if (!z) continue;
       const distance = miles(origin, z);
       if (distance > radius) continue;
+      if (!reaches(g, distance)) continue; // beyond the vendor's own travel area
       if (type && g.type !== type) continue;
       if (category !== "all" && categoryOf(g.type) !== category) continue;
       if (maxPrice && priceKey(g) > maxPrice) continue;
@@ -104,7 +105,8 @@ export default function searchRoutes(ctx, add) {
       fields: {
         distance_miles: Math.round(x.distance), photo: photos.has(x.g.id) ? "/uploads/" + photos.get(x.g.id) : null,
         from_cents: fromCents(x.g, minPrice), fits_event: x.fits || false, matched_songs: (x.matched || []).slice(0, 3),
-        open_slots: x.openForDate || null, open_soon: x.openSoon || null, lat: z.lat, lon: z.lon
+        open_slots: x.openForDate || null, open_soon: x.openSoon || null, lat: z.lat, lon: z.lon,
+        travel_extra_cents: x.distance > x.g.travel_miles ? x.g.travel_fee_cents : 0 // what getting to this ZIP adds
       }
     });
     c.story = c.story.slice(0, 220);

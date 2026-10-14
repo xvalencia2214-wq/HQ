@@ -7,6 +7,9 @@ import { renderChat } from "../chat.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
 
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
+// A visitor fills in the booking form and sees the price before having an account; what they picked waits here while they
+// sign up or log in, and comes back on this page (`?resume=1`).
+const DRAFT = "bm_bookdraft";
 
 export async function group(app, id, params = new URLSearchParams()) {
   const screen = currentScreen();
@@ -29,6 +32,10 @@ export async function group(app, id, params = new URLSearchParams()) {
   const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: params.get("zip") || "", date: params.get("date") || "" };
   const monthOf = (k) => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1);
   const policy = meta.policies[g.cancel_policy] || {};
+  let draft = null;
+  if (params.get("resume")) {
+    try { const d = JSON.parse(sessionStorage.getItem(DRAFT) || "null"); if (d && d.gid === g.id && user) { draft = d; sessionStorage.removeItem(DRAFT); } } catch { /* storage blocked */ }
+  }
 
   const music = g.category === "music";
   const fact = (k, v) => `<div class="fact"><span>${esc(t(k))}</span><strong>${v}</strong></div>`;
@@ -102,10 +109,10 @@ export async function group(app, id, params = new URLSearchParams()) {
     const box = document.getElementById("bookbox");
     if (g.is_owner) { box.innerHTML = `<div class="note">${esc(t("g.yours"))} <a class="btn small" href="#/dashboard?g=${esc(g.id)}&amp;tab=listing">✏️ ${esc(t("g.editPage"))}</a></div>`; return; }
     if (!g.bookable) { box.innerHTML = `<div class="note">${esc(t("g.notBookable"))}</div>`; return; }
-    if (!user) { box.innerHTML = `<div class="note">${esc(t("g.loginToBook"))}</div><a class="btn" href="#/login?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.login"))}</a> <a class="btn ghost" href="#/signup?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.signup"))}</a>`; return; }
     if (!st.date || !st.time) { box.innerHTML = `<div class="empty small">${esc(t("g.pickDate"))}</div>`; return; }
-    const prev = box.querySelector("form") ? Object.fromEntries(new FormData(box.querySelector("form"))) : {};
-    const prevAddons = box.querySelector("form") ? new FormData(box.querySelector("form")).getAll("addon") : [];
+    const prev = box.querySelector("form") ? Object.fromEntries(new FormData(box.querySelector("form"))) : draft ? draft.fields : {};
+    const prevAddons = box.querySelector("form") ? new FormData(box.querySelector("form")).getAll("addon") : draft ? draft.addons : [];
+    draft = null;
     const hourChoices = Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i);
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
@@ -117,16 +124,18 @@ export async function group(app, id, params = new URLSearchParams()) {
       <div class="dim small" id="wk-hint"${Number(prev.weeks || params.get("repeat") || 1) > 1 ? "" : " hidden"}>${esc(t("wk.hint"))}${g.weekly_discount_pct ? ` <strong>${esc(t("wk.discount", { pct: g.weekly_discount_pct }))}</strong>` : ""}</div>
       <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
       <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
-      <label for="b-name">${esc(t("g.yourName"))}</label><input id="b-name" name="name" required maxlength="80" autocomplete="name" value="${v("name", user.name)}">
-      <label for="b-phone">${esc(t("g.yourPhone"))}</label><input id="b-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" value="${v("phone", fmtPhone(user.phone))}">
+      <label for="b-name">${esc(t("g.yourName"))}</label><input id="b-name" name="name" required maxlength="80" autocomplete="name" value="${v("name", user ? user.name : "")}">
+      <label for="b-phone">${esc(t("g.yourPhone"))}</label><input id="b-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" value="${v("phone", user ? fmtPhone(user.phone) : "")}">
       <label for="b-addr">${esc(t("g.address"))}</label><input id="b-addr" name="address" required maxlength="160" value="${v("address")}">
       <label for="b-msg">${esc(t("g.special"))}</label><textarea id="b-msg" name="message" maxlength="500" placeholder="${esc(t("g.specialHint"))}">${v("message")}</textarea>
       <div id="quote" class="quote"></div>
-      ${(g.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" id="b-needs" name="needs"> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
-      <label class="chk"><input type="checkbox" id="b-agree" name="agree"> <span>${esc(t("g.agree"))}</span></label>
+      ${(g.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" id="b-needs" name="needs"${prev.needs ? " checked" : ""}> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
+      <label class="chk"><input type="checkbox" id="b-agree" name="agree"${prev.agree ? " checked" : ""}> <span>${esc(t("g.agree"))}</span></label>
       <div id="bookerr" class="err" role="alert"></div>
-      <button class="btn wide" type="submit" id="bookbtn">${esc(t("g.pay"))}</button>${payWays()}</form>`;
+      <button class="btn wide" type="submit" id="bookbtn">${esc(t(user ? "g.pay" : "g.payGuest"))}</button>${user ? "" : `<p class="dim small" id="acctnext">${esc(t("g.accountNext"))} <a id="acct-login" href="#/login?next=${encodeURIComponent(`#/group/${g.id}?resume=1`)}">${esc(t("nav.login"))}</a></p>`}${payWays()}</form>`;
     const form = document.getElementById("bookform");
+    const saveDraft = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ gid: g.id, date: st.date, time: st.time, fields: Object.fromEntries(new FormData(form)), addons: new FormData(form).getAll("addon") })); } catch { /* storage blocked: they pick again */ } };
+    const acctLogin = document.getElementById("acct-login"); if (acctLogin) acctLogin.addEventListener("click", saveDraft);
     const syncHours = () => { const w = document.getElementById("hrs-wrap"); if (w) w.hidden = Boolean(form.packageId.value); const h = document.getElementById("wk-hint"); if (h) h.hidden = Number(form.weeks.value) < 2; };
     syncHours();
     form.weeks.addEventListener("change", syncHours);
@@ -161,6 +170,11 @@ export async function group(app, id, params = new URLSearchParams()) {
       if (!document.getElementById("b-agree").checked) { err.textContent = t("g.mustAgree"); return; }
       const needsBox = document.getElementById("b-needs");
       if (needsBox && !needsBox.checked) { err.textContent = t("needs.must"); return; }
+      if (!user) { // keep the choices, make the account, come back here to pay
+        saveDraft();
+        location.hash = `#/signup?next=${encodeURIComponent(`#/group/${g.id}?resume=1`)}`;
+        return;
+      }
       btn.disabled = true;
       try {
         const bookBody = { acceptNeeds: Boolean(document.getElementById("b-needs")?.checked), groupId: g.id, date: st.date, time: st.time, packageId: f.packageId || null, hours: Number(f.hours), addonIds: new FormData(form).getAll("addon").map(Number), event: f.event, guests: Number(f.guests), eventZip: f.eventZip, name: f.name, phone: f.phone, address: f.address, message: f.message, acceptPolicy: true };
@@ -211,6 +225,11 @@ export async function group(app, id, params = new URLSearchParams()) {
 
   // Open on a month that has something to click, or on the date the customer searched for.
   async function initCalendar() {
+    if (draft && /^\d{4}-\d{2}-\d{2}$/.test(draft.date)) { // back from signing up: the same date and time, if still free
+      st.month = monthOf(draft.date); await loadMonth();
+      const open = (st.days[monthKey(st.month)] || {})[draft.date] || [];
+      if (open.length) { st.date = draft.date; st.time = open.includes(draft.time) ? draft.time : null; pkgChoice = draft.fields.packageId || pkgChoice; return; }
+    }
     if (ctx.date && /^\d{4}-\d{2}-\d{2}$/.test(ctx.date)) {
       st.month = monthOf(ctx.date); await loadMonth();
       if ((st.days[monthKey(st.month)] || {})[ctx.date]) { st.date = ctx.date; return; }

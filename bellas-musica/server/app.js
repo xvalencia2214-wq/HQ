@@ -46,6 +46,7 @@ import clientReviewRoutes from "./routes/clientreviews.js";
 import guestRoutes from "./routes/guests.js";
 import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
+import { translateError, requestLang } from "./errors-es.js";
 
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -256,8 +257,9 @@ export function createApp(config) {
       serveStatic(req, res, pathname);
     } catch (e) {
       if (res.headersSent) { res.end(); return; }
-      if (e instanceof HttpError) sendJson(res, e.status, { error: e.message, ...e.extra });
-      else { console.error(e); alert(`Server error on ${req.method} ${String(req.url).split("?")[0]}: ${e && e.message}`, `500 ${req.method} ${String(req.url).split("?")[0]}`); sendJson(res, 500, { error: "Something went wrong" }); }
+      const lang = requestLang(req); // a Spanish screen gets the message in Spanish
+      if (e instanceof HttpError) sendJson(res, e.status, { error: translateError(e.message, lang, e.status), ...e.extra });
+      else { console.error(e); alert(`Server error on ${req.method} ${String(req.url).split("?")[0]}: ${e && e.message}`, `500 ${req.method} ${String(req.url).split("?")[0]}`); sendJson(res, 500, { error: translateError("Something went wrong", lang) }); }
     }
   });
 

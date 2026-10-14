@@ -2,7 +2,7 @@ import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str,
 import { CATEGORIES, EVENT_TYPES, categoryOf, isTime } from "../pricing.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { maskContact } from "./messages.js";
-import { LIVE_SQL, activeOffers, isBookable, openSlots, ratingMap, ratingOf, responseTime } from "../shared.js";
+import { LIVE_SQL, activeOffers, isBookable, openSlots, ratingMap, ratingOf, reaches, responseTime } from "../shared.js";
 
 const MAX_GROUPS = 5;       // an event goes to at most this many groups at first
 const EXTRA_GROUPS = 2;     // and to this many more if nobody has answered after SILENT_HOURS
@@ -37,7 +37,7 @@ function matches(ctx, { event, date, guests, zip, customerId, time, size, budget
     if (!openSlots(db, g.id, date).length) continue;   // free that day
     const z = lookupZip(g.zip);
     const d = z ? miles(origin, z) : 999;
-    if (d > RADIUS) continue;
+    if (d > RADIUS || !reaches(g, d)) continue;
     // A budget is a promise not to waste a group's time: skip groups whose cheapest way to do this event is far above it.
     if (budgetMax) { const least = Math.min(cheapest.get(g.id) ?? Infinity, (g.hourly !== 0 ? g.rate_cents * Math.max(hours, g.min_hours || 1) : Infinity)); if (least > budgetMax * 100 * BUDGET_SLACK) continue; }
     const r = ratingOf(g, ratings);

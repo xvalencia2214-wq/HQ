@@ -15,7 +15,12 @@ export function parseCookies(header) {
   const out = {};
   for (const part of String(header || "").split(";")) {
     const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    // A cookie another script set on this domain may hold a stray "%": keep its raw text instead of failing the request.
+    const raw = part.slice(i + 1).trim();
+    let v = raw;
+    try { v = decodeURIComponent(raw); } catch { /* not percent-encoded */ }
+    out[part.slice(0, i).trim()] = v;
   }
   return out;
 }

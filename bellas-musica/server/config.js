@@ -65,6 +65,9 @@ export function loadConfig(env = process.env) {
     // Stripe (leave unset to run in simulated-payments mode)
     stripeKey: env.STRIPE_SECRET_KEY || "",
     stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET || "",
+    // Stripe sends events about vendors' payout accounts to a second ("Connected accounts") endpoint with its own secret;
+    // both endpoints use the same address. Optional: a daily check covers a missed one.
+    stripeConnectWebhookSecret: env.STRIPE_CONNECT_WEBHOOK_SECRET || "",
     stripeApi: env.STRIPE_API_BASE || "https://api.stripe.com",
     // Email (Resend). Leave the key empty to only log emails (simulated).
     resendKey: env.RESEND_API_KEY || "",

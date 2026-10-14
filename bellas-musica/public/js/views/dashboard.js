@@ -309,6 +309,7 @@ function listing({ g, body, refresh }) {
     <div><label for="l-set">${esc(t("dash.setMin"))}</label><input id="l-set" name="set_minutes" type="number" min="10" max="240" value="${g.set_minutes}"></div></div></div>
     <div class="row"><div><label for="l-tm">${esc(t("dash.travelMiles"))}</label><input id="l-tm" name="travel_miles" type="number" min="0" max="500" value="${g.travel_miles}"></div>
     <div><label for="l-tf">${esc(t("dash.travelFee"))}</label><input id="l-tf" name="travel_fee" type="number" min="0" max="2000" value="${g.travel_fee_cents / 100}"></div></div>
+    <p class="dim small">${esc(t("dash.reachHint"))}</p>
     <label for="l-wp">${esc(t("wp.label"))}</label><textarea id="l-wp" name="weather_policy" maxlength="300" placeholder="${esc(t("wp.ph"))}">${esc(g.weather_policy || "")}</textarea><div class="dim small">${esc(t("wp.hint"))}</div>
     <h2 class="sec">${esc(t("dash.terms"))}</h2>
     <div class="row"><div><label for="l-dep">${esc(t("dash.depositPct"))}</label><input id="l-dep" name="deposit_pct" type="number" min="20" max="50" value="${g.deposit_pct}"></div>

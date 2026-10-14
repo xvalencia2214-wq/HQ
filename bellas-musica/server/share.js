@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { lookupZip, miles, zipsWithin } from "./geo.js";
 import { MARKET } from "./market.js";
-import { LIVE_SQL, fromCents, ratingMap, ratingOf } from "./shared.js";
+import { LIVE_SQL, fromCents, ratingMap, ratingOf, reaches } from "./shared.js";
 import { categoryOf } from "./pricing.js";
 import { safeJson } from "./util.js";
 
@@ -112,7 +112,7 @@ function hoodGroups(ctx, hood, shared = {}) {
     const z = lookupZip(g.zip);
     if (!z) continue;
     const d = miles(origin, z);
-    if (d > LANDING_RADIUS) continue;
+    if (d > LANDING_RADIUS || !reaches(g, d)) continue;
     if (categoryOf(g.type) !== "music") continue; // these pages are about music
     out.push({ g, distance: d, from: fromCents(g, minPrice), r: ratingOf(g, ratings), place: `${z.city}, ${z.state}` });
   }

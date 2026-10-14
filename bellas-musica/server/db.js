@@ -666,6 +666,24 @@ export function openDb(config) {
   ensureColumn("groups", "founding_no", "INTEGER NOT NULL DEFAULT 0");      // 1..FOUNDING_SLOTS: one of the first listings to go live
   ensureColumn("groups", "founding_until", "INTEGER NOT NULL DEFAULT 0");   // ...its lower fee lasts until then
   ensureColumn("groups", "spotlight_until", "INTEGER NOT NULL DEFAULT 0");  // paid Spotlight: above Featured in search, the home page strip, twice the Discover turns
+  ensureColumn("groups", "stripe_checked_at", "INTEGER NOT NULL DEFAULT 0"); // when payouts were last re-read from Stripe (the daily check)
+  // A customer disputed a card payment with their bank (a chargeback): the platform has a few days to answer in Stripe.
+  db.exec(`CREATE TABLE IF NOT EXISTS disputes (
+    id TEXT PRIMARY KEY,                         -- Stripe's dispute id (dp_...)
+    payment_intent TEXT NOT NULL DEFAULT '',
+    booking_id TEXT NOT NULL DEFAULT '',
+    group_id TEXT NOT NULL DEFAULT '',
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    reason TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT '',             -- Stripe's: needs_response, under_review, won, lost...
+    due_by INTEGER NOT NULL DEFAULT 0,           -- answer in Stripe before this
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  // Lookups by listing that grow with the marketplace (search cards, ratings, the vendor page).
+  db.exec("CREATE INDEX IF NOT EXISTS idx_reviews_group ON reviews(group_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_photos_group ON photos(group_id, position)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_packages_group ON packages(group_id)");
   ensureColumn("parties", "rsvp_token", "TEXT NOT NULL DEFAULT ''");     // the open invitation link (made the first time the guest list is opened)
   ensureColumn("parties", "rsvp_note", "TEXT NOT NULL DEFAULT ''");      // what guests read on it (place, time, dress code)
   ensureColumn("parties", "rsvp_by", "TEXT NOT NULL DEFAULT ''");        // answer by this date

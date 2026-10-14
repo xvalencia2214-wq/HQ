@@ -81,6 +81,12 @@ export function feePctFor(g, config) {
   return pct;
 }
 
+// How far a listing goes for a party: free within its own travel miles; with a travel fee, up to twice that (at least 30
+// miles more). Search, Get quotes, Discover, the neighborhood pages and booking all use this, so a vendor is never shown
+// for (or booked at) a party it can't reach.
+export const reachMiles = (g) => (g.travel_fee_cents > 0 ? Math.max(g.travel_miles * 2, g.travel_miles + 30) : g.travel_miles);
+export const reaches = (g, distance) => distance <= reachMiles(g);
+
 // The "from" price on cards: the cheapest package, else the hourly price (for listings that can be booked by the hour).
 export const fromCents = (g, minPrice) => minPrice.get(g.id) ?? (g.hourly !== 0 ? g.rate_cents : 0);
 

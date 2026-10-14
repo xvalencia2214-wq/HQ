@@ -2,7 +2,7 @@ import { HttpError, int, isZip, str } from "../util.js";
 import { lookupZip, miles, zipsWithin } from "../geo.js";
 import { MARKET } from "../market.js";
 import { embedUrl } from "../media.js";
-import { LIVE_SQL, firstPhotos, fromCents, isPromoted, isSpotlight, ratingMap, ratingOf } from "../shared.js";
+import { LIVE_SQL, firstPhotos, fromCents, isPromoted, isSpotlight, ratingMap, ratingOf, reaches } from "../shared.js";
 import { CATEGORIES, categoryOf } from "../pricing.js";
 import { oneOf } from "../util.js";
 
@@ -44,7 +44,7 @@ export default function feedRoutes(ctx, add) {
       const z = lookupZip(g.zip);
       if (!z) continue;
       const d = miles(origin, z);
-      if (d > radius) continue;
+      if (d > radius || !reaches(g, d)) continue;
       if (category !== "all" && categoryOf(g.type) !== category) continue;
       const r = ratingOf(g, ratings);
       cards.set(g.id, {

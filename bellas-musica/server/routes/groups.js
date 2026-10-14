@@ -9,6 +9,7 @@ import { parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
 import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
 import { normalizePhone } from "../sms.js";
+import { accountStatus, applyAccount } from "../stripe-events.js";
 
 const MAX_GROUPS_PER_USER = 5;
 const MAX_PHOTOS = 10;
@@ -428,14 +429,8 @@ export default function groupRoutes(ctx, add) {
     if (!stripe.live) return { ready: Boolean(g.stripe_ready) };
     if (!g.stripe_account_id) return { ready: false };
     const acct = await stripe.getAccount(g.stripe_account_id);
-    const transfersOk = acct.capabilities?.transfers === undefined || acct.capabilities.transfers === "active";
-    const ready = Boolean(acct.charges_enabled && acct.payouts_enabled && transfersOk);
-    // Stripe only turns payouts on once it has checked who the person is (name, date of birth, SSN, and an ID document when
-    // it asks for one). Nothing is outstanding or overdue: we show "ID checked". We never see or keep the ID itself.
-    const req = acct.requirements || {};
-    const idOk = ready && !req.disabled_reason && !(req.past_due || []).length && !(req.currently_due || []).some((r) => /verification|individual|representative|id_number|dob|ssn/.test(r));
-    db.run("UPDATE groups SET stripe_ready = ?, id_checked = ? WHERE id = ?", ready ? 1 : 0, idOk ? 1 : 0, g.id);
-    return { ready };
+    applyAccount(ctx, { ...acct, id: g.stripe_account_id }); // also what the Stripe webhook and the daily check do
+    return { ready: accountStatus(acct).ready };
   }, { auth: true });
 
   // ---- paid placement (30 days): Featured, or Spotlight (the top level: Featured plus the top of every list) ----

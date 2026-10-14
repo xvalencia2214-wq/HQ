@@ -10,8 +10,9 @@ import { normalizePhone } from "../sms.js";
 import { bookingToIcs } from "../ics.js";
 import { usd } from "../emails.js";
 import { verifyWebhook } from "../stripe.js";
+import { handleStripeEvent } from "../stripe-events.js";
 import { signedFlags } from "../agreement.js";
-import { RESCHED_TTL, holdsPayout, releasePayoutLocked, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner, isTeam } from "../shared.js";
+import { RESCHED_TTL, reaches, holdsPayout, releasePayoutLocked, feePctFor, displayStatus, expirePending, getGroup, getVisibleGroup, isBookable, markBookingPaid, markBalancePaid, markCartPaid, markPartPaid, markFeaturePaid, newId, openSlots, refundBooking, refundBalance, requireOwner, isTeam } from "../shared.js";
 
 
 export default function bookingRoutes(ctx, add) {
@@ -53,7 +54,9 @@ export default function bookingRoutes(ctx, add) {
     }
     const minutes = pkg ? packageMinutes(pkg) : hours * 60;
     if (requireSlot) { expirePending(db); assertStart(db, group, date, time, minutes); }
-    const quote = buildQuote({ group, pkg, hours, distanceMiles: miles(lookupZip(group.zip), ez), feePct: feePctFor(group, config), addons });
+    const distance = miles(lookupZip(group.zip), ez);
+    if (!reaches(group, distance)) throw new HttpError(400, "This group's travel area doesn't reach that ZIP code");
+    const quote = buildQuote({ group, pkg, hours, distanceMiles: distance, feePct: feePctFor(group, config), addons });
     return { group, pkg, date, time, event, guests, eventZip, quote, minutes };
   }
 
@@ -481,10 +484,13 @@ export default function bookingRoutes(ctx, add) {
   // ---- Stripe webhook (signature verified; each event id is processed once) ----
   add("POST", "/api/stripe/webhook", async ({ req, body }) => {
     if (!config.stripeWebhookSecret) throw new HttpError(503, "Webhook not configured");
-    const event = verifyWebhook(body, req.headers["stripe-signature"], config.stripeWebhookSecret);
+    let event;
+    try { event = verifyWebhook(body, req.headers["stripe-signature"], config.stripeWebhookSecret); }
+    catch (e) { if (!config.stripeConnectWebhookSecret) throw e; event = verifyWebhook(body, req.headers["stripe-signature"], config.stripeConnectWebhookSecret); } // the Connect endpoint's secret
     if (db.run("INSERT OR IGNORE INTO webhook_events (id, created_at) VALUES (?, ?)", String(event.id), now()).changes === 0) return { received: true, duplicate: true };
     try {
       const obj = event.data?.object || {};
+      if (handleStripeEvent(ctx, event)) return { received: true }; // chargebacks, vendors' payout accounts
       if ((event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") && obj.payment_status === "paid") {
         const kind = obj.metadata?.kind;
         if (kind === "booking") {
