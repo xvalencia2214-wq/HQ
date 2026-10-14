@@ -1,6 +1,6 @@
 import { init, state, onChange, setUser, refreshMetaIfStale, refreshAttention } from "./state.js";
 import { api, ApiError } from "./api.js";
-import { t, lang, setLang, initLang } from "./i18n.js";
+import { t, lang, setLang, initLang, setWho } from "./i18n.js";
 import { esc, toast } from "./ui.js";
 import { killMap } from "./map.js";
 import { home } from "./views/home.js";
@@ -110,6 +110,7 @@ async function route() {
   killMap();
   if (viewCleanup) { const stop = viewCleanup; viewCleanup = null; stop(); }
   document.title = "Bella's Música";
+  setWho("music");
   const raw = location.hash.replace(/^#/, "") || "/";
   const qi = raw.indexOf("?");
   const path = qi === -1 ? raw : raw.slice(0, qi);

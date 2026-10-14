@@ -81,7 +81,7 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   // ---- the sombrero: a profile (radius, height) spun around the vertical axis ----
   const hat = new Group();
   const profile = [
-    [0.0, 1.95], [0.32, 1.93], [0.58, 1.84], [0.74, 1.62], [0.82, 1.25], [0.88, 0.85], [0.96, 0.5], [1.02, 0.32],   // the tall crown
+    [0.0, 2.18], [0.11, 2.25], [0.24, 2.28], [0.38, 2.19], [0.52, 1.94], [0.65, 1.52], [0.78, 1.02], [0.91, 0.56], [1.02, 0.32], // the tall crown, dented at the peak
     [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32], [3.36, 0.5], [3.42, 0.62], [3.38, 0.7],          // the brim curling up at the edge
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
@@ -97,19 +97,23 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
   for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27, Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
-  // a gold vine winding round the top of the brim, with leaves: it follows the brim's height so it sits on the felt
-  const brimTop = [[1.02, 0.32], [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32]];
-  const topY = (r) => { for (let i = 1; i < brimTop.length; i++) { const [r0, y0] = brimTop[i - 1], [r1, y1] = brimTop[i]; if (r <= r1) return y0 + ((r - r0) / (r1 - r0)) * (y1 - y0); } return 0.32; };
-  const WAVES = 14, vinePts = [];
-  for (let i = 0; i <= 280; i++) { const a = (i / 280) * Math.PI * 2, r = 1.95 + 0.17 * Math.sin(a * WAVES); vinePts.push(new Vector3(Math.cos(a) * r, topY(r) + 0.045, Math.sin(a) * r)); }
-  hat.add(new Mesh(new TubeGeometry(new CatmullRomCurve3(vinePts, true), reduced || lowPower ? 280 : 560, 0.04, 8, true), silver));
-  const leafGeo = new SphereGeometry(0.13, 12, 8), leaves = new InstancedMesh(leafGeo, silver, WAVES * 2);
-  for (let i = 0; i < WAVES * 2; i++) {
-    const a = ((i + 0.5) / (WAVES * 2)) * Math.PI * 2, side = i % 2 ? -1 : 1, r = 1.95 + side * 0.3;
-    dummy.position.set(Math.cos(a) * r, topY(r) + 0.05, Math.sin(a) * r); dummy.rotation.set(0, -a + side * 0.6, 0); dummy.scale.set(1.3, 0.3, 0.6);
+  // one gold vine winding up and across the hat, from below the brim's edge to above the peak, never touching it
+  const vinePts = [], VINE = 240;
+  const vineAt = (t) => { const a = -2.2 + t * Math.PI * 1.75, r = 3.65 * (1 - t) + 1.05 * t; return new Vector3(Math.cos(a) * r, -0.05 + t * 2.6, Math.sin(a) * r); };
+  for (let i = 0; i <= VINE; i++) vinePts.push(vineAt(i / VINE));
+  const vineCurve = new CatmullRomCurve3(vinePts);
+  hat.add(new Mesh(new TubeGeometry(vineCurve, reduced || lowPower ? 200 : 400, 0.045, 8, false), silver));
+  const LEAVES = 22, leafGeo = new SphereGeometry(0.15, 12, 8), leaves = new InstancedMesh(leafGeo, silver, LEAVES);
+  for (let i = 0; i < LEAVES; i++) {
+    const t = 0.04 + (i / LEAVES) * 0.92, p = vineCurve.getPoint(t), tan = vineCurve.getTangent(t), side = i % 2 ? -1 : 1;
+    dummy.position.copy(p).addScaledVector(new Vector3(-tan.z, 0.35, tan.x).normalize(), side * 0.16);
+    dummy.lookAt(p.clone().add(tan)); dummy.rotateY(side * 0.9); dummy.scale.set(0.45, 0.25, 1.35);
     dummy.updateMatrix(); leaves.setMatrixAt(i, dummy.matrix);
   }
   hat.add(leaves);
+  const bloomGeo = new SphereGeometry(0.11, 12, 8), blooms = new InstancedMesh(bloomGeo, silver, 4);
+  [0.0, 0.33, 0.66, 1.0].forEach((t, i) => { dummy.position.copy(vineCurve.getPoint(t)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.75); dummy.updateMatrix(); blooms.setMatrixAt(i, dummy.matrix); });
+  hat.add(blooms);
   hat.position.set(2.9, -0.7, 0); hat.rotation.x = 0.32;
   scene.add(hat);
 

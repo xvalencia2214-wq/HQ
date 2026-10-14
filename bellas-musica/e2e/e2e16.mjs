@@ -80,7 +80,7 @@ try {
   await V.click("#lp-lang"); await V.waitForFunction(() => /Buscar música/.test(document.body.innerText));
   await V.waitForTimeout(1200);
   const es = await text(V);
-  ok("Spanish: the whole page switches", /Mariachi, banda, norteño, DJs, taqueros, carpas/.test(es) && /¿Quién toca en tu fiesta\?/.test(es));
+  ok("Spanish: the whole page switches", /La música, la comida, toda la fiesta/.test(es) && /¿Quién toca en tu fiesta\?/.test(es));
   if (!/¿Quién toca en tu fiesta\?/.test(es)) console.log("   ", (es.match(/.{0,40}toca.{0,40}/) || [es.slice(0, 300)])[0]);
   await V.click("#lp-lang");
 

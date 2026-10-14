@@ -1,67 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a navy charro sombrero embroidered with gold vines">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bella's Música logo: a navy charro sombrero with a gold vine across it">
 <defs>
-<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8a"/><stop offset=".45" stop-color="#d4a53c"/><stop offset="1" stop-color="#a87a1f"/></linearGradient>
-<linearGradient id="goldv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3d37a"/><stop offset="1" stop-color="#c08f2c"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8a"/><stop offset=".5" stop-color="#d4a53c"/><stop offset="1" stop-color="#a87a1f"/></linearGradient>
+<linearGradient id="goldv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3d37a"/><stop offset="1" stop-color="#b8862a"/></linearGradient>
 <radialGradient id="bg" cx="50%" cy="35%" r="80%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f7f1e3"/></radialGradient>
-<linearGradient id="felt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0a1636"/><stop offset=".42" stop-color="#22397a"/><stop offset="1" stop-color="#0a1636"/></linearGradient>
-<linearGradient id="brim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22397a"/><stop offset="1" stop-color="#0a1534"/></linearGradient>
-<path id="leaf" d="M0 0 C2.4 -2.7 6.2 -2.7 7.8 0 C6.2 2.7 2.4 2.7 0 0 Z"/>
+<linearGradient id="felt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#091532"/><stop offset=".38" stop-color="#25407f"/><stop offset=".62" stop-color="#1a3068"/><stop offset="1" stop-color="#091532"/></linearGradient>
+<linearGradient id="brimtop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#132552"/><stop offset="1" stop-color="#21397a"/></linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a478f"/><stop offset="1" stop-color="#0b1838"/></linearGradient>
+<path id="leaf" d="M0 0 C2.6 -3 6.8 -3 8.6 0 C6.8 3 2.6 3 0 0 Z"/>
 </defs>
 <rect width="128" height="128" rx="30" fill="url(#bg)"/>
 <rect x="3" y="3" width="122" height="122" rx="27" fill="none" stroke="url(#gold)" stroke-width="2.4"/>
-<!-- the back of the brim, curling up behind the crown -->
-<path d="M8 80 C8 64 36 58 64 58 C92 58 120 64 120 80 C112 72 90 68 64 68 C38 68 16 72 8 80 Z" fill="#0a1534" stroke="url(#gold)" stroke-width="1.6" stroke-linejoin="round"/>
-<!-- brim: the underside, then the top with a gold rim -->
-<ellipse cx="64" cy="88" rx="57" ry="17" fill="#081230"/>
-<ellipse cx="64" cy="84" rx="57" ry="17" fill="url(#brim)" stroke="url(#gold)" stroke-width="2.4"/>
-<ellipse cx="64" cy="84" rx="49" ry="12.6" fill="none" stroke="url(#gold)" stroke-width=".7" opacity=".7"/>
-<!-- crown: tall and tapered, with the pinched peak of a charro hat -->
-<path d="M42 82 C42 62 45 45 49.5 34 C52.5 26.5 56.5 22 60.6 22.4 C62.2 22.6 63 24.2 64 24.2 C65 24.2 65.8 22.6 67.4 22.4 C71.5 22 75.5 26.5 78.5 34 C83 45 86 62 86 82 C77 88 51 88 42 82 Z" fill="url(#felt)" stroke="url(#gold)" stroke-width="1.4" stroke-linejoin="round"/>
-<path d="M55.5 28.5 C59.5 31.5 68.5 31.5 72.5 28.5" fill="none" stroke="#f3d37a" stroke-width="1.1" stroke-linecap="round" opacity=".8"/>
-<!-- gold band with a stitched edge and conchos -->
-<path d="M41.9 77 C50 83.5 78 83.5 86.1 77 L85.6 68 C77 74 51 74 42.4 68 Z" fill="url(#goldv)" stroke="#a87a1f" stroke-width=".7" stroke-linejoin="round"/>
-<path d="M42.6 70.4 C51 76.2 77 76.2 85.4 70.4" fill="none" stroke="#0a1636" stroke-width=".6" stroke-dasharray="1.4 1.4" opacity=".7"/>
-<g fill="#0a1636"><circle cx="52.5" cy="75.3" r="1.5"/><circle cx="64" cy="77.2" r="1.9"/><circle cx="75.5" cy="75.3" r="1.5"/></g>
-<!-- vines climbing the crown -->
-<g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-<path d="M64 67 C59.5 61 68.5 56 64 50 C59.5 44 68.5 40 64 34 C62.5 31.5 64.5 30 66.4 31.4"/>
-<path d="M62.4 59 C58 59.4 55.8 56.2 57.4 53.6 C58.6 51.8 61 52.6 60.6 54.6"/>
-<path d="M65.8 45.6 C70.2 46 72.2 42.8 70.6 40.2 C69.4 38.4 67 39.2 67.4 41.2"/>
-<path d="M49.5 66 C47.5 60 49 54 52 50"/>
-<path d="M78.5 66 C80.5 60 79 54 76 50"/>
+<g transform="translate(64 66) scale(.86) translate(-64 -62)">
+<!-- the brim: wide, its tips curling up, seen a little from above -->
+<path d="M7 70 C9 60 36 55 64 55 C92 55 119 60 121 70 C121 79 98 93 64 93 C30 93 7 79 7 70 Z" fill="url(#brimtop)"/>
+<!-- the rolled edge (the toquilla) along the front of the brim -->
+<path d="M7 70 C7 79 30 93 64 93 C98 93 121 79 121 70 C123 76 118 85 104 93 C92 100 78 102 64 102 C50 102 36 100 24 93 C10 85 5 76 7 70 Z" fill="url(#rim)"/>
+<path d="M7 70 C7 79 30 93 64 93 C98 93 121 79 121 70" fill="none" stroke="url(#gold)" stroke-width="1.6"/>
+<path d="M8 72.5 C11 84 34 100.5 64 100.5 C94 100.5 117 84 120 72.5" fill="none" stroke="url(#gold)" stroke-width="1" opacity=".75"/>
+<!-- the crown: tall, narrowing, with the pinched and dented peak of a charro hat -->
+<path d="M44 78 C44 62 46.5 47 50.5 37 C53.5 29.5 56.5 25 60 23.4 C61.6 22.7 62.8 24.6 64 24.6 C65.2 24.6 66.4 22.7 68 23.4 C71.5 25 74.5 29.5 77.5 37 C81.5 47 84 62 84 78 C76 84.5 52 84.5 44 78 Z" fill="url(#felt)" stroke="#0b1838" stroke-width=".8" stroke-linejoin="round"/>
+<!-- the front pinch (two dents) and the crease down from the peak -->
+<path d="M57 30 C59.5 35 59.5 41 58 46" fill="none" stroke="#4a66ad" stroke-width="1.3" stroke-linecap="round" opacity=".8"/>
+<path d="M71 30 C68.5 35 68.5 41 70 46" fill="none" stroke="#4a66ad" stroke-width="1.3" stroke-linecap="round" opacity=".8"/>
+<path d="M64 25.5 L64 43" fill="none" stroke="#0a1532" stroke-width="1" stroke-linecap="round" opacity=".7"/>
+<!-- the braided band (toquilla) round the crown -->
+<path d="M43.8 73 C52 79.5 76 79.5 84.2 73 L84 66.5 C76 72.5 52 72.5 44 66.5 Z" fill="url(#goldv)" stroke="#a87a1f" stroke-width=".6" stroke-linejoin="round"/>
+<g stroke="#8a6414" stroke-width=".8" stroke-linecap="round" opacity=".85">
+<path d="M47 69.5 L49.5 75.5"/><path d="M51 71 L53.5 77"/><path d="M55 72 L57.5 78"/><path d="M59 72.6 L61.5 78.6"/><path d="M63 72.8 L65.5 78.8"/><path d="M67 72.6 L69.5 78.6"/><path d="M71 72 L73.5 78"/><path d="M75 71 L77.5 77"/><path d="M79 69.5 L81.5 75.5"/>
 </g>
-<g fill="url(#gold)">
-<use href="#leaf" transform="translate(64.8 62) rotate(-25) scale(.9)"/>
-<use href="#leaf" transform="translate(63.2 52.6) rotate(200) scale(.9)"/>
-<use href="#leaf" transform="translate(64.6 42) rotate(-35) scale(.85)"/>
-<use href="#leaf" transform="translate(63.4 37.4) rotate(205) scale(.75)"/>
-<use href="#leaf" transform="translate(49.4 61) rotate(-120) scale(.75)"/>
-<use href="#leaf" transform="translate(78.6 61) rotate(-60) scale(.75)"/>
-<use href="#leaf" transform="translate(49.6 55) rotate(-70) scale(.7)"/>
-<use href="#leaf" transform="translate(78.4 55) rotate(-110) scale(.7)"/>
 </g>
-<!-- vines along the brim: scrolls, leaves and flowers on both sides -->
-<g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-<path d="M40 89 C31 88.6 22 86.4 16.5 82.6 C13 80 14.2 76.4 18 76.2"/>
-<path d="M88 89 C97 88.6 106 86.4 111.5 82.6 C115 80 113.8 76.4 110 76.2"/>
-<path d="M30.5 88 C29 91.6 24.6 92.4 22.8 90 C21.6 88.4 23 86.6 24.6 87.4"/>
-<path d="M97.5 88 C99 91.6 103.4 92.4 105.2 90 C106.4 88.4 105 86.6 103.4 87.4"/>
-<path d="M44 91.4 C52 94 76 94 84 91.4"/>
-<path d="M22 81.2 C20 79 20.8 77.4 22.4 77.2"/>
-<path d="M106 81.2 C108 79 107.2 77.4 105.6 77.2"/>
+<!-- one gold vine sweeping across the whole hat, from below the brim to above the crown -->
+<g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 110 C24 104 33 96 42 88 C52 79 60 74 68 66 C77 57 82 47 90 38 C97 30 104 25 112 21" stroke-width="2.6"/>
+<path d="M112 21 C117 18.5 120.5 21.5 118.5 25.5 C117 28.2 113.6 27.4 114.2 25"/>
+<path d="M12 110 C8.5 111.5 6.5 108 9 106 C10.8 104.6 13 106 12.2 107.6"/>
+<path d="M42 88 C37 87 33.5 89.5 32.5 93" stroke-width="1.5"/>
+<path d="M90 38 C95 39 98.5 37 100 33" stroke-width="1.5"/>
 </g>
-<g fill="url(#gold)">
-<use href="#leaf" transform="translate(36 89) rotate(165)"/>
-<use href="#leaf" transform="translate(27 86.6) rotate(-150) scale(.9)"/>
-<use href="#leaf" transform="translate(92 89) rotate(15)"/>
-<use href="#leaf" transform="translate(101 86.6) rotate(-30) scale(.9)"/>
-<use href="#leaf" transform="translate(53 93) rotate(195) scale(.85)"/>
-<use href="#leaf" transform="translate(75 93) rotate(-15) scale(.85)"/>
-<use href="#leaf" transform="translate(57 93.6) rotate(150) scale(.7)"/>
-<use href="#leaf" transform="translate(71 93.6) rotate(30) scale(.7)"/>
+<g fill="url(#gold)" stroke="#8a6414" stroke-width=".35">
+<use href="#leaf" transform="translate(20 105.5) rotate(-100) scale(1.15)"/>
+<use href="#leaf" transform="translate(27 101) rotate(15) scale(1.15)"/>
+<use href="#leaf" transform="translate(48 82.6) rotate(-110) scale(1.15)"/>
+<use href="#leaf" transform="translate(56 77) rotate(5) scale(1.15)"/>
+<use href="#leaf" transform="translate(74 60) rotate(-120) scale(1.15)"/>
+<use href="#leaf" transform="translate(80 51) rotate(-5) scale(1.15)"/>
+<use href="#leaf" transform="translate(98 31) rotate(-130) scale(1.05)"/>
+<use href="#leaf" transform="translate(105 25.5) rotate(-15) scale(1.05)"/>
+<use href="#leaf" transform="translate(36 91) rotate(30) scale(.9)"/>
+<use href="#leaf" transform="translate(62 71.5) rotate(-125) scale(.9)"/>
+<use href="#leaf" transform="translate(86 44) rotate(10) scale(.9)"/>
 </g>
-<g fill="#f6dc8a" stroke="#a87a1f" stroke-width=".5">
-<circle cx="18" cy="76.2" r="2.3"/><circle cx="110" cy="76.2" r="2.3"/><circle cx="64" cy="94.2" r="2.5"/><circle cx="66.4" cy="31.4" r="1.8"/>
+<g fill="#f6dc8a" stroke="#a87a1f" stroke-width=".6">
+<circle cx="32.5" cy="93.4" r="2.6"/><circle cx="100.2" cy="32.6" r="2.6"/><circle cx="68" cy="66" r="3"/>
 </g>
-<g fill="#0a1636"><circle cx="18" cy="76.2" r=".8"/><circle cx="110" cy="76.2" r=".8"/><circle cx="64" cy="94.2" r=".9"/><circle cx="66.4" cy="31.4" r=".6"/></g>
+<g fill="#0b1838"><circle cx="32.5" cy="93.4" r=".9"/><circle cx="100.2" cy="32.6" r=".9"/><circle cx="68" cy="66" r="1.1"/></g>
 </svg>

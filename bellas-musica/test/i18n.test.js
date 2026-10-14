@@ -41,3 +41,10 @@ test("no inline scripts or event-handler attributes (the CSP forbids them)", () 
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/);
   assert.doesNotMatch(src, /\son(click|change|submit|input)=/i);
 });
+
+test("every category has its own name for a listing ({who}/{whos}) and its own search-page heading, in both languages", () => {
+  for (const c of ["music", "food", "rentals", "decor", "photo", "services", "venues"])
+    for (const k of [`who.${c}`, `whos.${c}`, `hero.${c}`, `heroSub.${c}`]) { assert.ok(DICT.en[k], k); assert.ok(DICT.es[k], k); }
+  // a sentence never starts with {who}, so the nouns can stay lower-case
+  for (const lang of ["en", "es"]) for (const [k, v] of Object.entries(DICT[lang])) assert.ok(!/^\{whos?\}/.test(v), `${lang} ${k}`);
+});

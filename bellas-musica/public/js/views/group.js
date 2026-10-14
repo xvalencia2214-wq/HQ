@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { t, lang } from "../i18n.js";
+import { t, lang, setWho } from "../i18n.js";
 import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons, payWays } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
@@ -13,6 +13,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   try { g = await api.get("/api/groups/" + encodeURIComponent(id)); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Música`;
+  setWho(g.category); // "Request this venue", "Message this food vendor"...
   const meta = state.meta, user = state.user;
   await loadFavs();
   // Private offers the group made this customer (if any).
@@ -98,7 +99,7 @@ export async function group(app, id, params = new URLSearchParams()) {
 
   function drawBook() {
     const box = document.getElementById("bookbox");
-    if (g.is_owner) { box.innerHTML = `<div class="note">${esc(t("g.yours"))} <a href="#/dashboard?g=${esc(g.id)}">${esc(t("nav.groups"))}</a></div>`; return; }
+    if (g.is_owner) { box.innerHTML = `<div class="note">${esc(t("g.yours"))} <a class="btn small" href="#/dashboard?g=${esc(g.id)}&amp;tab=listing">✏️ ${esc(t("g.editPage"))}</a></div>`; return; }
     if (!g.bookable) { box.innerHTML = `<div class="note">${esc(t("g.notBookable"))}</div>`; return; }
     if (!user) { box.innerHTML = `<div class="note">${esc(t("g.loginToBook"))}</div><a class="btn" href="#/login?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.login"))}</a> <a class="btn ghost" href="#/signup?next=${encodeURIComponent("#/group/" + g.id)}">${esc(t("nav.signup"))}</a>`; return; }
     if (!st.date || !st.time) { box.innerHTML = `<div class="empty small">${esc(t("g.pickDate"))}</div>`; return; }

@@ -47,10 +47,10 @@ try {
   await Ow.click("[data-checkin]"); await Ow.fill(".ci-slot input", code === "0000" ? "1111" : "0000" === code ? "1111" : String((Number(code) % 8999) + 1001)); await Ow.click(".ci-slot button[type=submit]");
   await Ow.waitForSelector(".ci-slot .err:not(:empty)");
   ok("the group entering a wrong code is told no", /isn't right/.test(await Ow.locator(".ci-slot .err").innerText()));
-  await Ow.fill(".ci-slot input", code); await Ow.click(".ci-slot button[type=submit]"); await Ow.waitForSelector("text=The group checked in");
+  await Ow.fill(".ci-slot input", code); await Ow.click(".ci-slot button[type=submit]"); await Ow.waitForSelector("text=Checked in at the party");
   ok("entering the right code checks the group in", (await Ow.locator("[data-checkin]").count()) === 0);
   await go(Cu, "#/bookings"); await Cu.waitForSelector(".req");
-  ok("the customer sees that the group checked in and the code is gone", (await Cu.locator("#app").innerText()).includes("The group checked in") && (await Cu.locator(".bigcode").count()) === 0);
+  ok("the customer sees that the group checked in and the code is gone", (await Cu.locator("#app").innerText()).includes("They checked in at your party") && (await Cu.locator(".bigcode").count()) === 0);
 
   await Cu.click("[data-noshow]"); await Cu.fill(".review-form textarea", "Nobody came to the hall at all"); await Cu.click(".review-form button[type=submit]");
   await Cu.waitForSelector("text=No-show report under review");

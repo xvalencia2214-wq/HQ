@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { t } from "../i18n.js";
+import { t, setWho } from "../i18n.js";
 import { esc, money, sel, tomorrowKey, groupPhoto, shareButtons, wireShare, toast } from "../ui.js";
 import { drawMap } from "../map.js";
 import { waitlistBox } from "./waitlist.js";
@@ -46,10 +46,11 @@ export async function home(app, params) {
   const meta = state.meta;
   const moreOpen = ["song", "type", "max", "radius", "soon"].some((k) => p[k]) || (p.sort && p.sort !== "rating");
   const cat = meta.categories[p.category] ? p.category : "music", music = cat === "music";
+  setWho(cat); // "groups" for music, "food vendors" for food...
   // switching category keeps the place, date, event and guests, and drops filters that belong to the old one
   const catHref = (c) => { const u = new URLSearchParams(); for (const k of ["zip", "event", "date", "guests", "radius", "view"]) if (p[k]) u.set(k, p[k]); if (c !== "music") u.set("category", c); return "#/?" + u.toString(); };
 
-  app.innerHTML = `${holidayBanner()}<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t(music ? "home.title" : "home.titleAny"))}</h1><p>${esc(t(music ? "home.sub" : "home.subAny"))}</p>
+  app.innerHTML = `${holidayBanner()}<section class="hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(t("hero." + cat))}</h1><p>${esc(t("heroSub." + cat))}</p>
     ${catChips(cat, { href: catHref })}
     <form class="search" id="sform"><input type="hidden" id="s-category" value="${music ? "" : esc(cat)}">
       <div class="row"><div><label for="s-zip">${esc(t("f.zip"))}</label><input id="s-zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" required placeholder="60608" value="${esc(p.zip || "")}" autocomplete="postal-code">
@@ -117,7 +118,7 @@ export async function home(app, params) {
   const filtered = FIELDS.some((k) => k !== "zip" && k !== "category" && p[k]);
   const clearHref = `#/?zip=${encodeURIComponent(data.origin.zip)}${music ? "" : "&category=" + encodeURIComponent(cat)}`;
   const ctx = carry(p);
-  box.innerHTML = `<div class="titlebar"><h2>${esc(music ? t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }) : t("home.topAny", { cat: t("cat." + cat).toLowerCase(), city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
+  box.innerHTML = `<div class="titlebar"><h2>${esc(t("home.top", { city: `${data.origin.city}, ${data.origin.state}` }))}</h2>
     <div class="seg"><a href="${esc(viewLink("list"))}" class="${view === "list" ? "on" : ""}">${esc(t("home.list"))}</a><a href="${esc(viewLink("map"))}" class="${view === "map" ? "on" : ""}">${esc(t("home.map"))}</a></div></div>
     <div class="links">${music ? `<a href="#/best/${esc(data.origin.zip)}">🏆 ${esc(t("best.link", { city: data.origin.city }))}</a>` : ""}${filtered ? `<a href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<a href="#/quotes?${esc(ctx)}">✉ ${esc(t("rq.cta"))}</a>` : ""}<a href="#/party?${esc(ctx)}">🎉 ${esc(t("party.cta"))}</a></div>` +
     (!data.results.length ? `<div class="panel empty">${esc(t("home.none"))}${filtered ? `<br><a class="btn small" href="${esc(clearHref)}">${esc(t("f.clear"))}</a>` : ""}${music ? `<br><a class="btn small ghost" href="#/quotes?${esc(ctx)}">${esc(t("rq.cta"))}</a>` : ""}</div>`

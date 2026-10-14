@@ -1,6 +1,10 @@
 import { api } from "../api.js";
 import { esc, money, toast } from "../ui.js";
 
+// The sign-up link for a new business: after signing up it opens "List your business", and the sign-up counts as vendor-invite.
+const joinLink = () => `${location.origin}/?src=vendor-invite#/signup?next=${encodeURIComponent("#/dashboard?new=1")}`;
+const joinMessage = () => `¡Hola! Te invito a Bella's Música: crea tu página gratis con tus fotos, precios y fechas libres, y las familias te reservan con depósito. / Hi! Join Bella's Música: make your free page with your photos, prices and open dates, and families book you with a deposit. ${joinLink()}`;
+
 // Owner-only page. English only: it is for the person running the site.
 const cents = (c) => (Math.abs(c) >= 1_000_000 ? "$" + new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(c / 100) : money(c));
 const when = (ts) => new Date(ts * 1000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -47,8 +51,12 @@ export async function admin(app) {
     <div class="two"><div class="panel"><h2 class="sec">Where people search</h2>${s.top_zips.length ? `<table class="tbl"><thead><tr><th>ZIP</th><th>City</th><th class="num">Searches</th></tr></thead><tbody>${s.top_zips.map((z) => `<tr><td>${esc(z.zip)}</td><td>${esc(z.city)}</td><td class="num">${z.searches}</td></tr>`).join("")}</tbody></table>` : '<div class="dim">No searches yet.</div>'}</div>
     <div class="panel"><h2 class="sec">Waitlist (${s.waitlist.total})</h2>${s.waitlist.by_city.length ? `<table class="tbl"><thead><tr><th>Place</th><th class="num">Customers</th><th class="num">Groups</th></tr></thead><tbody>${s.waitlist.by_city.map((w) => `<tr><td>${esc(w.place)}</td><td class="num">${w.customers}</td><td class="num">${w.groups}</td></tr>`).join("")}</tbody></table><p><a href="/api/admin/waitlist.csv" download>Download the full list (CSV)</a></p>` : '<div class="dim">Nobody outside your launch area has asked yet.</div>'}</div></div>
 
-    <h2 class="sec">Invite a group</h2>
-    <div class="two"><div class="panel"><p class="dim small">Type in what a group sent you (or what you found on their page). You get a private link: when they open it and sign up, the listing is theirs. It stays a draft until they publish.</p>
+    <h2 class="sec">Invite a business: they make their own page</h2>
+    <div class="panel"><p>Send this link to any group or vendor. They sign up and fill in their own page (name, photos, prices, songs or menu, open dates) and can change it any time. You don't type anything. Their page stays a draft until they publish it, and sign-ups from it are counted under <code>vendor-invite</code> in the partner links.</p>
+      <div class="copyrow"><input readonly id="joinlink" value="${esc(joinLink())}" aria-label="Invitation link"><button type="button" class="btn small" id="joincopy">Copy</button><a class="btn ghost small" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(joinMessage())}">WhatsApp</a><a class="btn ghost small" href="sms:?&amp;body=${encodeURIComponent(joinMessage())}">Text message</a></div>
+      <p class="dim small">The message they get (Spanish and English): “${esc(joinMessage())}”</p></div>
+    <h2 class="sec">Or set up a page for them</h2>
+    <div class="two"><div class="panel"><p class="dim small">If a group would rather send you its details, type them in here. You get a private link: when they open it and sign up, the listing is theirs and they can edit everything. It stays a draft until they publish.</p>
       <form id="iform"><div class="row"><div><label for="i-name">Group name</label><input id="i-name" name="name" required maxlength="80"></div><div><label for="i-type">Type</label><select id="i-type" name="type">${["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"].map((x) => `<option>${x}</option>`).join("")}</select></div></div>
       <div class="row"><div><label for="i-zip">ZIP</label><input id="i-zip" name="zip" inputmode="numeric" maxlength="5" required></div><div><label for="i-rate">Price per hour ($)</label><input id="i-rate" name="rate" type="number" min="50" max="5000" value="300"></div></div>
       <label for="i-story">Story (optional)</label><textarea id="i-story" name="story" maxlength="800"></textarea><div id="ierr" class="err" role="alert"></div><button class="btn small" type="submit">Create invite link</button></form><div id="iresult"></div></div>
@@ -85,6 +93,7 @@ export async function admin(app) {
     box.querySelectorAll("[data-docno]").forEach((b) => { b.onclick = async () => { const note = prompt("Why? (the vendor sees this)", "The document is unreadable or expired"); if (note === null) return; try { await api.post(`/api/admin/documents/${b.dataset.docno}`, { approve: false, note }); toast("Rejected"); drawDocs(); } catch (e) { toast(e.message, "error"); } }; });
   };
   drawDocs().catch(() => {});
+  document.getElementById("joincopy").onclick = async () => { const i = document.getElementById("joinlink"); try { await navigator.clipboard.writeText(i.value); toast("Copied"); } catch { i.select(); } };
   document.getElementById("srcform").onsubmit = (e) => {
     e.preventDefault();
     const name = document.getElementById("src-name").value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);

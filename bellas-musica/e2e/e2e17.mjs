@@ -53,7 +53,7 @@ try {
   // ---- the family: held deposit note, signing the agreement ----
   const F = await person("family");
   await login(F, "f17@example.com"); await go(F, "#/bookings"); await F.waitForSelector(".req");
-  ok("the family sees its deposit is held until check-in", /keeps your deposit safe until the group checks in/.test(await text(F)));
+  ok("the family sees its deposit is held until check-in", /keeps your deposit safe until they check in/.test(await text(F)));
   await F.click(`a[href="#/agreement/${b.id}"]`); await F.waitForSelector("#signform");
   await F.check("#sg-ok"); await F.click("#signform button[type=submit]");
   ok("the family signs the agreement", await until(() => S.db.get("SELECT name FROM agreement_signs WHERE booking_id = ? AND side = 'customer'", b.id)?.name === "Rosa Martínez"));

@@ -713,3 +713,8 @@ body.is-landing .shell { display: block; max-width: none; padding: 0; }
 /* bigger text, for anyone who wants it (the "Bigger text" button in the menu): everything sized in rem grows with it */
 body { font-size: 1.0625rem; }
 html.big { font-size: 118.75%; }
+
+/* a draft's setup steps: ticked when done */
+.setup-steps { margin: 8px 0 10px; padding-left: 1.4em; display: grid; gap: 4px; }
+.setup-steps li.done { color: var(--good); }
+.setup-steps li.done::marker { color: var(--good); }

@@ -76,7 +76,7 @@ try {
   const rowBox = await C.locator(".catrow").boundingBox();
   ok("on a phone the category chips are one swipeable row", rowBox.height < 70);
   await C.click('.catchip:has-text("Rentals")'); await C.waitForFunction(() => /Carpas La Fiesta/.test(document.body.innerText));
-  ok("Rentals shows the tent company, the heading changes and the ZIP is kept", (await text(C)).includes("Everything for your fiesta") && (await C.inputValue("#s-zip")) === "60608" && !(await text(C)).includes("Mariachi Del Barrio"));
+  ok("Rentals shows the tent company, the heading changes and the ZIP is kept", (await text(C)).includes("Room for everyone you love") && (await text(C)).includes("Top rental companies near") && (await C.inputValue("#s-zip")) === "60608" && !(await text(C)).includes("Mariachi Del Barrio"));
   ok("vendor cards don't talk about musicians", !(await C.locator(".card").first().innerText()).includes("musicians"));
 
   // ---- Plan a party ----

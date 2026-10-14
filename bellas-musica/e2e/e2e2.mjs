@@ -143,7 +143,7 @@ try {
   };
   await pickDay(Cu, ".rs-cal", dates[1]); await Cu.click(".rs-slots .slot:has-text('4:00 PM')");
   await Cu.fill(".resched-form input", "Venue changed the day"); await Cu.click("[data-send]"); await Cu.waitForSelector("[data-unresched]");
-  ok("customer sees the request as waiting for the group", (await Cu.locator(".req").innerText()).includes("Waiting for the group to approve"));
+  ok("customer sees the request as waiting for the group", (await Cu.locator(".req").innerText()).includes("Waiting for them to approve"));
   await gotoHash(Ow, `#/dashboard?g=${gid}&tab=requests&r=1`); await Ow.waitForSelector("[data-rs=accept]");
   ok("group sees the request with the reason", (await Ow.locator(".req").innerText()).includes("Venue changed the day"));
   await shot(Ow, "dashboard-reschedule.png");

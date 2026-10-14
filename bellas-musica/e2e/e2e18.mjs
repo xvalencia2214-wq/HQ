@@ -10,7 +10,7 @@ const { chromium } = createRequire(import.meta.url)("playwright");
 
 const shots = process.argv[2] || "";
 if (shots) fs.mkdirSync(shots, { recursive: true });
-const S = await startApp({ DEMO_SEED: "0", WEATHER: "0" });
+const S = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss18@example.com" });
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 const problems = [];
 let failed = 0, nav = 0;
@@ -106,6 +106,35 @@ try {
   await P.click("#langbtn"); await P.waitForFunction(() => document.documentElement.lang === "es" || /Buscar/.test(document.body.innerText));
   await P.click("#navtoggle");
   ok("Spanish: the sections and the buttons", /BUSCAR Y PLANEAR|Buscar y planear/i.test(await P.locator("#nav").innerText()) && /Letra más grande/.test(await P.locator("#nav").innerText()) && /English/.test(await P.locator("#langbtn").innerText()));
+
+  // ---- each category has its own words ----
+  const tacos = client(S.base); await tacos.signup("t18@example.com", "Don Güero");
+  const tid = (await tacos.post("/api/groups", { name: "Tacos El Dieciocho", type: "Taquería / taco catering", zip: "60608", members: 3, hourly: false, story: "Tacos al pastor, asada and aguas frescas for parties of every size, all made fresh on site." })).json.id;
+  await tacos.post(`/api/groups/${tid}/packages`, { name: "Taquiza for 100", description: "Three meats", hours: 3, price: 900 });
+  await tacos.patch(`/api/groups/${tid}`, { events: ["Wedding", "Quinceañera"] });
+  await tacos.post(`/api/groups/${tid}/photos`, { data: "data:image/png;base64," + fs.readFileSync(path.join(process.cwd(), "public", "icon-192.png")).toString("base64") }).catch(() => {});
+  await go(W, "#/?zip=60608&category=food"); await W.waitForSelector("#results h2");
+  ok("food: its own heading, and the list says food vendors, not groups", /Food that brings everyone to the table/.test(await W.locator(".hero h1").innerText()) && /Top food vendors near/.test(await W.locator("#results h2").innerText()));
+  await go(W, "#/?zip=60608&category=venues"); await W.waitForSelector("#results");
+  ok("venues: its own heading and words", /The perfect place to celebrate/.test(await W.locator(".hero h1").innerText()) && await until(async () => /venues/i.test(await W.locator("#results").innerText())));
+  await go(W, "#/?zip=60608"); await W.waitForSelector("#results h2");
+  ok("music keeps groups", /Top groups near/.test(await W.locator("#results h2").innerText()));
+
+  // ---- owners make and edit their own page ----
+  const T = await person("tacos");
+  await login(T, "t18@example.com");
+  await go(T, `#/dashboard?g=${tid}`); await T.waitForSelector(".setup-steps");
+  const steps = await T.locator(".setup-steps li").allInnerTexts();
+  ok("a draft shows its setup as numbered steps, the done ones ticked", steps.length >= 5 && /✓ Name, type and ZIP code/.test(steps[0]) && (await T.locator(".setup-steps li.done").count()) >= 3 && (await T.locator(".setup-steps li a").count()) >= 1);
+  await go(T, `#/group/${tid}`); await T.waitForSelector("a[href*='tab=listing']");
+  ok("on its own page the owner gets an Edit your page button", /Edit your page/.test(await T.locator("a[href*='tab=listing']").innerText()));
+  await T.click("a[href*='tab=listing']"); await T.waitForSelector("#app form");
+  ok("…which opens the profile to edit", /tab=listing/.test(T.url()));
+  await client(S.base).signup("boss18@example.com", "The Boss");
+  const A = await person("admin");
+  await login(A, "boss18@example.com"); await go(A, "#/admin"); await A.waitForSelector("#joinlink");
+  const join = await A.inputValue("#joinlink");
+  ok("the owner page has a sign-up link to send a business, which makes its own page", /\?src=vendor-invite#\/signup\?next=%23%2Fdashboard%3Fnew%3D1$/.test(join) && /make your free page/.test(await A.locator("#app").innerText()));
 
   // ---- the 48-hour rule is in the terms ----
   const terms = await (await fetch(S.base + "/terms.html")).text();

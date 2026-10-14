@@ -41,7 +41,7 @@ export async function dashboard(app, params) {
 }
 
 // Draft / paused / live: what customers can see right now, and the one button that changes it.
-const PUB_TAB = { photos: "media", story: "listing", events: "listing", dates: "calendar", payouts: "payments" };
+const PUB_TAB = { photos: "media", story: "listing", events: "listing", packages: "extras", dates: "calendar", payouts: "payments" };
 function statusBanner(g) {
   const link = (tab) => `#/dashboard?g=${encodeURIComponent(g.id)}&tab=${tab}`;
   const outside = g.outside_market ? `<div class="note">${esc(t("pub.outside", { market: state.meta.market.name }))}</div>` : "";
@@ -50,11 +50,17 @@ function statusBanner(g) {
     const fd = state.meta.founding;
     return `<div class="note warn draft"><strong>${esc(t("pub.draftTitle"))}</strong> ${esc(t("pub.draftText"))}
       ${fd && fd.left > 0 ? `<p class="small"><strong>🌟 ${esc(t("fd.draft", { pct: fd.fee_pct, months: Math.round(fd.days / 30), left: fd.left }))}</strong></p>` : ""}
-      ${g.publish_missing.length ? `<ul>${g.publish_missing.map((k) => `<li><a href="${esc(link(PUB_TAB[k]))}">${esc(t("pub." + k))}</a></li>`).join("")}</ul>` : ""}
+      ${setupSteps(g, link)}
       <button type="button" class="btn small" id="publish"${g.publish_missing.length ? " disabled" : ""}>${esc(t("pub.publish"))}</button></div>${outside}`;
   }
   if (g.status === "paused") return `<div class="note warn"><strong>${esc(t("pub.pausedTitle"))}</strong> ${esc(t("pub.pausedText"))} <button type="button" class="btn small" id="resume">${esc(t("pub.resume"))}</button></div>${outside}`;
   return `<div class="statusline"><span class="tag trust">● ${esc(t("pub.live"))}</span> <button type="button" class="linkbtn" id="pause">${esc(t("pub.pause"))}</button></div>${outside}`;
+}
+// The draft's setup, as numbered steps: the ones already done are ticked, the rest link to where they are done.
+function setupSteps(g, link) {
+  const steps = ["photos", "story", "events", ...(!g.hourly || g.publish_missing.includes("packages") ? ["packages"] : []), "dates", ...(state.meta.payments === "stripe" ? ["payouts"] : [])];
+  const row = (done, label, href) => `<li class="${done ? "done" : ""}">${done ? `<span aria-hidden="true">✓</span> ${esc(label)} <span class="sr-only">(${esc(t("pub.done"))})</span>` : `<a href="${esc(href)}">${esc(label)}</a>`}</li>`;
+  return `<ol class="setup-steps">${row(true, t("pub.basics"))}${steps.map((k) => row(!g.publish_missing.includes(k), t("pub." + k), link(PUB_TAB[k]))).join("")}</ol>`;
 }
 function wireStatus(root, g, refresh) {
   const gid = encodeURIComponent(g.id);
@@ -120,7 +126,7 @@ async function requests({ g, body, refresh }) {
     ? `<div class="note small"><strong>${esc(t("rs.asks", { date: fmtDate(b.reschedule.date), time: b.reschedule.time }))}</strong>${b.reschedule.note ? `<br>“${esc(b.reschedule.note)}”` : ""}<br>
        <button class="btn small" data-rs="accept" data-id="${esc(b.id)}">${esc(t("rs.accept"))}</button> <button class="btn ghost small" data-rs="decline" data-id="${esc(b.id)}">${esc(t("rs.decline"))}</button></div>` : "");
   const showBox = (b) => {
-    let out = b.checked_in ? `<br><span class="dim small">✓ ${esc(t("show.checkedIn"))}</span>` : "";
+    let out = b.checked_in ? `<br><span class="dim small">✓ ${esc(t("show.checkedInVendor"))}</span>` : "";
     if (b.checkin_locked && !b.checked_in) out += `<div class="note warn small">${esc(t("show.locked"))}</div>`;
     if (b.noshow && b.noshow.status === "reported") out += `<div class="note warn small">${esc(t("show.groupReport", { note: b.noshow.note }))}${b.noshow.reply ? `<br>${esc(t("show.answered", { text: b.noshow.reply }))}` : ""}${b.can_reply_noshow ? `<br><button class="btn small" data-nsreply="${esc(b.id)}">${esc(t("show.answer"))}</button>` : ""}</div>`;
     else if (b.noshow) out += `<div class="dim small">${esc(t(b.noshow.status === "refunded" ? "show.stRefunded" : "show.stRejected"))}</div>`;
