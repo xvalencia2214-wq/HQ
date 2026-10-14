@@ -12,10 +12,10 @@
 <rect x="3" y="3" width="122" height="122" rx="27" fill="none" stroke="url(#gold)" stroke-width="2.4"/>
 <g transform="translate(64 66) scale(.88) translate(-65 -64)">
 <!-- the brim: very wide, seen from a little above, curling up at the back on the right -->
-<path d="M6 88 C7 78 34 69 64 67 C88 65.5 106 62 116 58 C122 56 125 60 124.5 66 C124 75 120 82 113 88 C100 98 72 104 42 102.5 C20 101 6 95.5 6 88 Z" fill="#081230"/>
-<path d="M6 86 C7 76 34 67 64 65 C88 63.5 106 60 116 56 C122 54 125 58 124.5 64 C124 73 120 80 113 86 C100 96 72 102 42 100.5 C20 99 6 93.5 6 86 Z" fill="url(#brim)" stroke="url(#gold)" stroke-width="1.2"/>
+<path d="M6 88 C7 78 34 69 60 65 C76 62 86 52 94 42 C101 33 113 29 120 32 C127 35 128 48 125 60 C122 71 118 78 112 84 C99 97 72 104 42 102.5 C20 101 6 95.5 6 88 Z" fill="#081230"/>
+<path d="M6 86 C7 76 34 67 60 63 C76 60 86 50 94 40 C101 31 113 27 120 30 C127 33 128 46 125 58 C122 69 118 76 112 82 C99 95 72 102 42 100.5 C20 99 6 93.5 6 86 Z" fill="url(#brim)" stroke="url(#gold)" stroke-width="1.2"/>
 <!-- the raised lip at the back right -->
-<path d="M116 56 C122 54 125 58 124.5 64 C124 73 120 80 113 86 C109 89 105 91.5 101 93.5 C110 86 116 78 117.5 70 C118.5 64 118 59 116 56 Z" fill="url(#lip)" opacity=".85"/>
+<path d="M94 40 C101 31 113 27 120 30 C127 33 128 46 125 58 C122 69 118 76 112 82 C108 86 104 89 100 91 C110 82 116 70 117.5 58 C118.5 48 112 41 103 40.5 C99.5 40.3 96.5 40.2 94 40 Z" fill="url(#lip)" opacity=".85"/>
 <path d="M9 88 C12 95 26 99 42 99.6 C70 101 100 95 112.5 85.5" fill="none" stroke="url(#gold)" stroke-width=".7" opacity=".7"/>
 <!-- the crown: tall and smoothly rounded, leaning a little -->
 <path d="M39 78 C37.5 62 39.5 44 46 33 C50 26 55 22.5 61 22.5 C67.5 22.5 73 27 76.5 34 C81.5 45 82.5 62 81 78 C72 83.5 48 83.5 39 78 Z" fill="url(#crown)"/>

@@ -88,17 +88,26 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
   const felt = new MeshPhysicalMaterial({ color: "#0c1a44", roughness: 0.62, metalness: 0.08, sheen: 0.8, sheenColor: new Color("#3a55a0"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
-  const body = new Mesh(new LatheGeometry(profile, reduced || lowPower ? 64 : 128), felt);
+  // A lathe is the same all the way round; a charro brim is not: its back sweeps up. Every point of the brim is lifted,
+  // more the farther out and the nearer the back it is (nothing within the crown moves), and the trim and studs follow.
+  const BACK = -Math.PI / 2; // the back of the hat: -z, away from the camera at the start
+  const lift = (x, z) => {
+    const r = Math.hypot(x, z); if (r <= 1.25) return 0;
+    const out = Math.min(1, (r - 1.25) / 2.15), back = (1 + Math.cos(Math.atan2(z, x) - BACK)) / 2;
+    return 2.5 * out * out * out * back * back;
+  };
+  const curl = (geo) => { const p = geo.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i))); geo.computeVertexNormals(); return geo; };
+  const body = new Mesh(curl(new LatheGeometry(profile, reduced || lowPower ? 96 : 160)), felt);
   hat.add(body);
   // the band wraps the bottom of the crown (from 0.32 up to 0.98), a hair outside the felt
   const band = new Mesh(new CylinderGeometry(0.905, 1.04, 0.66, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.7, metalness: 0.05, transparent: true, alphaTest: 0.5, side: DoubleSide }));
   band.position.y = 0.65; hat.add(band);
   const silver = new MeshPhysicalMaterial({ color: "#e0b04a", metalness: 1, roughness: 0.22, clearcoat: 1 }); // gold trim
-  const trim = new Mesh(new TorusGeometry(3.36, 0.06, 16, 200), silver); trim.rotation.x = Math.PI / 2; trim.position.y = 0.66; hat.add(trim);
+  const trim = new Mesh(curl(new TorusGeometry(3.36, 0.06, 16, 200).rotateX(Math.PI / 2).translate(0, 0.66, 0)), silver); hat.add(trim);
   const trim2 = new Mesh(new TorusGeometry(1.02, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.34; hat.add(trim2);
   // little gold studs (botonadura) around the brim
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
-  for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27, Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
+  for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27 + lift(Math.cos(a) * 2.6, Math.sin(a) * 2.6), Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
   // the knot on the side of the band, with two tassels hanging from it
   const knot = new Mesh(new SphereGeometry(0.11, 16, 12), silver); knot.scale.set(0.8, 1.3, 0.6); knot.position.set(1.0, 0.62, 0.02); hat.add(knot);
