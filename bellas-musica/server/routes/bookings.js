@@ -344,7 +344,7 @@ export default function bookingRoutes(ctx, add) {
       id: b.id, date: b.date, time: b.time, hours: durationOf(b) / 60, status: b.status, location: b.address, description,
       summary: isCustomer ? `${b.group_name}: ${b.event_type}` : `${b.event_type} for ${b.name} (${b.group_name})`
     });
-    res.writeHead(200, { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-musica-${b.date}.ics"`, "Cache-Control": "no-store" });
+    res.writeHead(200, { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-fiestas-${b.date}.ics"`, "Cache-Control": "no-store" });
     res.end(body);
   }, { auth: true });
 

@@ -3,7 +3,7 @@ import { esc, money, toast } from "../ui.js";
 
 // The sign-up link for a new business: after signing up it opens "List your business", and the sign-up counts as vendor-invite.
 const joinLink = () => `${location.origin}/?src=vendor-invite#/signup?next=${encodeURIComponent("#/dashboard?new=1")}`;
-const joinMessage = () => `¡Hola! Te invito a Bella's Música: crea tu página gratis con tus fotos, precios y fechas libres, y las familias te reservan con depósito. / Hi! Join Bella's Música: make your free page with your photos, prices and open dates, and families book you with a deposit. ${joinLink()}`;
+const joinMessage = () => `¡Hola! Te invito a Bella's Fiestas: crea tu página gratis con tus fotos, precios y fechas libres, y las familias te reservan con depósito. / Hi! Join Bella's Fiestas: make your free page with your photos, prices and open dates, and families book you with a deposit. ${joinLink()}`;
 
 // Owner-only page. English only: it is for the person running the site.
 const cents = (c) => (Math.abs(c) >= 1_000_000 ? "$" + new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(c / 100) : money(c));

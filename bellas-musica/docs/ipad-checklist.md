@@ -7,7 +7,7 @@ What *is* already checked automatically: `node e2e/touch.mjs` drags a finger acr
 Open the site in **Safari** (not Chrome) at your real address. Tick each line; write what you saw next to anything that fails.
 
 ## 1. Install it like an app
-- [ ] Share button, **Add to Home Screen**. The navy charro hat (seen from the side, gold stitching on the brim) and the name "Bella's Música" appear.
+- [ ] Share button, **Add to Home Screen**. The navy charro hat (seen from the side, gold stitching on the brim) and the name "Bella's Fiestas" appear.
 - [ ] Open it from the Home Screen: it opens full screen, no Safari bars, and the top of the page is not hidden by the clock or notch.
 - [ ] Log in, close the app, reopen it: you are still logged in.
 

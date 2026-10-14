@@ -49,7 +49,7 @@ try {
   ok("the service worker is installed", await F.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active)));
   await F.click("#foot a[href='#/app']"); await F.waitForSelector(".app-page");
   const appText = await text(F);
-  ok("Get the app page explains how to install, with store links", /Bella's Música on your phone/.test(appText) && /Google Play/.test(appText) && /App Store/.test(appText) && /(menu|Share)/.test(appText));
+  ok("Get the app page explains how to install, with store links", /Bella's Fiestas on your phone/.test(appText) && /Google Play/.test(appText) && /App Store/.test(appText) && /(menu|Share)/.test(appText));
   ok("logged out: asks to log in for notifications", /Log in to turn on notifications/.test(appText));
   await shot(F, "1-get-app.png");
   await F.reload(); await F.waitForSelector(".app-page"); // now controlled by the service worker
@@ -91,7 +91,7 @@ try {
   // ---- Spanish ----
   await F.evaluate(() => localStorage.setItem("bm_lang", "es"));
   await go(F, "#/app"); await F.waitForSelector(".app-page");
-  ok("Spanish: Bella's Música en tu teléfono", /Bella's Música en tu teléfono/.test(await text(F)));
+  ok("Spanish: Bella's Fiestas en tu teléfono", /Bella's Fiestas en tu teléfono/.test(await text(F)));
 } catch (e) { failed++; console.log("FAIL crashed:", e.message); }
 finally {
   for (const p of problems) { console.log("PROBLEM", p); failed++; }

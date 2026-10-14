@@ -44,6 +44,6 @@ ${d.addons.length ? `<div class="panel"><h2 class="sec">Extras</h2>${d.addons.ma
 <div class="panel"><h2 class="sec">Next open dates</h2>${open.length ? open.map(([k, s]) => `<div class="row2"><span>${h(day(k))}</span><span class="dim">${h(s.length > 6 ? `${s[0]} – ${s[s.length - 1]}` : s.join(", "))}</span></div>`).join("") + `<p><a class="btn small" href="${h(book)}">Book one of these</a></p>` : `<p class="dim">Message us to ask about your date.</p>`}</div>
 ${d.recent_reviews.length ? `<div class="panel"><h2 class="sec">What customers say</h2>${d.recent_reviews.slice(0, 5).map((r) => `<p>${"★".repeat(r.rating)} <strong>${h(r.name)}</strong>${r.past_client ? ` <span class="dim small">· past client</span>` : ""}<br>${h(r.text)}</p>`).join("")}</div>` : ""}
 ${g.weather_policy ? `<div class="panel"><h2 class="sec">If it rains</h2><p>${h(g.weather_policy)}</p></div>` : ""}
-<footer>Deposits and bookings are handled securely by <a href="${h(config.baseUrl)}/">Bella's Música</a>.</footer>
+<footer>Deposits and bookings are handled securely by <a href="${h(config.baseUrl)}/">Bella's Fiestas</a>.</footer>
 </main></body></html>`;
 }

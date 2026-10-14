@@ -102,7 +102,7 @@ function fold(line) {
 }
 export function bookingsFeed(groupName, bookings) {
   const now = new Date();
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bella's Musica//Vendor feed//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc("Bella's Música: " + groupName)}`];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bella's Fiestas//Vendor feed//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc("Bella's Fiestas: " + groupName)}`];
   for (const b of bookings) {
     const [h, m] = parseTime(b.time), [y, mo, d] = b.date.split("-").map(Number);
     const start = new Date(Date.UTC(y, mo - 1, d, h, m)), end = new Date(start.getTime() + (b.duration_min > 0 ? b.duration_min : b.hours * 60) * 60_000);

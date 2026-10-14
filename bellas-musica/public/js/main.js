@@ -72,6 +72,7 @@ try { if (localStorage.getItem("bm_big") === "1") document.documentElement.class
 
 // The menu, in sections: a sidebar on wide screens, the "Menu" button on phones. Each row is an icon and a word.
 function renderChrome() {
+  const tag = document.getElementById("brandtag"); if (tag) tag.textContent = t("brand.tag"); // the line under the name, in the screen's language
   const u = state.user;
   const a = state.attention;
   const dot = (n) => (n > 0 ? `<span class="dot" aria-label="${n}">${n}</span>` : "");
@@ -111,7 +112,7 @@ async function route() {
   const token = ++routeToken;
   killMap();
   if (viewCleanup) { const stop = viewCleanup; viewCleanup = null; stop(); }
-  document.title = "Bella's Música";
+  document.title = "Bella's Fiestas";
   newScreen(); // listings are "groups" until the screen says otherwise
   const raw = location.hash.replace(/^#/, "") || "/";
   const qi = raw.indexOf("?");

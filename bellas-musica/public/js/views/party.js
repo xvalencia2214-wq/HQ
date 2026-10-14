@@ -38,7 +38,7 @@ export async function categorySections(box, p, cats, { pick = null } = {}) {
 export async function party(app, params) {
   const meta = state.meta;
   const p = { event: params.get("event") || "", date: params.get("date") || "", zip: params.get("zip") || "", guests: params.get("guests") || "", tpl: TEMPLATES[params.get("tpl")] ? params.get("tpl") : "" };
-  document.title = `${t("party.nav")} · Bella's Música`;
+  document.title = `${t("party.nav")} · Bella's Fiestas`;
   let need = p.tpl ? [...TEMPLATES[p.tpl].needs] : loadNeed() || [...CAT_ORDER];
   let mine = [];
   if (state.user) { try { mine = (await api.get("/api/my/parties")).parties.filter((x) => !x.past); } catch { /* fine */ } }

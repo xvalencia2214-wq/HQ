@@ -2,6 +2,7 @@
 // name and "Show more", fair paid spots, the vendor's Today box, search appearances, price insight, grouped dashboard
 // tabs and quick replies. Merged into the main dictionaries by i18n.js.
 export const EN7 = {
+  "brand.tag": "Music and everything for your fiesta",
   "g.accountNext": "Next you'll log in or create a free account. Your choices stay saved.",
   "g.payGuest": "Continue to pay deposit",
   "dash.reachHint": "Families farther away than your free miles don't see you. Set a travel fee and you also show up to twice as far, with the fee added.",
@@ -18,6 +19,7 @@ export const EN7 = {
   "event.Baptism": "Baptism", "event.First Communion": "First Communion", "event.Graduation": "Graduation", "event.Baby shower": "Baby shower", "event.Funeral / Memorial": "Funeral / Memorial",
 };
 export const ES7 = {
+  "brand.tag": "Música y todo para tu fiesta",
   "g.accountNext": "Después inicias sesión o creas una cuenta gratis. Tus opciones se quedan guardadas.",
   "g.payGuest": "Continuar para pagar el depósito",
   "dash.reachHint": "Las familias más lejos que tus millas sin costo no te ven. Si pones un costo de viaje, también apareces hasta el doble de lejos, con el costo incluido.",

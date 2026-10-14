@@ -1,4 +1,4 @@
-# Put Bella's Música in the app stores
+# Put Bella's Fiestas in the app stores
 
 The store apps are a frame around your live website, so **every update to the site shows up in the apps by itself**.
 You don't build anything twice. Everything here is clicking in websites; no code.
@@ -25,7 +25,7 @@ Deposits, balances and tips keep using Stripe: they pay for a real service in pe
 ### 1. Make a Google Play developer account
 1. Go to **play.google.com/console** and sign up. Pay the $25 and verify your identity (photo of your ID). Google can
    take a few days to approve.
-2. **Personal or organization?** If Bella's Música is an LLC, choose **Organization** (you'll need a free D-U-N-S
+2. **Personal or organization?** If Bella's Fiestas is an LLC, choose **Organization** (you'll need a free D-U-N-S
    number from dnb.com, which takes about a week), and you skip the 12-tester rule below. If not, choose **Personal**.
 
 ### 2. Make the Android app with PWABuilder (free)
@@ -49,7 +49,7 @@ Deposits, balances and tips keep using Stripe: they pay for a real service in pe
    app shows a browser address bar at the top.)
 
 ### 4. Create the app in Play Console
-1. **Create app:** name `Bella's Música`, default language **English (United States)**, **App**, **Free**.
+1. **Create app:** name `Bella's Fiestas`, default language **English (United States)**, **App**, **Free**.
 2. Go through **Set up your app** (each item is a short form):
    - **Privacy policy:** `https://bellasmusica.com/privacy.html`
    - **App access:** "All or some functionality is restricted" → give the reviewer's email and password.
@@ -82,7 +82,7 @@ Deposits, balances and tips keep using Stripe: they pay for a real service in pe
 **Short description (EN):** Book mariachi, banda, norteño and everything for your party, with safe deposits.
 
 **Full description (EN):**
-Bella's Música is the easiest way to book live Mexican music and everything else for your party in Chicago.
+Bella's Fiestas is the easiest way to book live Mexican music and everything else for your party in Chicago.
 Find mariachi, banda, norteño, tríos, DJs, taqueros, tents, decorations, photographers and venues, see real prices
 and open dates, and book with a deposit that's held safely. Plan the whole quinceañera, wedding or birthday in one
 place: one checkout for every vendor, padrinos can chip in, and a timeline for the big day. Leave a tip for the
@@ -93,7 +93,7 @@ to your own clients, and get a morning summary of your day. In English and Spani
 **Descripción corta (ES):** Reserva mariachi, banda, norteño y todo para tu fiesta, con depósitos seguros.
 
 **Descripción completa (ES):**
-Bella's Música es la forma más fácil de reservar música mexicana en vivo y todo lo demás para tu fiesta en Chicago.
+Bella's Fiestas es la forma más fácil de reservar música mexicana en vivo y todo lo demás para tu fiesta en Chicago.
 Encuentra mariachi, banda, norteño, tríos, DJs, taqueros, carpas, decoración, fotógrafos y salones, ve precios reales y
 fechas libres, y reserva con un depósito que se guarda de forma segura. Planea toda la quinceañera, boda o cumpleaños en
 un solo lugar: un solo pago para todos los proveedores, los padrinos pueden cooperar y un horario para el gran día.

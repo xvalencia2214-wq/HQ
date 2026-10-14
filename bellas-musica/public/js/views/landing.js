@@ -43,7 +43,7 @@ export async function landing(app) {
     <a class="lp-skip" href="#/">${esc(t("land.skip"))}</a>
     <div class="lp-progress" aria-hidden="true"><i></i></div>
     <header class="lp-nav" id="lp-nav">
-      <a class="lp-brand" href="#/welcome" aria-label="Bella's Música"><img src="logo.svg" alt="" width="34" height="34"><span>Bella's Música</span></a>
+      <a class="lp-brand" href="#/welcome" aria-label="Bella's Fiestas"><img src="logo.svg" alt="" width="34" height="34"><span>Bella's Fiestas</span></a>
       <nav aria-label="Main">
         <a href="#/">${esc(t("land.nav.find"))}</a><a href="#/party">${esc(t("land.nav.party"))}</a><a href="${groupsHref}">${esc(t("land.nav.groups"))}</a>
       </nav>

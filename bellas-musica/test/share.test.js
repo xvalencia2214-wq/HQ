@@ -32,7 +32,7 @@ test("share pages: photo card tags, hostile names are escaped, hidden groups don
     assert.doesNotMatch(await (await fetch(S.base + "/g/does-not-exist")).text(), /Reyes/);
     S.db.run("UPDATE groups SET hidden = 1 WHERE id = ?", id);
     html = await (await fetch(S.base + `/g/${id}`)).text();
-    assert.doesNotMatch(html, /Reyes/); assert.match(html, /og:title" content="Bella&#39;s Música/);
+    assert.doesNotMatch(html, /Reyes/); assert.match(html, /og:title" content="Bella&#39;s Fiestas/);
     assert.equal((await client(S.base).get(`/api/groups/${id}`)).status, 404);
     assert.equal((await owner.get(`/api/groups/${id}`)).status, 200); // its own manager still sees it
     assert.ok(!(await client(S.base).get("/api/search?zip=60608")).json.results.some((g) => g.id === id));
@@ -41,7 +41,7 @@ test("share pages: photo card tags, hostile names are escaped, hidden groups don
     // best-of page
     const best = await (await fetch(S.base + "/b/77003")).text();
     assert.match(best, /Best mariachis and bands in Houston, TX/);
-    assert.match(await (await fetch(S.base + "/b/00000")).text(), /og:title" content="Bella&#39;s Música/);
+    assert.match(await (await fetch(S.base + "/b/00000")).text(), /og:title" content="Bella&#39;s Fiestas/);
   } finally { await S.close(); }
 });
 

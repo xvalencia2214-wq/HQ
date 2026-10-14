@@ -16,7 +16,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   let g;
   try { g = await api.get("/api/groups/" + encodeURIComponent(id)); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
-  document.title = `${g.name} · Bella's Música`;
+  document.title = `${g.name} · Bella's Fiestas`;
   setWho(g.category, screen); // "Request this venue", "Message this food vendor"...
   const meta = state.meta, user = state.user;
   await loadFavs();

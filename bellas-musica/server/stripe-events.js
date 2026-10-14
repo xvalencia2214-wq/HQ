@@ -3,7 +3,7 @@
 import { now } from "./util.js";
 import { defineTemplates, usd } from "./emails.js";
 
-const B = "Bella's Música";
+const B = "Bella's Fiestas";
 defineTemplates({
   "payouts.off.group": { transactional: true,
     en: (v) => ({ subject: "Action needed: your payouts are paused", lines: [`Hi ${v.name},`, `Stripe paused payouts for ${v.group}, so families can't pay deposits to you right now.`, "Open Payments on your dashboard and finish what Stripe asks for. It usually takes a few minutes."], cta: { label: "Fix my payouts", url: v.url }, sms: `${B}: Stripe paused payouts for ${v.group}. Open Payments to fix it: ${v.url}` }),

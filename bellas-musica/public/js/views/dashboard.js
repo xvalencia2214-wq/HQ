@@ -493,7 +493,7 @@ async function reviews({ g, body, refresh }) {
   if (!g.demo) await pastClientPanel({ g, body });
 }
 
-// Ask clients from before Bella's Música for a review: a one-time link by email or WhatsApp.
+// Ask clients from before Bella's Fiestas for a review: a one-time link by email or WhatsApp.
 async function pastClientPanel({ g, body }) {
   const gid = encodeURIComponent(g.id);
   let data;

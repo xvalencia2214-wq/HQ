@@ -1,11 +1,11 @@
-# Bella's Música
+# Bella's Fiestas
 
 **Launch market: Chicago.** **To put it online: `docs/publish.md`** (plain steps, no commands). **App stores: `docs/app-stores.md`.** New visitors land on the welcome page (`#/welcome`); after editing `tools/landing3d.js` run `npm install && npm run build:landing`. Then `docs/go-live.md` and `docs/chicago-launch.md`. **What to improve next:** `docs/improvement-plan.md` (audit of Oct 14, 2026); the rules and checks for each area are project skills in `/.claude/skills/`.
 
 A marketplace for booking live Mexican music (mariachi, banda, norteño, trío, grupera, conjunto, DJ).
 Customers search by event, date, guests, ZIP and even a song, see who is free, pay a deposit and message the group.
 Groups list themselves, set prices, packages, songs, photos, video and open dates, and accept or decline requests.
-English and Spanish. White and gold across the whole app, with black and navy writing (Bricolage Grotesque type), matching the 3D welcome page, with a navy sombrero logo seen from the side (a tall crown with a dented top and a gold band, a long brim curling up at both ends, gold zigzag on the front of the brim and scallops on the back); a sidebar menu in sections and a Bigger text button.
+English and Spanish. White and gold across the whole app, with black and navy writing (Bricolage Grotesque type), matching the 3D welcome page, with a black and gold sombrero logo seen from the side on white marble with gold veins (a tall crown with a dented top, a gold flower and a braided gold band with a tassel, a long brim curling up at both ends trimmed in gold, a gold zigzag with dots on the front of the brim and scallops on the back); a sidebar menu in sections and a Bigger text button.
 
 **No dependencies.** Node 22.13+ only (built-in SQLite). Nothing to `npm install`.
 

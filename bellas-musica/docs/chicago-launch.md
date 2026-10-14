@@ -25,10 +25,10 @@ Keep a simple sheet: group, link, type, date contacted, replied, invited, claime
 Send from a **business Instagram/Facebook page** or a business number. Keep it short; a link to their own listing is the whole pitch. Send the first message in Spanish unless their page is in English.
 
 **Spanish, first message**
-> Hola, soy [Tu nombre] de Bella's Música. Estamos lanzando una página para que familias en Chicago reserven mariachis, bandas y grupos norteños para quinceañeras, bodas y fiestas. Vi su trabajo y me encantaría tenerlos. Es gratis publicar; solo cobramos una comisión pequeña cuando reciben una reserva pagada, y el cliente paga un depósito por adelantado, así que se acaban los "no llegó". ¿Les mando el enlace de cómo se vería su página? Sin compromiso.
+> Hola, soy [Tu nombre] de Bella's Fiestas. Estamos lanzando una página para que familias en Chicago reserven mariachis, bandas y grupos norteños para quinceañeras, bodas y fiestas. Vi su trabajo y me encantaría tenerlos. Es gratis publicar; solo cobramos una comisión pequeña cuando reciben una reserva pagada, y el cliente paga un depósito por adelantado, así que se acaban los "no llegó". ¿Les mando el enlace de cómo se vería su página? Sin compromiso.
 
 **English, first message**
-> Hi, I'm [Name] with Bella's Música. We're launching a site where Chicago families book mariachi, banda and norteño groups for quinceañeras, weddings and parties. I saw your work and would love to have you. Listing is free; we only take a small fee on paid bookings, and customers pay a deposit up front so there are fewer no-shows. Can I send you a link to what your page would look like? No commitment.
+> Hi, I'm [Name] with Bella's Fiestas. We're launching a site where Chicago families book mariachi, banda and norteño groups for quinceañeras, weddings and parties. I saw your work and would love to have you. Listing is free; we only take a small fee on paid bookings, and customers pay a deposit up front so there are fewer no-shows. Can I send you a link to what your page would look like? No commitment.
 
 **Follow-up after 3 days (no reply)**
 > Solo quería dar seguimiento. Ya tenemos [N] solicitudes de familias en [zona] esta semana. ¿Les puedo mandar el enlace? / Just following up; we're getting requests from families in [area]. Can I send the link?

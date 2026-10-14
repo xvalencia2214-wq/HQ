@@ -1,6 +1,6 @@
 # Stripe go-live guide
 
-Bella's Música uses **Stripe Connect (Express)**: the customer pays a deposit; your fee stays with you and the rest is transferred to the group's own Stripe account. You never hold their money. Groups onboard from their dashboard (Payments tab).
+Bella's Fiestas uses **Stripe Connect (Express)**: the customer pays a deposit; your fee stays with you and the rest is transferred to the group's own Stripe account. You never hold their money. Groups onboard from their dashboard (Payments tab).
 
 ## A. Set up the platform (once)
 

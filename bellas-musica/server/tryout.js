@@ -53,8 +53,8 @@ const busy = async (e) => {
     older = (await at("/api/health")).ok && (await at("/js/views/landing.js")).status === 404;
   } catch { /* not ours */ }
   console.error(older
-    ? `\n*** An OLDER copy of Bella's Música is still running (in another black window, or in the background). ***\nThe browser is showing that old copy, not this one.\nClose every black window. If it still says this: press Ctrl+Shift+Esc (Task Manager), find "Node.js JavaScript Runtime",\nclick it, press "End task", then type npm run tryout again in THIS window.\n`
-    : `\nPort ${config.port} is already in use: Bella's Música (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\nStill stuck? Press Ctrl+Shift+Esc (Task Manager), end "Node.js JavaScript Runtime", and try again.\n`);
+    ? `\n*** An OLDER copy of Bella's Fiestas is still running (in another black window, or in the background). ***\nThe browser is showing that old copy, not this one.\nClose every black window. If it still says this: press Ctrl+Shift+Esc (Task Manager), find "Node.js JavaScript Runtime",\nclick it, press "End task", then type npm run tryout again in THIS window.\n`
+    : `\nPort ${config.port} is already in use: Bella's Fiestas (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\nStill stuck? Press Ctrl+Shift+Esc (Task Manager), end "Node.js JavaScript Runtime", and try again.\n`);
   process.exit(1);
 };
 const port = await app.listen().catch(busy);
@@ -242,7 +242,7 @@ sendDailyTexts(app.ctx, { hour: 8 });
 const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
 const url = config.baseUrl, here = ONLINE ? url : `http://localhost:${port}`;
-console.log(`Bella's Música TEST DRIVE is running (version ${VERSION}): open ${here}
+console.log(`Bella's Fiestas TEST DRIVE is running (version ${VERSION}): open ${here}
 Opening the welcome page in your browser: ${here}/#/welcome
 ${LAN ? `
   >>> On your iPad or phone (same Wi-Fi as this computer), open:  ${url}

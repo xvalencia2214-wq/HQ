@@ -1,4 +1,4 @@
-// "Get the app": install Bella's Música on the phone, and the phone-notifications switch (also on the Account page and
+// "Get the app": install Bella's Fiestas on the phone, and the phone-notifications switch (also on the Account page and
 // the vendor dashboard).
 import { api } from "../api.js";
 import { state, setUser } from "../state.js";
@@ -17,7 +17,7 @@ function installBlock() {
 }
 
 export async function appPage(app) {
-  document.title = `${t("app.title")} · Bella's Música`;
+  document.title = `${t("app.title")} · Bella's Fiestas`;
   app.innerHTML = `<div class="panel narrow app-page"><img src="icon-192.png" alt="" width="96" height="96" class="app-icon"><h1>${esc(t("app.title"))}</h1>
     <p>${esc(t("app.lead"))}</p><div id="app-install-box">${installBlock()}</div></div>
     <div class="panel narrow"><h2 class="sec">🔔 ${esc(t("push.title"))}</h2><div id="pushbox"></div></div>`;

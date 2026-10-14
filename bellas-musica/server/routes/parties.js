@@ -224,7 +224,7 @@ export default function partyRoutes(ctx, add) {
     return { party: view(p, "family", { voter: voterOf(body.voter) }) };
   });
 
-  // ---- "This party was planned on Bella's Música": public credits page, only if the host turned it on ----
+  // ---- "This party was planned on Bella's Fiestas": public credits page, only if the host turned it on ----
   add("GET", "/api/thanks/:id", ({ params }) => {
     const p = db.get("SELECT * FROM parties WHERE id = ?", String(params.id));
     if (!p || !p.credits_public) throw new HttpError(404, "Not found");

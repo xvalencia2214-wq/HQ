@@ -42,7 +42,7 @@ Check: open your address, sign up with your `ADMIN_EMAILS` email, and confirm **
 Email carries password resets, booking confirmations and reminders. Without it, people who forget a password are locked out.
 
 1. Create a Resend account, **add and verify your domain** (they show you the DNS records; wait for "Verified").
-2. Create an API key. Set `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bella's Música <hello@yourdomain.com>`), `EMAIL_REPLY_TO`.
+2. Create an API key. Set `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bella's Fiestas <hello@yourdomain.com>`), `EMAIL_REPLY_TO`.
 3. Set `BUSINESS_ADDRESS` (a real postal address; a PO box or registered-agent address is fine) and `SUPPORT_EMAIL`. US commercial email must include it, and the footer prints it.
 4. Redeploy, run `npm run preflight`, then sign up with a fresh address and check the confirmation email arrives (not in spam). Try **Forgot password** end to end.
 

@@ -38,7 +38,7 @@ fs.mkdirSync(path.join(root, "docs", "store"), { recursive: true });
 // Facebook show when someone shares the site (og.png, 1200x630).
 const banner = (w, h, logo) => `<html><body style="margin:0"><div style="width:${w}px;height:${h}px;background:radial-gradient(circle at 25% 40%,#ffffff,#f7f1e3 75%);border-bottom:10px solid #c9962b;display:flex;align-items:center;gap:52px;padding:0 76px;box-sizing:border-box;font-family:Georgia,serif;color:#0b1838">
   <img src="${dataUrl(svg)}" style="width:${logo}px;height:${logo}px;flex:none;filter:drop-shadow(0 12px 26px rgba(11,24,56,.25))">
-  <div><div style="font-size:${Math.round(w / 15)}px;line-height:1.05;color:#0b1838">Bella's Música</div>
+  <div><div style="font-size:${Math.round(w / 15)}px;line-height:1.05;color:#0b1838">Bella's Fiestas</div>
   <div style="font:500 ${Math.round(w / 34)}px/1.35 system-ui,sans-serif;margin-top:18px;color:#1c2f63">Mariachi, banda, norteño and everything for the party</div>
   <div style="font:700 ${Math.round(w / 46)}px/1.3 system-ui,sans-serif;margin-top:22px;color:#8a6414;letter-spacing:.06em">SAFE DEPOSITS · ENGLISH Y ESPAÑOL</div></div></div></body></html>`;
 for (const [file, w, h, logo] of [[path.join(root, "docs", "store", "feature-graphic.png"), 1024, 500, 300], [path.join(pub, "og.png"), 1200, 630, 360]]) {

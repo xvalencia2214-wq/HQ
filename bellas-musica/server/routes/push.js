@@ -32,7 +32,7 @@ export default function pushRoutes(ctx, add) {
 
   add("POST", "/api/push/test", async ({ user }) => {
     if (!ctx.limiters.chat.check("pushtest|" + user.id)) throw new HttpError(429, "Too many tries. Wait a little and try again.");
-    const sent = await push.toUser(user.id, { title: "Bella's Música", body: user.lang === "es" ? "¡Listo! Las notificaciones funcionan en este teléfono." : "All set! Notifications work on this phone.", url: "/#/account" });
+    const sent = await push.toUser(user.id, { title: "Bella's Fiestas", body: user.lang === "es" ? "¡Listo! Las notificaciones funcionan en este teléfono." : "All set! Notifications work on this phone.", url: "/#/account" });
     if (!sent) throw new HttpError(400, "We couldn't reach this phone. Turn notifications off and on again.");
     return { ok: true };
   }, { auth: true });

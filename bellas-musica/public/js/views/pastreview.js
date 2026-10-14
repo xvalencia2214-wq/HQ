@@ -10,7 +10,7 @@ export async function pastReview(app, token) {
   let r;
   try { r = await api.get(`/api/past-review/${encodeURIComponent(token)}`); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
-  document.title = `${t("pr.pageTitle", { group: r.group.name })} · Bella's Música`;
+  document.title = `${t("pr.pageTitle", { group: r.group.name })} · Bella's Fiestas`;
   const head = `<h1 class="sec">${esc(t("pr.pageTitle", { group: r.group.name }))}</h1><p>${esc(t("pr.pageLead", { group: r.group.name, event: t("event." + r.event).toLowerCase(), when: monthLabel(r.when) }))}</p>`;
   const page = `<a class="btn ghost" href="#/group/${esc(r.group.id)}">${esc(t("pr.see"))}</a>`;
   if (r.status === "done") { app.innerHTML = `<div class="panel narrow">${head}<p class="note ok">${esc(t("pr.already"))}</p>${page}</div>`; return; }

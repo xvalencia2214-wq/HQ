@@ -73,7 +73,7 @@ export function loadConfig(env = process.env) {
     stripeApi: env.STRIPE_API_BASE || "https://api.stripe.com",
     // Email (Resend). Leave the key empty to only log emails (simulated).
     resendKey: env.RESEND_API_KEY || "",
-    emailFrom: env.EMAIL_FROM || "",            // e.g. Bella's Música <hello@yourdomain.com>
+    emailFrom: env.EMAIL_FROM || "",            // e.g. Bella's Fiestas <hello@yourdomain.com>
     emailReplyTo: env.EMAIL_REPLY_TO || "",
     emailApi: env.EMAIL_API_BASE || "https://api.resend.com",
     // Operations
@@ -87,7 +87,7 @@ export function loadConfig(env = process.env) {
     // Failed logins from one network, across every account (slows down password guessing); per 15 minutes
     loginFailsPerIp: int(env.RATE_LOGIN_IP, 30),
     // Who is sending (shown in email footers; commercial email must include a postal address)
-    businessName: env.BUSINESS_NAME || "Bella's Música",
+    businessName: env.BUSINESS_NAME || "Bella's Fiestas",
     businessAddress: env.BUSINESS_ADDRESS || "",
     supportEmail: env.SUPPORT_EMAIL || "",
     // Weather for outdoor parties (US National Weather Service, free, no key). WEATHER=0 turns it off.

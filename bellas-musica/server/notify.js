@@ -45,10 +45,10 @@ export function createNotifier(ctx) {
   // The notification on the phone: the email's subject as the title, the text message (without our name and the link)
   // as the body, and tapping it opens the same page as the link.
   function pushPayload(msg, kind, vars) {
-    const body = String(msg.sms).replace(/^Bella's Música:\s*/, "").replace(/\s*https?:\/\/\S+\s*$/, "").trim();
+    const body = String(msg.sms).replace(/^Bella's Fiestas:\s*/, "").replace(/\s*https?:\/\/\S+\s*$/, "").trim();
     const link = String(vars.url || msg.cta?.url || "");
     const url = link.startsWith(config.baseUrl) ? link.slice(config.baseUrl.length) || "/" : link.startsWith("/") ? link : "/";
-    return { title: msg.subject || "Bella's Música", body: body.slice(0, 240), url, tag: kind };
+    return { title: msg.subject || "Bella's Fiestas", body: body.slice(0, 240), url, tag: kind };
   }
 
   // For people without an account (the waitlist). Transactional only: they asked for exactly this.

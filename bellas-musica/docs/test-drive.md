@@ -1,6 +1,6 @@
 # Test drive: try every feature
 
-One command starts Bella's Música with practice accounts and a quinceañera already being planned. Money and texts are
+One command starts Bella's Fiestas with practice accounts and a quinceañera already being planned. Money and texts are
 pretend. It uses its own practice data (the `data-tryout` folder), so it never mixes with anything real.
 
 ## Start it
@@ -167,7 +167,7 @@ else. Or use a private (incognito) window for a second person at the same time.
   as someone else (for example padrino@prueba.com) to write the review.
 - **Founding vendors:** the DJ, the tents and the mariachi were the first three to go live, so their fee is 5% for 6
   months (**Payments** says "Founding vendor #1"). Make a new listing to see "22 of 25 spots left".
-- **Held deposits for new vendors:** these vendors are new, so families see "🔒 Bella's Música keeps your deposit safe
+- **Held deposits for new vendors:** these vendors are new, so families see "🔒 Bella's Fiestas keeps your deposit safe
   until the group checks in", and the DJ sees "Your share is sent when you check in". Check in at Mateo's baptism
   (today) with Rosa's code and the note disappears (the money moves for real only with live Stripe).
 - **Spanish search page:** open **http://localhost:3000/es/chicago/pilsen/quinceanera** (Google shows this one to

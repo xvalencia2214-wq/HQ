@@ -1,4 +1,4 @@
-/* Bella's Música welcome page. Loaded only on that page; everything is scoped under .lp. */
+/* Bella's Fiestas welcome page. Loaded only on that page; everything is scoped under .lp. */
 
 body.is-landing { background: #fdfbf6; }
 body.is-landing > header.top, body.is-landing > footer#foot { display: none; }

@@ -85,7 +85,7 @@ test("Resend: real requests carry the key, sender, unsubscribe headers; failures
   const seen = []; let fail = false;
   const srv = http.createServer(async (req, res) => { let b = ""; for await (const c of req) b += c; seen.push({ url: req.url, auth: req.headers.authorization, body: JSON.parse(b) }); res.writeHead(fail ? 500 : 200, { "Content-Type": "application/json" }); res.end("{}"); });
   await new Promise((r) => srv.listen(0, r));
-  const S = await startApp({ RESEND_API_KEY: "re_test_123", EMAIL_FROM: "Bella's Música <hello@bellas.test>", EMAIL_REPLY_TO: "help@bellas.test", EMAIL_API_BASE: `http://127.0.0.1:${srv.address().port}` });
+  const S = await startApp({ RESEND_API_KEY: "re_test_123", EMAIL_FROM: "Bella's Fiestas <hello@bellas.test>", EMAIL_REPLY_TO: "help@bellas.test", EMAIL_API_BASE: `http://127.0.0.1:${srv.address().port}` });
   try {
     const owner = client(S.base), cust = client(S.base);
     await owner.signup("rs-o@example.com", "Rs Owner"); await cust.signup("rs-c@example.com", "Rs Cust");
@@ -94,7 +94,7 @@ test("Resend: real requests carry the key, sender, unsubscribe headers; failures
     await new Promise((r) => setTimeout(r, 150));
     const m = seen.find((x) => x.body.to[0] === "rs-o@example.com" && /New message/.test(x.body.subject));
     assert.equal(m.url, "/emails"); assert.equal(m.auth, "Bearer re_test_123");
-    assert.equal(m.body.from, "Bella's Música <hello@bellas.test>"); assert.equal(m.body.reply_to, "help@bellas.test");
+    assert.equal(m.body.from, "Bella's Fiestas <hello@bellas.test>"); assert.equal(m.body.reply_to, "help@bellas.test");
     assert.match(m.body.headers["List-Unsubscribe"], /^<http.*\/unsubscribe\?u=\d+&t=/); assert.equal(m.body.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
     assert.match(m.body.html, /<a href="http/); assert.match(m.body.text, /Open messages/);
     assert.equal(S.db.get("SELECT sent FROM email_log WHERE kind = 'message.group'").sent, 1);

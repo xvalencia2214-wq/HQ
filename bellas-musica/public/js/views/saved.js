@@ -41,7 +41,7 @@ export async function shortlist(app, token) {
   let d;
   try { d = await api.get(`/api/shortlists/${encodeURIComponent(token)}`); }
   catch { app.innerHTML = `<div class="panel empty">${esc(t("fav.listGone"))} <a href="#/">${esc(t("nav.find"))}</a></div>`; return; }
-  document.title = `${d.title || t("fav.listBy", { name: d.by })} · Bella's Música`;
+  document.title = `${d.title || t("fav.listBy", { name: d.by })} · Bella's Fiestas`;
   app.innerHTML = `<div class="titlebar"><h1>♥ ${esc(d.title || t("fav.listBy", { name: d.by }))}</h1></div><p class="dim">${esc(t("fav.listBy", { name: d.by }))}</p>
     ${d.groups.length ? grid(d.groups) : `<div class="panel empty">${esc(t("fav.listGone"))}</div>`}
     <p><a class="btn" href="#/chicago">${esc(t("fav.cta"))}</a></p>`;

@@ -175,7 +175,7 @@ export function createApp(config) {
     if (ok) db.run("UPDATE users SET email_notify = 0 WHERE id = ?", id);
     const msg = ok ? "You will no longer receive these notifications. Booking receipts and security emails will still be sent. You can turn notifications back on under Account." : "This unsubscribe link is not valid. You can change your email preferences under Account.";
     if (req.method === "POST") { res.writeHead(ok ? 200 : 400, { "Content-Type": "text/plain" }); res.end(ok ? "ok" : "bad link"); return; }
-    sendText(res, "text/html; charset=utf-8", `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email preferences</title><link rel="stylesheet" href="/style.css"></head><body><main style="max-width:520px"><div class="panel"><h1>Email preferences</h1><p>${msg}</p><p><a class="btn" href="/">Back to Bella&#39;s Música</a></p></div></main></body></html>`);
+    sendText(res, "text/html; charset=utf-8", `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email preferences</title><link rel="stylesheet" href="/style.css"></head><body><main style="max-width:520px"><div class="panel"><h1>Email preferences</h1><p>${msg}</p><p><a class="btn" href="/">Back to Bella&#39;s Fiestas</a></p></div></main></body></html>`);
   }
 
   function serveStatic(req, res, pathname) {
@@ -244,8 +244,8 @@ export function createApp(config) {
   const server = http.createServer(async (req, res) => {
     securityHeaders(res, req);
     if (previewHash && !/^\/(api\/(health|stripe\/webhook)|\.well-known\/(assetlinks\.json|apple-app-site-association))$/.test(String(req.url).split("?")[0]) && !previewOk(req)) {
-      res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Bella\'s Musica preview", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
-      res.end("Bella's Música is in private preview. Ask the owner for the password.");
+      res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Bella\'s Fiestas preview", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+      res.end("Bella's Fiestas is in private preview. Ask the owner for the password.");
       return;
     }
     try {

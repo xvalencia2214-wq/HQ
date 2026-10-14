@@ -11,7 +11,7 @@ export async function agreement(app, id, params) {
   if (!b && params.get("g")) { try { b = (await api.get(`/api/groups/${encodeURIComponent(params.get("g"))}/bookings`)).bookings.find((x) => x.id === id) || null; asOwner = Boolean(b); } catch { /* not the owner */ } }
   if (!b) { app.innerHTML = `<div class="panel empty">${esc(t("common.notFound"))}</div>`; return; }
   if (b.status !== "confirmed") { app.innerHTML = `<div class="panel empty">${esc(t("agr.notConfirmed"))} <a href="#/bookings">${esc(t("bk.all"))}</a></div>`; return; }
-  document.title = `${t("agr.title")} ${b.id} · Bella's Música`;
+  document.title = `${t("agr.title")} ${b.id} · Bella's Fiestas`;
   setWho(b.category, screen);
   const policy = (state.meta.policies[b.policy] || {})[lang()] || "";
   const customer = asOwner ? b.customer_name : state.user.name;

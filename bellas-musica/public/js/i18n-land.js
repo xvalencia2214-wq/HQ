@@ -1,6 +1,6 @@
 // Strings for the welcome page (#/welcome, and the front door for new visitors). Merged into the main dictionaries by i18n.js.
 export const EN4 = {
-  "land.title": "Bella's Música · Live Mexican music and everything for the party",
+  "land.title": "Bella's Fiestas · Live Mexican music and everything for the party",
   "land.skip": "Skip to the app",
   "land.nav.find": "Find music", "land.nav.party": "Plan a party", "land.nav.groups": "For businesses", "land.nav.login": "Log in", "land.nav.start": "Get started",
   "land.loading": "Tuning the guitars",
@@ -12,7 +12,7 @@ export const EN4 = {
   "land.stat.groups": "groups and vendors", "land.stat.zips": "ZIP codes covered", "land.stat.langs": "languages, one app",
   "land.scroll": "Scroll",
   "land.marquee": "Quinceañeras,Bodas,Serenatas,Bautizos,Cumpleaños,Aniversarios,Mañanitas,Día de las Madres,Graduaciones,Primeras comuniones",
-  "land.manifesto": "Our families never threw a party without live music. The mariachi at the quince. The banda at the wedding. The serenata for mamá at dawn. We made Bella's Música so the music always shows up.",
+  "land.manifesto": "Our families never threw a party without live music. The mariachi at the quince. The banda at the wedding. The serenata for mamá at dawn. We made Bella's Fiestas so the music always shows up.",
   "land.morph.k": "One app, every sound",
   "land.morph.0": "Mariachi", "land.morph.0t": "Trumpets, violins and the vals for her big night.",
   "land.morph.1": "Norteño & banda", "land.morph.1t": "Accordion, bajo sexto and brass. Nobody stays seated.",
@@ -59,7 +59,7 @@ export const EN4 = {
 };
 
 export const ES4 = {
-  "land.title": "Bella's Música · Música mexicana en vivo y todo para la fiesta",
+  "land.title": "Bella's Fiestas · Música mexicana en vivo y todo para la fiesta",
   "land.skip": "Ir a la app",
   "land.nav.find": "Buscar música", "land.nav.party": "Planear fiesta", "land.nav.groups": "Para negocios", "land.nav.login": "Entrar", "land.nav.start": "Empezar",
   "land.loading": "Afinando las guitarras",
@@ -71,7 +71,7 @@ export const ES4 = {
   "land.stat.groups": "grupos y proveedores", "land.stat.zips": "códigos postales", "land.stat.langs": "idiomas, una sola app",
   "land.scroll": "Desliza",
   "land.marquee": "Quinceañeras,Bodas,Serenatas,Bautizos,Cumpleaños,Aniversarios,Mañanitas,Día de las Madres,Graduaciones,Primeras comuniones",
-  "land.manifesto": "En nuestras familias no había fiesta sin música en vivo. El mariachi en los quince. La banda en la boda. La serenata para mamá al amanecer. Hicimos Bella's Música para que la música siempre llegue.",
+  "land.manifesto": "En nuestras familias no había fiesta sin música en vivo. El mariachi en los quince. La banda en la boda. La serenata para mamá al amanecer. Hicimos Bella's Fiestas para que la música siempre llegue.",
   "land.morph.k": "Una app, todos los sonidos",
   "land.morph.0": "Mariachi", "land.morph.0t": "Trompetas, violines y el vals para su gran noche.",
   "land.morph.1": "Norteño y banda", "land.morph.1t": "Acordeón, bajo sexto y metales. Nadie se queda sentado.",

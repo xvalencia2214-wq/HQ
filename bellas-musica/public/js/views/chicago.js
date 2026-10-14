@@ -10,7 +10,7 @@ const POPULAR = ["Quinceañera", "Wedding", "Birthday", "Serenata", "Anniversary
 // The launch-city page: what it is, how it works, neighborhoods, top groups, questions, and a door for groups.
 export async function chicago(app) {
   const m = state.meta.market;
-  document.title = `${t("chi.title")} · Bella's Música`;
+  document.title = `${t("chi.title")} · Bella's Fiestas`;
   let top = [];
   await loadFavs();
   try { top = (await api.get("/api/best?zip=" + encodeURIComponent(m.center_zip))).groups.slice(0, 6); } catch { /* the page still works without the list */ }

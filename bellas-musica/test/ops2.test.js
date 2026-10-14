@@ -17,11 +17,11 @@ const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 test("alerts: one message per problem per 10 minutes, Slack- and Discord-shaped, silent without a webhook", async () => {
   const h = await hook();
   try {
-    const alert = createAlerts({ alertWebhook: h.url, businessName: "Bella's Música" });
+    const alert = createAlerts({ alertWebhook: h.url, businessName: "Bella's Fiestas" });
     alert("Something broke", "k1"); alert("Something broke", "k1"); alert("Something else", "k2");
     await wait();
     assert.equal(h.got.length, 2);
-    assert.equal(h.got[0].text, "[Bella's Música] Something broke"); assert.equal(h.got[0].content, h.got[0].text);
+    assert.equal(h.got[0].text, "[Bella's Fiestas] Something broke"); assert.equal(h.got[0].content, h.got[0].text);
     const quiet = createAlerts({ alertWebhook: "", businessName: "x" }); quiet("no webhook"); await wait(30);
     assert.equal(h.got.length, 2);
   } finally { h.close(); }

@@ -5,12 +5,12 @@ const config = loadConfig();
 const app = createApp(config);
 const busy = (e) => {
   if (e && e.code !== "EADDRINUSE") throw e;
-  console.error(`\nPort ${config.port} is already in use: Bella's Música (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\n`);
+  console.error(`\nPort ${config.port} is already in use: Bella's Fiestas (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\n`);
   process.exit(1);
 };
 const port = await app.listen().catch(busy);
 const { stripe, sms } = app.ctx;
-console.log(`Bella's Música running at ${config.baseUrl} (port ${port})`);
+console.log(`Bella's Fiestas running at ${config.baseUrl} (port ${port})`);
 console.log(`Payments: ${stripe.mode}${stripe.live ? "" : "  (no STRIPE_SECRET_KEY: deposits are simulated)"}`);
 console.log(`Texts:    ${sms.mode}${sms.live ? "" : "  (no Twilio settings: messages are only logged)"}`);
 process.on("unhandledRejection", (e) => app.ctx.alert(`Unhandled promise rejection: ${e && e.message}`, "unhandled"));

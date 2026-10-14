@@ -1,4 +1,4 @@
-// Bella's Música service worker: a friendly page when there's no signal, faster maps, and phone notifications.
+// Bella's Fiestas service worker: a friendly page when there's no signal, faster maps, and phone notifications.
 // Pages and data always come fresh from the server when online (nothing stale is ever shown); only the offline page,
 // the icons and the map library are kept on the phone.
 const CACHE = "bm-v2"; // a new name drops everything the old version kept
@@ -36,7 +36,7 @@ self.addEventListener("fetch", (e) => {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(d.title || "Bella's Música", {
+  e.waitUntil(self.registration.showNotification(d.title || "Bella's Fiestas", {
     body: d.body || "", icon: "/icon-192.png", badge: "/badge.png", tag: d.tag || undefined, renotify: Boolean(d.tag),
     data: { url: d.url || "/" }
   }));

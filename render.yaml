@@ -1,4 +1,4 @@
-# Render.com blueprint for Bella's Música (the app lives in the bellas-musica folder).
+# Render.com blueprint for Bella's Fiestas (the app lives in the bellas-musica folder).
 # On render.com: New > Blueprint > pick this repository and branch > fill in the blanks > Apply.
 # Step-by-step in plain words: bellas-musica/docs/publish.md
 services:

@@ -1,5 +1,5 @@
 // Propinas: after the party the family can leave the vendor a tip in the app. It goes to the vendor's account like the
-// deposit; Bella's Música keeps no fee (only the card processing cost, so the platform doesn't pay to move it).
+// deposit; Bella's Fiestas keeps no fee (only the card processing cost, so the platform doesn't pay to move it).
 import { HttpError, addDays, int, now, str, todayStr, withLock } from "../util.js";
 import { getGroup, isTeam, newId } from "../shared.js";
 import { maskContact } from "./messages.js";

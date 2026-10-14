@@ -81,7 +81,7 @@ export async function rsvpPage(app, token) {
   try { R = await api.get(`/api/rsvp/${encodeURIComponent(token)}`); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
   const P = R.party, title = P.title || t("pp.untitled");
-  document.title = `${title} · Bella's Música`;
+  document.title = `${title} · Bella's Fiestas`;
   const head = `<p class="dim">${esc(t("rsvp.from", { host: P.host }))}</p><h1 class="sec rsvp-title">🎉 ${esc(title)}</h1>
     <p class="rsvp-when">📅 <strong>${esc(fmtDate(P.date))}</strong>${P.event ? ` · ${esc(t("event." + P.event))}` : ""}</p>
     ${P.note ? `<p class="rsvp-note">${esc(P.note)}</p>` : ""}${P.by && !P.past ? `<p class="small">${esc(t("rsvp.by", { date: fmtDate(P.by) }))}</p>` : ""}`;

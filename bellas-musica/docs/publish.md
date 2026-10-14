@@ -1,4 +1,4 @@
-# Publish Bella's Música (put it on the internet)
+# Publish Bella's Fiestas (put it on the internet)
 
 This puts the app on a real web address. You don't type any commands: everything is clicking in websites.
 Plan about **30 minutes** for steps 1 to 3. Money stays pretend until you do step 6, so nothing can go wrong with

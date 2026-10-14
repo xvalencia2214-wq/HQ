@@ -29,7 +29,7 @@ export function bookingToIcs({ id, date, time, hours, summary, location, descrip
   const [y, mo, d] = date.split("-").map(Number);
   const start = new Date(Date.UTC(y, mo - 1, d, h, m)), end = new Date(start.getTime() + hours * 3600_000);
   const lines = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bella's Musica//Booking//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bella's Fiestas//Booking//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
     "BEGIN:VEVENT", `UID:${id}@bellasmusica`, `DTSTAMP:${stamp(new Date())}Z`,
     `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
     `SUMMARY:${esc(summary)}`, `LOCATION:${esc(location)}`, `DESCRIPTION:${esc(description)}`,

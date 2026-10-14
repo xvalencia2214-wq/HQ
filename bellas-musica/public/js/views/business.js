@@ -315,7 +315,7 @@ export async function payLinkPage(app, token) {
   const screen = currentScreen();
   let l;
   try { l = (await api.get(`/api/pay-link/${encodeURIComponent(token)}`)).link; } catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
-  document.title = `${l.group.name} · Bella's Música`;
+  document.title = `${l.group.name} · Bella's Fiestas`;
   setWho(l.group.category, screen);
   const user = state.user, next = encodeURIComponent("#/pay-link/" + token);
   const head = `<div class="pl-head">${l.group.photo ? `<img src="${esc(l.group.photo)}" alt="" class="pl-photo">` : ""}<div><h1>${esc(l.group.name)}</h1><div class="dim">${esc(t("type." + l.group.type))}</div></div></div>`;
@@ -357,7 +357,7 @@ export async function specialsPage(app, key, params) {
   const zip = params.get("zip") || state.meta.market.center_zip;
   let r;
   try { r = await api.get(`/api/specials/${encodeURIComponent(key)}?zip=${encodeURIComponent(zip)}`); } catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
-  document.title = `${t("sp." + key)} · Bella's Música`;
+  document.title = `${t("sp." + key)} · Bella's Fiestas`;
   app.innerHTML = `<div class="panel"><h1>🌹 ${esc(t("sp.pageTitle." + key))}</h1><p>${esc(t("sp.pageText." + key, { date: fmtDate(r.date) }))}</p></div>
     ${r.vendors.length ? `<div class="cards">${r.vendors.map((v) => `<div class="card sp-card">${v.photo ? `<img src="${esc(v.photo)}" alt="" loading="lazy">` : ""}<div class="card-b"><strong>${esc(v.name)}</strong> <span class="dim small">${esc(t("type." + v.type))}${v.city ? " · " + esc(v.city) : ""}${v.distance !== null ? " · " + esc(t("sp.miles", { n: v.distance })) : ""}</span>
       <div>${esc(v.special.name)} · ${esc(lenLabel(v.special.minutes))} · <strong>${money(v.special.price_cents)}</strong></div>

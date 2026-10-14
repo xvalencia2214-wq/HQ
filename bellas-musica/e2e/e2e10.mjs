@@ -115,7 +115,7 @@ try {
   await shot(R, "party-sign.png");
   const G = await person("guest", { width: 430, height: 900 });
   await go(G, `#/thanks/${pid}`); await G.waitForSelector(".plist");
-  ok("scanning opens the credits page with the vendors", /planned on Bella's Música/.test(await text(G)) && /Mariachi Del Barrio/.test(await text(G)) && !/\$/.test(await G.locator(".plist").innerText()));
+  ok("scanning opens the credits page with the vendors", /planned on Bella's Fiestas/.test(await text(G)) && /Mariachi Del Barrio/.test(await text(G)) && !/\$/.test(await G.locator(".plist").innerText()));
 
   // ---- open this week ----
   await go(R, "#/?zip=60608&soon=1"); await R.waitForSelector(".card");

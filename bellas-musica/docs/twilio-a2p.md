@@ -16,7 +16,7 @@ Texts are opt-in: people tick a box (sign-up or account page) that says *"Text m
 **Use case:** Account Notification (Low Volume Mixed is also fine at the start).
 
 **Campaign description:**
-> Bella's Música is a marketplace where people book live Mexican music groups (mariachi, banda, norteño) for events. We text customers and musicians who opt in about their own bookings: new booking requests, confirmations, date-change requests, reminders before an event, replies to their messages, and a review request after the event. We do not send marketing or promotional texts, and we never share numbers with third parties.
+> Bella's Fiestas is a marketplace where people book live Mexican music groups (mariachi, banda, norteño) for events. We text customers and musicians who opt in about their own bookings: new booking requests, confirmations, date-change requests, reminders before an event, replies to their messages, and a review request after the event. We do not send marketing or promotional texts, and we never share numbers with third parties.
 
 **How do users opt in?**
 > On the sign-up form at https://YOUR-DOMAIN/#/signup and on the Account page, users enter their mobile number and check an unchecked box that reads: "Text me about my bookings and messages. Message and data rates may apply. Reply STOP to opt out." The Terms and Privacy Policy (https://YOUR-DOMAIN/terms.html, https://YOUR-DOMAIN/privacy.html) describe SMS use. Consent is not a condition of using the service.
@@ -24,15 +24,15 @@ Texts are opt-in: people tick a box (sign-up or account page) that says *"Text m
 **Opt-in screenshot:** take one of the sign-up form with the checkbox (or the Account page).
 
 **Sample messages** (these are the real templates, sent from `server/emails.js`):
-1. `Bella's Música: new booking request for 2026-11-07 2:00 PM. Open your dashboard to accept: https://YOUR-DOMAIN/#/dashboard`
-2. `Bella's Música: Mariachi Tierra Viva confirmed your booking for 2026-11-07 at 2:00 PM.`
-3. `Bella's Música: reminder, Mariachi Tierra Viva plays tomorrow (2026-11-07 2:00 PM).`
-4. `Bella's Música: Mariachi Tierra Viva replied to your message. Open the app to read it: https://YOUR-DOMAIN/#/messages`
-5. `Bella's Música: how was Mariachi Tierra Viva? Leave a quick review: https://YOUR-DOMAIN/#/bookings`
+1. `Bella's Fiestas: new booking request for 2026-11-07 2:00 PM. Open your dashboard to accept: https://YOUR-DOMAIN/#/dashboard`
+2. `Bella's Fiestas: Mariachi Tierra Viva confirmed your booking for 2026-11-07 at 2:00 PM.`
+3. `Bella's Fiestas: reminder, Mariachi Tierra Viva plays tomorrow (2026-11-07 2:00 PM).`
+4. `Bella's Fiestas: Mariachi Tierra Viva replied to your message. Open the app to read it: https://YOUR-DOMAIN/#/messages`
+5. `Bella's Fiestas: how was Mariachi Tierra Viva? Leave a quick review: https://YOUR-DOMAIN/#/bookings`
 
 **Message flow / keywords:**
 - **STOP** (also STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT): Twilio handles opt-out automatically on your number and confirms it. Users can also untick the box on the Account page.
-- **HELP**: reply with `Bella's Música: help at support@YOUR-DOMAIN. Msg&data rates may apply. Reply STOP to opt out.` (set this as the HELP auto-reply in your Twilio Messaging Service).
+- **HELP**: reply with `Bella's Fiestas: help at support@YOUR-DOMAIN. Msg&data rates may apply. Reply STOP to opt out.` (set this as the HELP auto-reply in your Twilio Messaging Service).
 - Embedded links: yes (your own domain, no shorteners). Embedded phone numbers: no.
 - Age-gated content, lending, gambling, crypto, cannabis: none.
 

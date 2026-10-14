@@ -30,7 +30,7 @@ test("ics endpoint: customer and group can download an active booking; strangers
     await cust.post(`/api/bookings/${b.id}/simulate-pay`);
     const r = await fetch(S.base + `/api/bookings/${b.id}/ics`, { headers: { Cookie: await cookieOf(cust) } });
     assert.equal(r.status, 200);
-    assert.match(r.headers.get("content-type"), /text\/calendar/); assert.match(r.headers.get("content-disposition"), /attachment; filename="bellas-musica-\d{4}-\d{2}-\d{2}\.ics"/);
+    assert.match(r.headers.get("content-type"), /text\/calendar/); assert.match(r.headers.get("content-disposition"), /attachment; filename="bellas-fiestas-\d{4}-\d{2}-\d{2}\.ics"/);
     const text = (await r.text()).replace(/\r\n /g, "");
     assert.match(text, /LOCATION:Casa\\, Chicago\; back gate/); assert.match(text, /STATUS:TENTATIVE/);
     assert.doesNotMatch(text, /555-0142|\+1312555/); // the group's copy hides the customer's phone until confirmed, the customer's copy never needs it

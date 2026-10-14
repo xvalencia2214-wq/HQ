@@ -66,7 +66,7 @@ export function shareLinks(name, path) {
   // Group and best-of links point at the server-rendered preview routes so chat apps show a photo card.
   const pretty = path.replace(/^#\/group\//, "g/").replace(/^#\/best\//, "b/");
   const url = location.origin + "/" + pretty;
-  const text = `${name} · Bella's Música`;
+  const text = `${name} · Bella's Fiestas`;
   return { url, text, wa: `https://wa.me/?text=${encodeURIComponent(text + " " + url)}` };
 }
 export async function share(name, path) {

@@ -24,7 +24,7 @@ export async function familyParty(app, token) {
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)}</div>`; return; }
   const base = `/api/fp/${encodeURIComponent(token)}`;
   function draw() {
-    document.title = `${P.title || t("pp.untitled")} · Bella's Música`;
+    document.title = `${P.title || t("pp.untitled")} · Bella's Fiestas`;
     const name = store.get("bm_party_name");
     const nameField = (id) => `<input name="name" id="${id}" maxlength="40" required placeholder="${esc(t("pp.yourName"))}" aria-label="${esc(t("pp.yourName"))}" value="${esc(name)}">`;
     app.innerHTML = `<section class="hero party-hero"><img class="hero-logo" src="logo.svg" alt="" width="84" height="84"><h1>${esc(P.title || t("pp.untitled"))}</h1>
@@ -71,7 +71,7 @@ export async function familyParty(app, token) {
   draw();
 }
 
-// "This party was planned on Bella's Música": what guests see when they scan the sign.
+// "This party was planned on Bella's Fiestas": what guests see when they scan the sign.
 export async function thanksPage(app, id) {
   let P;
   try { P = (await api.get(`/api/thanks/${encodeURIComponent(id)}`)).party; }

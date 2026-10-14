@@ -13,7 +13,7 @@ const h = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "
 export function renderSharePage(ctx, kind, id, extra) {
   const { db, config } = ctx;
   let html = fs.readFileSync(path.join(config.publicDir, "index.html"), "utf8");
-  let title = "Bella's Música · Book live Mexican music", desc = "Find and book mariachis, bandas, norteños and more for your wedding, quinceañera or fiesta. See who is free and pay a deposit online.";
+  let title = "Bella's Fiestas · Live music and everything for your fiesta", desc = "Find and book mariachis, bandas, norteños and more for your wedding, quinceañera or fiesta. See who is free and pay a deposit online.";
   let image = `${config.baseUrl}/og.png`, url = config.baseUrl + "/", summary = "";
 
   if (kind === "g") {
@@ -30,11 +30,11 @@ export function renderSharePage(ctx, kind, id, extra) {
       summary = `<div class="panel"><h1>${h(g.name)}</h1><p>${h(g.type)}${place ? " · " + h(place) : ""} · from $${Math.round(fromPrice / 100)}</p><p>${h(g.story)}</p></div>`;
     }
   } else if (kind === "c" && id === MARKET.key) {
-    title = "Live Mexican music in Chicago: mariachi, banda, norteño and more · Bella's Música";
+    title = "Live Mexican music in Chicago: mariachi, banda, norteño and more · Bella's Fiestas";
     desc = "Book mariachis, bandas, norteño groups and DJs for your quinceañera, wedding or fiesta anywhere in Chicagoland. See who is free on your date, compare prices, and pay a deposit online.";
     url = `${config.baseUrl}/c/${MARKET.key}`;
     summary = `<div class="panel"><h1>Live Mexican music for your Chicago fiesta</h1>
-      <p>Bella's Música helps families in ${h(MARKET.area)} find and book mariachi, banda, norteño, grupera, trío and DJ groups for quinceañeras, weddings, birthdays, anniversaries and serenatas. Search by your date and guest count, compare prices, message the group, and secure your date with a deposit.</p>
+      <p>Bella's Fiestas helps families in ${h(MARKET.area)} find and book mariachi, banda, norteño, grupera, trío and DJ groups for quinceañeras, weddings, birthdays, anniversaries and serenatas. Search by your date and guest count, compare prices, message the group, and secure your date with a deposit.</p>
       <h2>Serving</h2><p>${MARKET.neighborhoods.map((n) => `<a href="/${MARKET.key}/${n.id}">${h(n.name)}</a>`).join(", ")} and the surrounding suburbs.</p>
       <h2>Common questions</h2>
       <p><strong>How does the deposit work?</strong> You pay a deposit to request a group. If the group declines, you get it back in full. The balance is paid at the event or in the app.</p>
@@ -43,7 +43,7 @@ export function renderSharePage(ctx, kind, id, extra) {
   } else if (kind === "b") {
     const z = lookupZip(id);
     if (z) {
-      title = `Best mariachis and bands in ${z.city}, ${z.state} · Bella's Música`;
+      title = `Best mariachis and bands in ${z.city}, ${z.state} · Bella's Fiestas`;
       desc = `The top-rated live Mexican music groups near ${z.city}, ${z.state}. See prices, open dates and book with a deposit.`;
       url = `${config.baseUrl}/b/${z.zip}`;
     }
@@ -60,7 +60,7 @@ export function renderSharePage(ctx, kind, id, extra) {
   }
   const tags = [
     `<meta name="description" content="${h(desc)}">`, `<link rel="canonical" href="${h(url)}">`,
-    `<meta property="og:type" content="website">`, `<meta property="og:site_name" content="Bella's Música">`,
+    `<meta property="og:type" content="website">`, `<meta property="og:site_name" content="Bella's Fiestas">`,
     `<meta property="og:title" content="${h(title)}">`, `<meta property="og:description" content="${h(desc)}">`,
     `<meta property="og:url" content="${h(url)}">`, `<meta property="og:image" content="${h(image)}">`,
     `<meta name="twitter:card" content="summary_large_image">`, `<meta name="twitter:title" content="${h(title)}">`, `<meta name="twitter:image" content="${h(image)}">`,
@@ -156,7 +156,7 @@ export function renderLandingPage(ctx, hoodId, eventSlug, lang = "en") {
   const alternates = { en: `${config.baseUrl}/${MARKET.key}/${hood.id}${ev ? "/" + eventKey : ""}`, es: `${config.baseUrl}/es/${MARKET.key}/${hood.id}${ev ? "/" + esSlugOf(eventKey) : ""}` };
   if (lang === "es") return landingPageEs(ctx, hood, eventKey, groups, alternates);
   const what = ev ? `for ${ev.phrase}` : "for your event";
-  const title = `Live mariachi, banda and norteño ${what} in ${hood.name}, ${MARKET.name} · Bella's Música`;
+  const title = `Live mariachi, banda and norteño ${what} in ${hood.name}, ${MARKET.name} · Bella's Fiestas`;
   const url = `${config.baseUrl}/${MARKET.key}/${hood.id}${ev ? "/" + eventKey : ""}`;
   const rates = groups.map((x) => x.g.rate_cents);
   const priceLine = groups.length ? ` Groups near ${hood.name} list from $${Math.round(Math.min(...groups.map((x) => x.from)) / 100)}${rates.length > 1 ? `; hourly rates run $${Math.round(Math.min(...rates) / 100)} to $${Math.round(Math.max(...rates) / 100)}` : ""}.` : "";
@@ -168,13 +168,13 @@ export function renderLandingPage(ctx, hoodId, eventSlug, lang = "en") {
   const others = MARKET.neighborhoods.filter((n) => n.id !== hood.id).slice(0, 8).map((n) => `<a href="/${MARKET.key}/${n.id}${ev ? "/" + eventKey : ""}">${h(n.name)}</a>`).join(" · ");
   const evLinks = Object.entries(LANDING_EVENTS).filter(([k]) => k !== eventKey).map(([k, e]) => `<a href="/${MARKET.key}/${hood.id}/${k}">${h(e.label)}</a>`).join(" · ");
   const summary = `<div class="panel"><h1>Live Mexican music ${h(what)} in ${h(hood.name)}, ${h(MARKET.name)}</h1>
-    <p>Bella's Música helps families in ${h(hood.name)} and across ${h(MARKET.area)} book mariachi, banda, norteño, grupera, trío and DJ groups ${h(what)}. See each group's price and open dates first, message them, and secure your date with a deposit. If a group doesn't show up, you get back everything you paid in the app.</p>
+    <p>Bella's Fiestas helps families in ${h(hood.name)} and across ${h(MARKET.area)} book mariachi, banda, norteño, grupera, trío and DJ groups ${h(what)}. See each group's price and open dates first, message them, and secure your date with a deposit. If a group doesn't show up, you get back everything you paid in the app.</p>
     <h2>Groups serving ${h(hood.name)}</h2>${list}
     <p><a class="btn" href="${h(searchHash)}">See who is free on your date</a></p>
     ${ev ? "" : `<h2>By event</h2><p>${evLinks}</p>`}
     <h2>Nearby</h2><p>${others}</p><p><a href="${h(alternates.es.replace(config.baseUrl, ""))}" hreflang="es">En español</a></p></div>`;
   const ld = groups.length ? `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Música", ""),
+    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Fiestas", ""),
     itemListElement: groups.map((x, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "MusicGroup", name: x.g.name, url: `${config.baseUrl}/g/${x.g.id}`, address: { "@type": "PostalAddress", addressLocality: x.place.split(", ")[0], addressRegion: x.place.split(", ")[1] }, ...(x.r.reviews >= 3 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Math.round(x.r.rating * 10) / 10, reviewCount: x.r.reviews } } : {}) } }))
   }).replace(/</g, "\\u003c")}</script>` : "";
   return { title, desc, url, summary, ld, indexable: groups.length > 0, alternates, lang: "en" };
@@ -186,7 +186,7 @@ function categoryPage(ctx, hood, catKey, lang) {
   const c = LANDING_CATS[catKey], es = lang === "es", tx = es ? c.esText : c.en;
   const groups = hoodGroups(ctx, hood).filter((x) => x.cat === c.cat);
   const alternates = { en: `${config.baseUrl}/${MARKET.key}/${hood.id}/${catKey}`, es: `${config.baseUrl}/es/${MARKET.key}/${hood.id}/${c.es}` };
-  const title = es ? `${tx.h} en ${hood.name}, ${MARKET.name} · Bella's Música` : `${tx.h} in ${hood.name}, ${MARKET.name} · Bella's Música`;
+  const title = es ? `${tx.h} en ${hood.name}, ${MARKET.name} · Bella's Fiestas` : `${tx.h} in ${hood.name}, ${MARKET.name} · Bella's Fiestas`;
   const from = groups.length ? Math.round(Math.min(...groups.map((x) => x.from)) / 100) : 0;
   const desc = (es
     ? `Contrata ${tx.what} en ${hood.name}, ${MARKET.name}. ${groups.length ? `${groups.length} ${tx.noun} de la zona con precios y fechas libres, desde $${from}.` : "Ve quién está libre en tu fecha."} Paga un depósito en línea.`
@@ -198,13 +198,13 @@ function categoryPage(ctx, hood, catKey, lang) {
   const others = MARKET.neighborhoods.filter((n) => n.id !== hood.id).slice(0, 8).map((n) => `<a href="${es ? "/es" : ""}/${MARKET.key}/${n.id}/${es ? c.es : catKey}">${h(n.name)}</a>`).join(" · ");
   const kinds = Object.entries(LANDING_CATS).filter(([k]) => k !== catKey).map(([k, o]) => `<a href="${es ? "/es" : ""}/${MARKET.key}/${hood.id}/${es ? o.es : k}">${h((es ? o.esText : o.en).h)}</a>`).join(" · ");
   const summary = `<div class="panel"><h1>${h(tx.h)} ${es ? "en" : "in"} ${h(hood.name)}, ${h(MARKET.name)}</h1>
-    <p>${es ? `Bella's Música ayuda a las familias de ${h(hood.name)} a contratar ${h(tx.what)}. Ve primero el precio y las fechas libres, mándales un mensaje y aparta tu fecha con un depósito.` : `Bella's Música helps families in ${h(hood.name)} book ${h(tx.what)}. See prices and open dates first, message them, and secure your date with a deposit.`}</p>
+    <p>${es ? `Bella's Fiestas ayuda a las familias de ${h(hood.name)} a contratar ${h(tx.what)}. Ve primero el precio y las fechas libres, mándales un mensaje y aparta tu fecha con un depósito.` : `Bella's Fiestas helps families in ${h(hood.name)} book ${h(tx.what)}. See prices and open dates first, message them, and secure your date with a deposit.`}</p>
     <h2>${es ? `${h(tx.noun[0].toUpperCase() + tx.noun.slice(1))} cerca de ${h(hood.name)}` : `${h(tx.noun[0].toUpperCase() + tx.noun.slice(1))} serving ${h(hood.name)}`}</h2>${list}
     <p><a class="btn" href="${h(searchHash)}">${es ? "Ve quién está libre en tu fecha" : "See who is free on your date"}</a></p>
     <h2>${es ? "Todo para tu fiesta" : "Everything for your party"}</h2><p><a href="${es ? "/es" : ""}/${MARKET.key}/${hood.id}">${es ? "Música en vivo" : "Live music"}</a> · ${kinds}</p>
     <h2>${es ? "Cerca" : "Nearby"}</h2><p>${others}</p><p><a href="${h((es ? alternates.en : alternates.es).replace(config.baseUrl, ""))}" hreflang="${es ? "en" : "es"}">${es ? "English" : "En español"}</a></p></div>`;
   const ld = groups.length ? `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Música", ""), ...(es ? { inLanguage: "es" } : {}),
+    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Fiestas", ""), ...(es ? { inLanguage: "es" } : {}),
     itemListElement: groups.map((x, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "LocalBusiness", name: x.g.name, url: `${config.baseUrl}/g/${x.g.id}`, address: { "@type": "PostalAddress", addressLocality: x.place.split(", ")[0], addressRegion: x.place.split(", ")[1] }, ...(x.r.reviews >= 3 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Math.round(x.r.rating * 10) / 10, reviewCount: x.r.reviews } } : {}) } }))
   }).replace(/</g, "\\u003c")}</script>` : "";
   return { title, desc, url: es ? alternates.es : alternates.en, summary, ld, indexable: groups.length > 0, alternates, lang: es ? "es" : "en" };
@@ -214,7 +214,7 @@ function landingPageEs(ctx, hood, eventKey, groups, alternates) {
   const esSlug = eventKey ? esSlugOf(eventKey) : "";
   const ev = esSlug ? LANDING_EVENTS_ES[esSlug] : null;
   const what = ev ? `para ${ev.phrase}` : "para tu fiesta";
-  const title = `Mariachi, banda y norteño en vivo ${what} en ${hood.name}, ${MARKET.name} · Bella's Música`;
+  const title = `Mariachi, banda y norteño en vivo ${what} en ${hood.name}, ${MARKET.name} · Bella's Fiestas`;
   const rates = groups.map((x) => x.g.rate_cents);
   const priceLine = groups.length ? ` Los grupos cerca de ${hood.name} cobran desde $${Math.round(Math.min(...groups.map((x) => x.from)) / 100)}${rates.length > 1 ? `; por hora, de $${Math.round(Math.min(...rates) / 100)} a $${Math.round(Math.max(...rates) / 100)}` : ""}.` : "";
   const desc = `Contrata música mexicana en vivo ${what} en ${hood.name}, ${MARKET.name}. ${groups.length ? `${groups.length} grupo${groups.length > 1 ? "s" : ""} de la zona con precios y fechas libres.` : "Ve quién está libre en tu fecha."}${priceLine} Paga un depósito en línea.`.slice(0, 300);
@@ -225,13 +225,13 @@ function landingPageEs(ctx, hood, eventKey, groups, alternates) {
   const others = MARKET.neighborhoods.filter((n) => n.id !== hood.id).slice(0, 8).map((n) => `<a href="/es/${MARKET.key}/${n.id}${esSlug ? "/" + esSlug : ""}">${h(n.name)}</a>`).join(" · ");
   const evLinks = Object.entries(LANDING_EVENTS_ES).filter(([s]) => s !== esSlug).map(([s, e]) => `<a href="/es/${MARKET.key}/${hood.id}/${s}">${h(e.label)}</a>`).join(" · ");
   const summary = `<div class="panel"><h1>Música mexicana en vivo ${h(what)} en ${h(hood.name)}, ${h(MARKET.name)}</h1>
-    <p>Bella's Música ayuda a las familias de ${h(hood.name)} y de todo ${h(MARKET.area)} a contratar mariachi, banda, norteño, grupera, trío y DJ ${h(what)}. Ve primero el precio y las fechas libres de cada grupo, mándales un mensaje y aparta tu fecha con un depósito. Si un grupo no llega, te devolvemos todo lo que pagaste en la app.</p>
+    <p>Bella's Fiestas ayuda a las familias de ${h(hood.name)} y de todo ${h(MARKET.area)} a contratar mariachi, banda, norteño, grupera, trío y DJ ${h(what)}. Ve primero el precio y las fechas libres de cada grupo, mándales un mensaje y aparta tu fecha con un depósito. Si un grupo no llega, te devolvemos todo lo que pagaste en la app.</p>
     <h2>Grupos que tocan en ${h(hood.name)}</h2>${list}
     <p><a class="btn" href="${h(searchHash)}">Ve quién está libre en tu fecha</a></p>
     ${ev ? "" : `<h2>Por evento</h2><p>${evLinks}</p>`}
     <h2>Cerca</h2><p>${others}</p><p><a href="${h(alternates.en.replace(ctx.config.baseUrl, ""))}" hreflang="en">English</a></p></div>`;
   const ld = groups.length ? `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Música", ""), inLanguage: "es",
+    "@context": "https://schema.org", "@type": "ItemList", name: title.replace(" · Bella's Fiestas", ""), inLanguage: "es",
     itemListElement: groups.map((x, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "MusicGroup", name: x.g.name, url: `${ctx.config.baseUrl}/g/${x.g.id}`, address: { "@type": "PostalAddress", addressLocality: x.place.split(", ")[0], addressRegion: x.place.split(", ")[1] }, ...(x.r.reviews >= 3 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Math.round(x.r.rating * 10) / 10, reviewCount: x.r.reviews } } : {}) } }))
   }).replace(/</g, "\\u003c")}</script>` : "";
   return { title, desc, url: alternates.es, summary, ld, indexable: groups.length > 0, alternates, lang: "es" };

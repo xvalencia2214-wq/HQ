@@ -24,7 +24,7 @@ export async function myParty(app, id) {
   let P;
   try { P = (await api.get(`/api/parties/${encodeURIComponent(id)}`)).party; }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/party">${esc(t("party.nav"))}</a></div>`; return; }
-  document.title = `${P.title || t("pp.untitled")} · Bella's Música`;
+  document.title = `${P.title || t("pp.untitled")} · Bella's Fiestas`;
   const meta = state.meta;
   await loadFavs();
 
@@ -140,7 +140,7 @@ export async function myParty(app, id) {
   draw();
 }
 
-// A printable sign for the party: "Planned on Bella's Música" with a QR code to the vendor list.
+// A printable sign for the party: "Planned on Bella's Fiestas" with a QR code to the vendor list.
 export async function partySign(app, id) {
   let P;
   try { P = (await api.get(`/api/parties/${encodeURIComponent(id)}`)).party; }
