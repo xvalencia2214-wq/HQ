@@ -109,7 +109,7 @@ body.lp-intro { overflow: hidden; }
 .lp .sticky { position: sticky; top: 0; height: 100svh; display: grid; place-items: center; }
 .lp-manifesto { height: 260vh; padding: 0 24px; }
 .lp-mtext { max-width: 1100px; font-size: clamp(1.7rem, 4.2vw, 3.6rem); line-height: 1.12; letter-spacing: -.025em; font-weight: 700; margin: 0; }
-.lp-mtext .w { color: rgba(11,24,56,.45); transition: color .35s; } /* dim, but still readable (3:1 for large text) */
+.lp-mtext .w { color: rgba(11,24,56,.52); transition: color .35s; } /* dim, but still readable (3:1 for large text) */
 .lp-mtext .w.lit { color: var(--white); }
 .lp-reduced .lp-manifesto { height: auto; padding: 120px 24px; } .lp-reduced .lp-manifesto .sticky { position: static; height: auto; }
 
