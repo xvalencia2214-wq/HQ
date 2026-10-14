@@ -56,10 +56,12 @@ NODE_PATH=$(npm root -g) node e2e/e2e16.mjs    # welcome page incl. Spanish
 NODE_PATH=$(npm root -g) node e2e/e2e18.mjs    # words per category in both languages
 ```
 
-## Known gaps (2026-10-14 audit, `bellas-musica/docs/improvement-plan.md`)
+## How errors are translated (since Oct 14, 2026)
 
-- About **391 server error messages are English only**, and screens show them as they are (`e.message`, ~130 places).
-  - A Spanish user sees "That time was just taken. Please pick another." at checkout.
-  - The fix: send a stable `code` with each `HttpError`, translate it on the screen, and keep the English text as the fallback.
-- The "Connection problem" message in `public/js/api.js` is English only.
-- The Spanish review sheet's header names only two of the six dictionaries (the sheet itself includes all of `DICT`).
+- `public/js/api.js` sends `X-Lang` (the screen's language) with every call and has its own Spanish for "Connection problem".
+- `server/app.js` answers every `HttpError` through `translateError(message, requestLang(req), status)` (`server/errors-es.js`):
+  - exact messages first, then patterns for messages carrying names and numbers, then the field names used by `str`/`int`/`oneOf`;
+  - Stripe's own English becomes a Spanish line.
+- **When you add an `HttpError` message, add its Spanish to `errors-es.js`.** `test/errors-es.test.js` reads every throw in `server/` and fails otherwise. Do the same for a new field name in an input check.
+- New screen strings for the plan live in `public/js/i18n-plan.js` (`EN7`/`ES7`).
+- Still for a person to do: a native speaker reads the new Spanish (`npm run spanish-sheet`).

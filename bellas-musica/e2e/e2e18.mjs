@@ -22,7 +22,7 @@ async function person(label, viewport = { width: 1180, height: 820 }, touch = fa
   await ctx.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
-  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|Problema de conexión/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
   p.on("dialog", (d) => d.accept());
   return p;
 }

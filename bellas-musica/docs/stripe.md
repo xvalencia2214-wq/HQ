@@ -11,7 +11,10 @@ Bella's Música uses **Stripe Connect (Express)**: the customer pays a deposit; 
 5. Developers, Webhooks, add endpoint `https://YOUR-DOMAIN/api/stripe/webhook` with events:
    - `checkout.session.completed`
    - `checkout.session.async_payment_succeeded`
+   - `charge.dispute.created` and `charge.dispute.closed` (chargebacks: you get an alert with the date to answer by, and they're listed on the Admin page)
    Copy the signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`.
+
+   Then add a **second** endpoint at the same address, choosing **"Events on Connected accounts"**, with the event `account.updated`. Copy its secret into `STRIPE_CONNECT_WEBHOOK_SECRET`. When Stripe pauses a vendor's payouts, the vendor stops taking deposits right away and gets an email and text to fix it (without this endpoint, a daily check does the same within a day).
 6. **Apple Pay and Google Pay:** Settings, Payment methods. Make sure **Apple Pay** and **Google Pay** are turned on (they usually are by default). The app never lists payment methods itself, so Stripe's checkout page shows the Apple Pay button on any iPhone, iPad or Mac that has a card in Wallet, and Google Pay on Android and Chrome. Nothing else to set up: Stripe hosts the checkout page, so no domain verification is needed. The pay buttons in the app say "Apple Pay · Google Pay · Card".
 7. Redeploy. `npm run preflight` should say "Stripe key: test mode", "account reachable", and that the webhook endpoint points at your domain with the right events.
 

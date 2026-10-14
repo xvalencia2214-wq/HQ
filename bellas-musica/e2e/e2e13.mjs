@@ -22,7 +22,7 @@ async function person(label, viewport = { width: 1000, height: 1100 }) {
   await ctx.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
-  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|Problema de conexión/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
   p.on("dialog", (d) => d.accept(d.type() === "prompt" ? "" : undefined));
   return p;
 }
@@ -129,7 +129,7 @@ try {
   await login(L, "lupe@example.com");
   await L.goto(teamUrl.replace(/^https?:\/\/[^/]+/, S.base)); await L.waitForSelector("#tm-join");
   await L.click("#tm-join"); await L.waitForFunction(() => /#\/dashboard/.test(location.hash));
-  await L.waitForSelector(".tabs");
+  await L.waitForSelector(".tabs >> visible=true");
   ok("the helper joins and lands on the listing's dashboard", /DJ Relámpago/.test(await text(L)));
   await go(L, `#/dashboard?g=${gid}&tab=payments`); await L.waitForSelector("#tabbody .panel");
   await L.waitForFunction(() => /Only the owner of this listing/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {}); // the note replaces the buttons once the panels load

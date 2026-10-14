@@ -21,7 +21,7 @@ async function person(label, opts = {}) {
   ctx.setDefaultTimeout(60000); // the 3D scene runs on a software renderer here, which can keep a page busy for a while
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
-  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|GPU stall|WebGL/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|Problema de conexión|GPU stall|WebGL/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
   return p;
 }
 const shot = (p, n) => shots && p.screenshot({ path: path.join(shots, n) });

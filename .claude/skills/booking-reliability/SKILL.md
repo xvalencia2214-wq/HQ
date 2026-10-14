@@ -60,9 +60,12 @@ NODE_PATH=$(npm root -g) node e2e/e2e11.mjs                   # carts, bundles, 
 
 Before going live with real cards, follow `docs/stripe.md` and record the run in `docs/stripe-test-log.md`.
 
-## Known gaps (2026-10-14 audit, `bellas-musica/docs/improvement-plan.md`)
+## Rules added by the Oct 14, 2026 plan (keep them)
 
-- No webhook for chargebacks (`charge.dispute.*`). The owner never hears about one.
-- No webhook for vendors' payout accounts (`account.updated`). `stripe_ready` only refreshes when the vendor opens Payments.
-- A booking can be priced for an event far outside the vendor's `travel_miles` with no extra fee, because the default travel fee is $0.
-- Booking errors from the server are English-only (see bilingual-ux).
+- **Other Stripe events**: `server/stripe-events.js` handles events that aren't payments, and runs first in the webhook.
+  - `account.updated` → `applyAccount`. A vendor whose payouts Stripe paused stops being bookable at once and is told (`payouts.off.group`).
+  - `charge.dispute.*` → the `disputes` table, an alert with the answer-by date, and the list on the Admin page.
+  - The webhook also accepts `STRIPE_CONNECT_WEBHOOK_SECRET`; `recheckAccounts` re-reads payout accounts daily in case a webhook was missed.
+- **Travel**: `priceRequest` refuses an event ZIP past the vendor's reach (`reaches`). Don't price far parties with a $0 fee.
+- **Guest checkout draft**: logged-out visitors fill the form and see `/api/quote`. The draft waits in `sessionStorage` (`bm_bookdraft`) through sign-up or log-in (`?resume=1`). The booking itself still needs an account; never create bookings without one.
+- **Errors**: booking errors reach Spanish screens in Spanish (bilingual-ux). Add every new `HttpError` text to `server/errors-es.js`.

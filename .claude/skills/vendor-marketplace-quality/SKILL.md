@@ -50,12 +50,13 @@ NODE_PATH=$(npm root -g) node e2e/e2e9.mjs              # party vendors: categor
 NODE_PATH=$(npm root -g) node e2e/e2e18.mjs             # Spotlight shown and labelled, words per category
 ```
 
-## Known gaps (2026-10-14 audit, `bellas-musica/docs/improvement-plan.md`)
+## Rules added by the Oct 14, 2026 plan (keep them)
 
-- Search returns at most 20 vendors, with no "Show more".
-- No search by vendor name.
-- Search ignores the vendor's own travel distance (`travel_miles`).
-- The event list has no Bautizo, Primera Comunión, Graduation, Baby shower or Funeral.
-- The price filter steps ($250–$900) are the same for every category.
-- Google landing pages cover music only.
-- Paid cards carry a "#1" rank badge.
+- **Travel range**: `reaches(g, distance)` / `reachMiles(g)` in `shared.js`. Free within `travel_miles`; with a travel fee, up to twice that (30 more at least). Used by search, Get quotes, Discover, the neighborhood pages and booking (`priceRequest` refuses past it). Cards show `travel_extra_cents`.
+- **Pages**: `/api/search` returns `page`, `total`, `more`; the screen has Show more. Ranks (`.rank`) are only on unpaid cards and keep counting across pages.
+- **Paid order**: on `sort=rating` all paid first (Spotlight, then Featured); on price or distance at most `PAID_ON_TOP` (2) paid first, then the order asked for.
+- **"From" price**: `fromCents` is the least it can be booked for (cheapest public package, or rate × `min_hours`). Price filter and sort use it, and the price steps differ per category (`PRICE_STEPS` in `home.js`).
+- **Search by name**: `q`, accents ignored; a name searches every category.
+- **Events**: `EVENT_TYPES` includes Baptism, First Communion, Graduation, Baby shower, Funeral / Memorial. A new event needs `event.*` in both languages, `ES_EVENTS`, `EVENT_FIT`, and the `LANDING_EVENTS`/`_ES` slugs, plus `EVENT_NAMES` in `main.js`.
+- **Category pages for Google**: `LANDING_CATS` in `share.js` (`/chicago/<hood>/catering`, `/es/chicago/<barrio>/comida`…), indexable and in the sitemap only with a real vendor; `main.js` maps the slug to `category=`.
+- **Proof**: `test/plan.test.js` and `e2e/e2e19.mjs`.

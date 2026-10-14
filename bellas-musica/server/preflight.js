@@ -56,6 +56,7 @@ export async function runPreflight(config) {
         const ev = mine.enabled_events || [];
         const need = ["checkout.session.completed", "checkout.session.async_payment_succeeded"].filter((e) => !ev.includes(e) && !ev.includes("*"));
         out.push(need.length ? fail("Stripe webhook events", `the endpoint is missing: ${need.join(", ")}`) : ok("Stripe webhook endpoint", mine.status || "enabled"));
+        if (!ev.includes("*") && !ev.includes("charge.dispute.created")) out.push(warn("Stripe chargeback alerts", "add the events charge.dispute.created and charge.dispute.closed to the endpoint, so you hear about a disputed payment in time to answer it (docs/stripe.md)"));
       }
     } else out.push(warn("Stripe webhook endpoint", "could not list endpoints with this key (restricted key?): confirm it in the Stripe dashboard"));
   }

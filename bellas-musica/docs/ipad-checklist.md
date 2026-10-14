@@ -1,4 +1,4 @@
-# iPad test checklist (about 20 minutes)
+# iPad test checklist (about 25 minutes)
 
 The automated browser tests run in Chromium. They cannot prove how the site behaves in real Safari on a real iPad: the on-screen keyboard, the Home Screen app, autoplay rules, and how a thumb feels on a swipe are all different there. Do this once on a real iPad (and once on an iPhone) before any group or customer sees the site.
 
@@ -45,6 +45,15 @@ Open the site in **Safari** (not Chrome) at your real address. Tick each line; w
 
 ## 7. Spanish
 - [ ] Tap **ES**: the whole screen changes; reload and it stays Spanish. Spot-check a few screens for text that is cut off (Spanish is about 20% longer).
+
+## 8. New on Oct 14 (try these too)
+- [ ] **Logged out**, open a group, pick a date and time: the whole price shows (total, deposit, balance). Fill it in, tap **Continue to pay deposit**, create an account: you come back to the same page with everything still filled in.
+- [ ] In Spanish, type a wrong phone number and tap pay: the red message is in Spanish.
+- [ ] Search: scroll to the bottom and tap **Show more**. Paid cards say Spotlight or Featured and have no "#1".
+- [ ] More filters → **Vendor name**: type part of a group's name.
+- [ ] The **Event** list has Bautizo, Primera Comunión, Graduación, Baby shower and Funeral.
+- [ ] Tap the food chip: "Get quotes" is there too, and the price steps go up to $3,000.
+- [ ] As a vendor: the **Today** box is first. On the iPhone-size screen the tabs are five big ones. In Messages, the **quick replies** fill the box in English or Spanish.
 
 ## If something fails
 Send the screen (side button + volume up for a screenshot), what you tapped, and the iPad model and iOS version. The most likely trouble spots are video autoplay, the keyboard covering a button, and photo upload size.

@@ -23,7 +23,7 @@ async function person(label, viewport = { width: 1000, height: 1100 }) {
   await ctx.route(/youtube|vimeo|tiktok|instagram/, (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<body>player</body>" }));
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
-  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|Problema de conexión/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
   return p;
 }
 const go = (p, hash) => p.goto(`${S.base}/?n=${++nav}${hash}`);

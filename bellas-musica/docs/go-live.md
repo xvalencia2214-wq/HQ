@@ -22,6 +22,9 @@ Set these environment variables (see `.env.example` for the full list):
 | `ADMIN_EMAILS` | your email. Sign up with it, and an **Admin** link appears |
 | `BUSINESS_TZ` | `America/Chicago` |
 | `BACKUP_DIR` | e.g. `/data/backups` (nightly copies, verified, 14 kept) |
+| `BACKUP_S3_URL`, `BACKUP_S3_KEY_ID`, `BACKUP_S3_SECRET` | **off-site copies**: the database, photos and documents go every night to a bucket somewhere else (Cloudflare R2 is free for this size; steps in `docs/publish.md`). `npm run restore -- 2026-10-14` brings a day back onto a new disk |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | optional: the secret of the "connected accounts" webhook (`docs/stripe.md` A.5), so a vendor whose payouts Stripe pauses stops taking deposits at once (a daily check catches it otherwise) |
+| `RATE_LOGIN_IP` | default 30: wrong passwords allowed from one network, across all accounts, per 15 minutes |
 | `ALERT_WEBHOOK_URL` | a Slack/Discord webhook so you're told when something breaks (server errors, failed payments, and pages that crash in someone's browser) |
 | `SENTRY_DSN` | optional: also send those alerts to Sentry (free tier is plenty) |
 | `TWILIO_WHATSAPP_FROM` | optional: a WhatsApp-enabled Twilio number so people can pick WhatsApp for alerts. Twilio must approve your message templates before WhatsApp delivers messages you start; until then use texts |
@@ -31,6 +34,8 @@ Set these environment variables (see `.env.example` for the full list):
 Run `npm run preflight` on the server. It checks every setting and calls Stripe/Resend/Twilio to make sure the keys work. **Fix every FAIL; read every WARN.**
 
 Check: open your address, sign up with your `ADMIN_EMAILS` email, and confirm **Admin** shows in the top bar.
+
+**Always one copy of the server.** Bookings, rate limits and background jobs rely on a single running copy (`numInstances: 1` in `render.yaml`). If the site ever needs more power, pick a bigger plan; never turn on more instances or autoscaling.
 
 ## 2. Email (Resend), about 20 minutes
 

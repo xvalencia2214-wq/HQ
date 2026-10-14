@@ -48,10 +48,16 @@ NODE_PATH=$(npm root -g) node e2e/e2e13.mjs   # business tools: windows, crews, 
 NODE_PATH=$(npm root -g) node e2e/touch.mjs   # tap-target sizes on the main screens
 ```
 
-## Ideas from the 2026-10-14 audit (`bellas-musica/docs/improvement-plan.md`)
+## What the dashboard has since Oct 14, 2026 (keep it working)
 
-- **"Today" summary first**: next gig, requests waiting with countdowns, unread messages, money on the way.
-- **Search appearances per listing**, with a simple funnel (seen → opened → requested → confirmed) so a vendor knows whether its photos or its price are the problem.
-- **Price insight**: "Mariachis near you usually charge $X–$Y for 2 hours" from real public packages.
-- **Fewer tabs on phones**: group the 9 tabs into Requests · Calendar · My page · Money · Messages.
-- **Reply templates** in both languages for common questions (price, travel, songs).
+- **Today box** (`todayBox` in `server/vendor-insights.js`, `todayCard` in `dashboard.js`): first on the Requests tab, above the checklist.
+  - Requests waiting with the earliest answer-by time.
+  - The next party, unread messages, balances to collect, held deposits.
+- **Seen in search**: `/api/search` counts `search_seen` per listing (`stats.countMany`). It leads the tiles, with a one-line tip (`stat.tipOpen` / `stat.tipBook`).
+- **Price insight** (`priceInsight`): the middle half of real, live listings of the same type within 30 miles.
+  - Needs 3 or more; sample listings never count.
+  - Shown on Profile and Packages.
+- **Five tabs on a phone** (`TAB_GROUPS`, `.tabs-grouped`/`.tabs-sub` under 700px). The addresses (`tab=…`) are unchanged; add a new tab to both `TABS` and a group.
+- **Quick replies**: `renderChat({ quick })` with `{ label, en, es }`. The vendor picks the language; the text fills the box to edit, never sent by itself.
+- **Payouts paused** by Stripe: the vendor is emailed/texted (`payouts.off.group`).
+- **Still to consider**: reply templates the vendor writes, and per-listing conversion over time.

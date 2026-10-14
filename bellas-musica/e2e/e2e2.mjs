@@ -128,7 +128,7 @@ try {
   ok("bookings list then shows the balance as paid and no pay button", (await Cu.locator(".req").innerText()).includes("Balance paid in the app") && (await Cu.locator("[data-balance]").count()) === 0);
   await gotoHash(Ow, `#/dashboard?g=${gid}&tab=requests`); await Ow.waitForSelector(".req");
   ok("group sees the balance as paid in the app", (await Ow.locator(".req").innerText()).includes("paid in the app"));
-  ok("group sees last-30-day numbers", (await Ow.locator(".tiles.small .tile").count()) === 5);
+  ok("group sees last-30-day numbers (seen in search first)", (await Ow.locator(".tiles.small .tile").count()) === 6 && /Seen in search/.test(await Ow.locator(".tiles.small .tile").first().innerText()));
 
   // reschedule
   await Cu.click("[data-resched]"); await Cu.waitForSelector(".rs-cal .cal");

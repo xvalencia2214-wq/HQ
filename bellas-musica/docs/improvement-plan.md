@@ -1,5 +1,13 @@
 # Improvement plan (audit of 2026-10-14)
 
+> **Status: all 21 items done (same day).** Each is proven in `test/plan.test.js` (server) and `e2e/e2e19.mjs` (browser),
+> numbered as below; Spanish for every server message is enforced by `test/errors-es.test.js`.
+> The three decisions were taken as recommended: at most 2 paid listings first on Lowest price / Closest and no rank on
+> paid cards; vendors hidden past their travel miles unless they charge a travel fee (then up to twice as far); the five
+> new events. What is left is yours to do outside the code: create the Cloudflare R2 bucket (`docs/publish.md`), add the
+> dispute events and the Connect endpoint in Stripe (`docs/stripe.md` A.5), and have a native speaker read the new
+> Spanish (`npm run spanish-sheet`).
+
 **What this is:** a review of the code as it stands (commit `bc9aa8b`), with fixes ranked by how much they help families find and book bandas, grupos, mariachis, catering, decorations and other vendors.
 
 **Nothing in the app was changed for this audit.** The project skills in `/.claude/skills/` hold the rules and checks for each area, so future work follows the same playbook.

@@ -93,4 +93,26 @@ that says FAIL.
   last version that worked.
 - **"Port in use" or other messages on your own computer** don't matter here: Render runs its own copy.
 - **Backups:** the app copies the database every night to the disk (`/data/backups`, 14 days kept) and Render also
-  snapshots the disk every day (service → **Disks**).
+  snapshots the disk every day (service → **Disks**). Both live with the server, so also turn on the **off-site copy** below.
+
+## Off-site copy (about 10 minutes, free)
+
+Every night the app sends the database, every photo and every license document to a storage "bucket" at another company,
+so even if Render lost the disk nothing is gone. Cloudflare R2 is free at this size.
+
+1. Make a free account at **cloudflare.com**. In the dashboard open **R2 Object Storage** → **Create bucket**, name it
+   `bellas-backups`, location **Automatic**. Leave it **private** (the default).
+2. On the R2 page, **Manage R2 API Tokens** → **Create API token**: permission **Object Read & Write**, only for
+   `bellas-backups`. Copy the **Access Key ID**, the **Secret Access Key**, and the **S3 address** it shows
+   (`https://<long number>.r2.cloudflarestorage.com`).
+3. In Render → your service → **Environment**, add:
+   - `BACKUP_S3_URL` = the S3 address followed by `/bellas-backups`
+   - `BACKUP_S3_KEY_ID` = the Access Key ID
+   - `BACKUP_S3_SECRET` = the Secret Access Key
+   Save; Render restarts the site.
+4. Within the hour the Admin page shows **Off-site copy: On** with the time of the last copy. If a copy ever fails you
+   get an alert, and it tries again every hour.
+
+**If the disk is ever lost:** in Render open **Shell** and run `npm run restore -- 2026-10-14` (the day you want).
+It brings back that day's database and every photo and document, then restart the service. Anything already on the disk
+is kept (renamed), never overwritten.

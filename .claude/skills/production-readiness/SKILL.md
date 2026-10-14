@@ -77,15 +77,15 @@ Connected tools that help (claude.ai connectors in this account):
 
 Vercel is also connected but does not fit this app (it needs a persistent disk and one long-running process).
 
-## Known gaps (2026-10-14 audit, `bellas-musica/docs/improvement-plan.md`)
+## Since the Oct 14, 2026 plan (keep it this way)
 
-1. **A malformed cookie crashes every API call for that visitor.**
-   - `parseCookies` calls `decodeURIComponent`, which throws on a stray `%`. The result is a 500 on `/api/*` and an alert each time.
-   - Reproduced with `Cookie: _ga=100%`.
-2. **Backups stay on the same disk**:
-   - The nightly copies go to the same disk as the database (`/data/backups`).
-   - Photos (`/data/uploads`) are covered only by Render's disk snapshots.
-   - Add an off-site copy (e.g. S3/R2) and a restore drill.
-3. **Stripe events not handled**: no webhook handling for `charge.dispute.*` (chargebacks) or `account.updated` (a vendor's payouts disabled).
-4. **Missing indexes**: `reviews(group_id)`, `photos(group_id)`, `packages(group_id)`. Fine at launch size, but needed as listings grow.
-5. **Login limiter keys**: the login limiter is keyed per IP + email, so one network can try many accounts (capped only by the general 300/min limit).
+- **Cookies**: `parseCookies` keeps a malformed cookie's raw text instead of throwing; `test/errors-es.test.js` covers it.
+- **Off-site backups** (`server/offsite.js`), set with `BACKUP_S3_URL`, `BACKUP_S3_KEY_ID`, `BACKUP_S3_SECRET` and optional `BACKUP_S3_REGION`:
+  - Photos and documents are sent first, then a fresh, checked database copy once a day, to any S3-compatible bucket (`offsite_files` records what went).
+  - Signed with SigV4, verified against AWS's published examples in `test/plan.test.js`.
+  - Failures and staleness are alerted. Status shows on the Admin page; preflight warns when it is off.
+  - `npm run restore -- <day>` restores onto a new disk and keeps what was there.
+- **Stripe**: chargebacks are alerted, and paused payouts are applied (see booking-reliability). Preflight warns when the endpoint lacks `charge.dispute.created`.
+- **Login**: wrong passwords from one IP are limited across all accounts (`loginFails` limiter, `RATE_LOGIN_IP`, default 30 per 15 min). Correct logins don't count.
+- **Indexes**: `idx_reviews_group`, `idx_photos_group`, `idx_packages_group`.
+- **One instance**: `numInstances: 1` in `render.yaml`. Never scale out (see the top of this skill).

@@ -21,7 +21,7 @@ async function person(label, opts = {}) {
   await ctx.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   const p = await ctx.newPage();
   p.on("pageerror", (e) => problems.push(`${label} pageerror: ${e.message}`));
-  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|ERR_INTERNET_DISCONNECTED/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
+  p.on("console", (m) => { const x = m.text(); if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|net::|Failed to fetch|Connection problem|Problema de conexión|ERR_INTERNET_DISCONNECTED/.test(x)) problems.push(`${label} console: ${x}`); if (/missing translation/.test(x)) problems.push(`${label} i18n: ${x}`); });
   return { p, ctx };
 }
 const go = (p, hash) => p.goto(`${S.base}/?n=${++nav}${hash}`);
@@ -67,12 +67,12 @@ try {
   // ---- the vendor: notifications in Account and the dashboard reminder ----
   const { p: B } = await person("beto", { permissions: ["notifications"] });
   await login(B, "beto@example.com");
-  await go(B, `#/dashboard?g=${gid}`); await B.waitForSelector(".tabs");
+  await go(B, `#/dashboard?g=${gid}`); await B.waitForSelector(".tabs >> visible=true");
   await B.waitForSelector("#pushnudge:not([hidden])");
   ok("dashboard reminds the vendor to turn on notifications", /Get new requests and payments on your phone/.test(await B.locator("#pushnudge").innerText()));
   await B.click("#push-nudge-x");
   ok("'Not now' hides the reminder", await B.locator("#pushnudge").isHidden());
-  await go(B, `#/dashboard?g=${gid}`); await B.waitForSelector(".tabs"); await B.waitForTimeout(400);
+  await go(B, `#/dashboard?g=${gid}`); await B.waitForSelector(".tabs >> visible=true"); await B.waitForTimeout(400);
   ok("...and it stays hidden for a while", await B.locator("#pushnudge").isHidden());
   await go(B, "#/account"); await B.waitForSelector("#pushbox button, #pushbox .note");
   ok("Account has the notifications switch", (await B.locator("#push-on").count()) === 1);

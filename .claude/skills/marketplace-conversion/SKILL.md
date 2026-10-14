@@ -61,11 +61,16 @@ AXE=/path/to/axe.min.js NODE_PATH=$(npm root -g) node e2e/a11y.mjs
 node e2e/qa.mjs /tmp/shots                     # screenshots of every screen (iPad + phone) to eyeball
 ```
 
-## Biggest opportunities (2026-10-14 audit, `bellas-musica/docs/improvement-plan.md`)
+## Done in the Oct 14, 2026 plan (measure them)
 
-1. **The vendor page shows the calendar but hides the booking form and the price until the customer logs in** (`drawBook` in `group.js` returns the log-in box first). Let them pick a package and see the total and deposit first; ask for the account at "Pay deposit".
-2. **Search shows at most 20 vendors** and has no "Show more".
-3. **Missing event types**: Bautizo, Primera Comunión, Graduation, Baby shower and Funeral/Velorio, which are common reasons to hire mariachi or catering.
-4. **Get quotes and the Google pages are offered only for music.** Catering, decorations and rentals miss both doors.
-5. **Card prices for hourly vendors show the hourly rate**, not the real minimum (rate × minimum hours).
-6. **Search appearances are not counted per vendor**, so neither the owner nor the vendor can see where families drop off.
+1. **Price before an account**: the full booking form and the quote show logged out. "Continue to pay deposit" keeps the choices through sign-up/log-in and brings the visitor back to pay.
+   - Watch: `booking_started / group_view`.
+2. **Show more**, search by name, new events (Bautizo, Primera Comunión, Graduación, Baby shower, Funeral / Misa).
+3. **Get quotes for every category**, worded per category (`rq.cta` uses `{whos}`), plus Google pages per category.
+4. **Honest prices**: "from" is rate × minimum hours or the cheapest package; price steps per category.
+5. **Search appearances per vendor** (`search_seen`): the funnel seen → opened → requested → confirmed is now visible to each vendor.
+
+Next ideas, measured first:
+- Show the quote's deposit on the card.
+- A one-tap "Ask these 3" from a shortlist.
+- Remembering the family's event details across visits.
