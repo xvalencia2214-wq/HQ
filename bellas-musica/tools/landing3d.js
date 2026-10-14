@@ -1,12 +1,12 @@
-// The 3D scene on the welcome page: a navy charro sombrero turned on a lathe (its profile spun around an axis): a smooth
-// rounded crown, a cream band embroidered with flowers and gold scrolls under a wavy braided gold cord, the knot with its
-// tassels on the side, and gold trim, under a string of papel picado that waves in the breeze. It follows the pointer,
+// The 3D scene on the welcome page: a black and gold sombrero (like the logo) turned on a lathe (its profile spun around an
+// axis): a smooth rounded crown in black felt, a gold band embroidered with black flowers and scrolls under a wavy braided
+// gold cord, the knot with its tassels on the side, a gold zigzag around the brim, and gold trim, under a string of papel picado that waves in the breeze. It follows the pointer,
 // turns with the scroll, bounces to the music and spins when tapped.
 // Bundled with only the parts of three.js it uses:  npm run build:landing  ->  public/vendor/landing3d.js
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, Vector2, Vector3, Color, Fog,
   LatheGeometry, CylinderGeometry, TorusGeometry, PlaneGeometry, SphereGeometry,
-  MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial, Mesh, InstancedMesh, Object3D,
+  MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial, Mesh, InstancedMesh, Object3D, Quaternion,
   HemisphereLight, DirectionalLight, PointLight, CanvasTexture, SRGBColorSpace, DoubleSide, PMREMGenerator, ACESFilmicToneMapping,
   BufferGeometry, Float32BufferAttribute, LineBasicMaterial, Line, RepeatWrapping, Points, PointsMaterial
 } from "three";
@@ -14,12 +14,12 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 
 // ---- textures drawn on a canvas ----
 function bandTexture() {
-  // a cream band whose top edge waves up and down under a braided gold cord (above the wave is cut away), with navy
-  // flowers and gold scrolls stitched between the waves, like the "pita" embroidery of a charro hat
+  // a gold band whose top edge waves up and down under a braided gold cord (above the wave is cut away), with black
+  // flowers and dark gold scrolls stitched between the waves, like the "pita" embroidery of a charro hat
   const W = 1024, H = 256, WAVES = 8, c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d");
   const top = (px) => 64 - 30 * Math.cos((px / W) * WAVES * Math.PI * 2); // the wave: 34 at its peaks, 94 in its dips
-  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#fbf4e2"); g.addColorStop(1, "#e6d3a8");
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#e2b54e"); g.addColorStop(0.5, "#c08f2c"); g.addColorStop(1, "#8f6418");
   x.fillStyle = g; x.beginPath(); x.moveTo(0, H);
   for (let px = 0; px <= W; px += 4) x.lineTo(px, top(px));
   x.lineTo(W, H); x.closePath(); x.fill();
@@ -29,9 +29,9 @@ function bandTexture() {
   cord(() => { x.moveTo(0, H - 12); x.lineTo(W, H - 12); }, 18);
   for (let i = 0; i < WAVES; i++) {
     const cx = (i + 0.5) * (W / WAVES), cy = 168; // under each dip of the wave: a flower, with gold scrolls either side
-    x.strokeStyle = "#b8862a"; x.lineWidth = 5; x.lineCap = "round";
+    x.strokeStyle = "#5c4210"; x.lineWidth = 5; x.lineCap = "round";
     for (const s of [-1, 1]) { x.beginPath(); x.moveTo(cx + s * 22, cy + 6); x.bezierCurveTo(cx + s * 40, cy + 30, cx + s * 58, cy - 6, cx + s * 46, cy - 18); x.stroke(); x.beginPath(); x.arc(cx + s * 40, cy - 12, 7, 0, Math.PI * 1.5); x.stroke(); }
-    x.fillStyle = "#14285e";
+    x.fillStyle = "#111111";
     for (let p = 0; p < 5; p++) { const a = (p / 5) * Math.PI * 2 - Math.PI / 2; x.beginPath(); x.arc(cx + Math.cos(a) * 13, cy + Math.sin(a) * 13, 10, 0, Math.PI * 2); x.fill(); }
     x.fillStyle = "#e6c063"; x.beginPath(); x.arc(cx, cy, 7, 0, Math.PI * 2); x.fill();
   }
@@ -87,7 +87,7 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32], [3.36, 0.5], [3.42, 0.62], [3.38, 0.7],          // the brim curling up at the edge
     [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
   ].map(([r, y]) => new Vector2(r, y));
-  const felt = new MeshPhysicalMaterial({ color: "#0c1a44", roughness: 0.62, metalness: 0.08, sheen: 0.8, sheenColor: new Color("#3a55a0"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
+  const felt = new MeshPhysicalMaterial({ color: "#060606", roughness: 0.55, metalness: 0.05, sheen: 0.45, sheenColor: new Color("#3a3a3a"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
   // A lathe is the same all the way round; a charro brim is not: its back sweeps up high and its front a little. Every point of the brim is lifted,
   // more the farther out and the nearer the back it is (nothing within the crown moves), and the trim and studs follow.
   const BACK = -Math.PI / 2; // the back of the hat: -z, away from the camera at the start
@@ -109,6 +109,17 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
   for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27 + lift(Math.cos(a) * 2.6, Math.sin(a) * 2.6), Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
+  // a gold zigzag all the way around the top of the brim, near its edge (the logo's greca)
+  const brimTop = (r) => 0.3 + (r - 2.75) * (0.12 / 0.35) + 0.03; // the rolled top of the brim, seen from above
+  const ZIG = 96, zigPts = [];
+  for (let i = 0; i <= ZIG; i++) { const a = (i / ZIG) * Math.PI * 2, r = i % 2 ? 3.12 : 2.92, xx = Math.cos(a) * r, zz = Math.sin(a) * r; zigPts.push(new Vector3(xx, brimTop(r) + lift(xx, zz), zz)); }
+  const zigGeo = new CylinderGeometry(0.032, 0.032, 1, 6), zig = new InstancedMesh(zigGeo, silver, ZIG), up = new Vector3(0, 1, 0);
+  for (let i = 0; i < ZIG; i++) {
+    const a = zigPts[i], b = zigPts[i + 1], dir = new Vector3().subVectors(b, a), len = dir.length();
+    dummy.position.copy(a).addScaledVector(dir, 0.5); dummy.quaternion.copy(new Quaternion().setFromUnitVectors(up, dir.normalize())); dummy.scale.set(1, len, 1);
+    dummy.updateMatrix(); zig.setMatrixAt(i, dummy.matrix);
+  }
+  hat.add(zig);
   // the knot on the side of the band, with two tassels hanging from it
   const knot = new Mesh(new SphereGeometry(0.11, 16, 12), silver); knot.scale.set(0.8, 1.3, 0.6); knot.position.set(1.0, 0.62, 0.02); hat.add(knot);
   for (const [dz, len] of [[-0.05, 0.3], [0.07, 0.24]]) {
