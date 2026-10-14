@@ -83,36 +83,38 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   // ---- the sombrero: a profile (radius, height) spun around the vertical axis ----
   const hat = new Group();
   const profile = [
-    [0.0, 2.2], [0.22, 2.18], [0.42, 2.1], [0.58, 1.94], [0.71, 1.66], [0.81, 1.28], [0.89, 0.88], [0.96, 0.52], [1.02, 0.32], // the tall, smoothly rounded crown
-    [1.2, 0.26], [1.7, 0.22], [2.3, 0.2], [2.8, 0.23], [3.15, 0.32], [3.36, 0.5], [3.42, 0.62], [3.38, 0.7],          // the brim curling up at the edge
-    [3.26, 0.62], [3.1, 0.42], [2.75, 0.3], [2.2, 0.26], [1.6, 0.27], [1.15, 0.3], [1.0, 0.25]                        // its underside
+    [0.0, 2.07], [0.22, 2.09], [0.46, 2.14], [0.64, 2.12], [0.76, 2.02], [0.82, 1.78], [0.87, 1.3], [0.92, 0.8], [0.97, 0.3], // the tall crown, its top dented in the middle (like the logo)
+    [1.15, 0.24], [1.8, 0.2], [2.4, 0.23], [2.8, 0.32], [3.05, 0.48], [3.2, 0.68], [3.26, 0.86], [3.3, 0.9],  // a thin brim that curls up at its edge
+    [3.33, 0.85], [3.28, 0.66], [3.12, 0.45], [2.86, 0.28], [2.45, 0.18], [1.8, 0.15], [1.15, 0.18], [0.97, 0.22] // its outside, a hair below
   ].map(([r, y]) => new Vector2(r, y));
   const felt = new MeshPhysicalMaterial({ color: "#060606", roughness: 0.55, metalness: 0.05, sheen: 0.45, sheenColor: new Color("#3a3a3a"), sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45, side: DoubleSide });
-  // A lathe is the same all the way round; a charro brim is not: its back sweeps up high and its front a little. Every point of the brim is lifted,
-  // more the farther out and the nearer the back it is (nothing within the crown moves), and the trim and studs follow.
+  // A lathe is the same all the way round; the logo's brim is a canoe: from the side both ends ride up. Every point of the brim is lifted a
+  // little, more the farther out and the nearer the front or the back it is (nothing within the crown moves), and the trim, studs and zigzag follow.
   const BACK = -Math.PI / 2; // the back of the hat: -z, away from the camera at the start
   const lift = (x, z) => {
-    const r = Math.hypot(x, z); if (r <= 1.25) return 0;
-    const out = Math.min(1, (r - 1.25) / 2.15), back = (1 + Math.cos(Math.atan2(z, x) - BACK)) / 2, front = 1 - back;
-    return out * out * out * (2.5 * back * back + 0.7 * front * front); // high at the back, a little at the front, like a canoe
+    const r = Math.hypot(x, z); if (r <= 1.2) return 0;
+    const out = Math.min(1, (r - 1.2) / 2.1), ends = (1 + Math.cos(2 * (Math.atan2(z, x) - BACK))) / 2; // 1 at the front and back, 0 at the sides
+    return out * out * (0.12 + 0.4 * ends); // a gentle canoe, never a wall
   };
   const curl = (geo) => { const p = geo.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + lift(p.getX(i), p.getZ(i))); geo.computeVertexNormals(); return geo; };
   const body = new Mesh(curl(new LatheGeometry(profile, reduced || lowPower ? 96 : 160)), felt);
   hat.add(body);
   // the band wraps the bottom of the crown (from 0.32 up to 0.98), a hair outside the felt
-  const band = new Mesh(new CylinderGeometry(0.905, 1.04, 0.66, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.7, metalness: 0.05, transparent: true, alphaTest: 0.5, side: DoubleSide }));
+  const band = new Mesh(new CylinderGeometry(0.94, 1.0, 0.66, 128, 1, true), new MeshStandardMaterial({ map: bandTexture(), roughness: 0.7, metalness: 0.05, transparent: true, alphaTest: 0.5, side: DoubleSide }));
   band.position.y = 0.65; hat.add(band);
   const silver = new MeshPhysicalMaterial({ color: "#e0b04a", metalness: 1, roughness: 0.22, clearcoat: 1 }); // gold trim
-  const trim = new Mesh(curl(new TorusGeometry(3.36, 0.06, 16, 200).rotateX(Math.PI / 2).translate(0, 0.66, 0)), silver); hat.add(trim);
-  const trim2 = new Mesh(new TorusGeometry(1.02, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.34; hat.add(trim2);
+  const trim = new Mesh(curl(new TorusGeometry(3.31, 0.045, 16, 200).rotateX(Math.PI / 2).translate(0, 0.89, 0)), silver); hat.add(trim);
+  const trim2 = new Mesh(new TorusGeometry(1.0, 0.035, 12, 120), silver); trim2.rotation.x = Math.PI / 2; trim2.position.y = 0.3; hat.add(trim2);
   // little gold studs (botonadura) around the brim
   const studGeo = new SphereGeometry(0.05, 12, 8), studs = new InstancedMesh(studGeo, silver, 36), dummy = new Object3D();
-  for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.6, 0.27 + lift(Math.cos(a) * 2.6, Math.sin(a) * 2.6), Math.sin(a) * 2.6); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
+  for (let i = 0; i < 36; i++) { const a = (i / 36) * Math.PI * 2; dummy.position.set(Math.cos(a) * 2.1, 0.23 + lift(Math.cos(a) * 2.1, Math.sin(a) * 2.1), Math.sin(a) * 2.1); dummy.updateMatrix(); studs.setMatrixAt(i, dummy.matrix); }
   hat.add(studs);
-  // a gold zigzag all the way around the top of the brim, near its edge (the logo's greca)
-  const brimTop = (r) => 0.3 + (r - 2.75) * (0.12 / 0.35) + 0.03; // the rolled top of the brim, seen from above
-  const ZIG = 96, zigPts = [];
-  for (let i = 0; i <= ZIG; i++) { const a = (i / ZIG) * Math.PI * 2, r = i % 2 ? 3.12 : 2.92, xx = Math.cos(a) * r, zz = Math.sin(a) * r; zigPts.push(new Vector3(xx, brimTop(r) + lift(xx, zz), zz)); }
+  // a gold zigzag all the way around the outside of the brim's upturned edge: the band you see on the front of the logo's brim
+  const ZIG = 120, zigPts = [];
+  for (let i = 0; i <= ZIG; i++) {
+    const a = (i / ZIG) * Math.PI * 2, [r, y] = i % 2 ? [3.335, 0.74] : [3.2, 0.5]; // high and low points, a hair outside the felt
+    const xx = Math.cos(a) * r, zz = Math.sin(a) * r; zigPts.push(new Vector3(xx, y + lift(xx, zz), zz));
+  }
   const zigGeo = new CylinderGeometry(0.032, 0.032, 1, 6), zig = new InstancedMesh(zigGeo, silver, ZIG), up = new Vector3(0, 1, 0);
   for (let i = 0; i < ZIG; i++) {
     const a = zigPts[i], b = zigPts[i + 1], dir = new Vector3().subVectors(b, a), len = dir.length();
@@ -126,7 +128,7 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     const cord = new Mesh(new CylinderGeometry(0.012, 0.012, len, 6), silver); cord.position.set(1.07, 0.56 - len / 2, dz); hat.add(cord);
     const tassel = new Mesh(new CylinderGeometry(0.025, 0.05, 0.1, 10), silver); tassel.position.set(1.07, 0.5 - len, dz); hat.add(tassel);
   }
-  hat.position.set(2.9, -0.7, 0); hat.rotation.x = 0.32;
+  hat.position.set(2.05, -0.3, 0); hat.rotation.x = 0.16;
   scene.add(hat);
 
   // ---- papel picado: a string across the top with paper flags that wave ----
@@ -158,17 +160,18 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
   // ---- state from the page ----
   let pointerX = 0, pointerY = 0, scroll = 0, level = 0, spin = 0, visible = true, raf = 0, last = performance.now(), t0 = last;
   // where the hat sits: beside the headline on a wide screen, small above it on a phone
-  let lay = { x: 2.9, y: -0.7, s: 0.8, sy: 4.45 };
+  let lay = { x: 2.05, y: -0.3, s: 0.54, sy: 4.45 };
   const resize = () => {
     const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
     renderer.setSize(w, h, false); camera.aspect = w / h;
     const wide = w / h > 1.05;
     camera.position.z = wide ? 9.5 : 13;
-    lay = wide ? { x: Math.min(2.9, (w / h) * 1.9), y: -0.7, s: 0.8, sy: 4.45 } : { x: 0, y: 2.05, s: 0.44, sy: 4.75 };
+    lay = wide ? { x: Math.min(2.05, (w / h) * 1.4), y: -0.3, s: 0.54, sy: 4.45 } : { x: 0, y: 2.05, s: 0.38, sy: 4.75 };
     strand.position.x = 0; strand.scale.setScalar(wide ? 1 : 0.62);
     camera.updateProjectionMatrix();
   };
   const ro = new ResizeObserver(resize); ro.observe(canvas); resize();
+  hat.position.x = lay.x; // start where it belongs on this screen (it glides only when the screen changes shape)
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) loop(); }, { threshold: 0 });
   io.observe(canvas);
   const onVis = () => { if (!document.hidden && visible && !raf) loop(); };
@@ -181,7 +184,7 @@ export function mountSombrero(canvas, { reduced = false, lowPower = false } = {}
     const idle = reduced ? 0 : 1;
     spin *= Math.pow(0.04, dt);
     hat.rotation.y += dt * (0.25 * idle + spin) + 0;
-    const tx = 0.32 + pointerY * 0.25 + scroll * 0.6, tz = -pointerX * 0.2;
+    const tx = 0.16 + pointerY * 0.2 + scroll * 0.6, tz = -pointerX * 0.2;
     hat.rotation.x += (tx - hat.rotation.x) * Math.min(1, dt * 4);
     hat.rotation.z += (tz - hat.rotation.z) * Math.min(1, dt * 4);
     const bounce = level * 0.35;
