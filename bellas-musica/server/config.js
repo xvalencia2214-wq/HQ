@@ -11,13 +11,15 @@ export function loadConfig(env = process.env) {
   fs.mkdirSync(path.join(dataDir, "uploads"), { recursive: true });
   const prod = env.NODE_ENV === "production";
 
-  let secret = env.SESSION_SECRET;
+  let secret = env.SESSION_SECRET, secretGenerated = false;
   if (!secret) {
-    if (prod) throw new Error("SESSION_SECRET must be set in production");
-    // Dev convenience: generate once and keep it beside the database.
-    const f = path.join(dataDir, ".dev-secret");
+    // Not set (a host service made by hand instead of from render.yaml): make a strong one once and keep it beside the
+    // database, on the persistent disk, so the site still starts. Preflight and the start-up log say to set it.
+    const f = path.join(dataDir, prod ? ".session-secret" : ".dev-secret");
     if (!fs.existsSync(f)) fs.writeFileSync(f, crypto.randomBytes(32).toString("hex"), { mode: 0o600 });
     secret = fs.readFileSync(f, "utf8");
+    secretGenerated = true;
+    if (prod) console.warn("SESSION_SECRET is not set: using one generated and saved in DATA_DIR. Set it in your host's environment settings.");
   }
 
   const int = (v, d) => (v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
@@ -32,7 +34,7 @@ export function loadConfig(env = process.env) {
     baseUrl: (env.BASE_URL || env.RENDER_EXTERNAL_URL || `http://localhost:${int(env.PORT, 3000)}`).replace(/\/$/, ""),
     previewPassword: env.PREVIEW_PASSWORD || "", // set it to keep the whole site private (the browser asks for it) until launch
     trustProxy: env.TRUST_PROXY === "1",
-    secret,
+    secret, secretGenerated,
     demoSeed: env.DEMO_SEED !== "0",
     adminEmails: String(env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean), // who may open the admin page
     sitemapCacheSeconds: int(env.SITEMAP_CACHE, 600), // sitemap.xml is rebuilt at most this often (0 = every request; tests use 0)
