@@ -78,7 +78,7 @@ function person() {
 }
 async function signup(email, name, extra = {}) {
   const p = person();
-  await p.post("/api/auth/register", { email, name, password: PASSWORD, phone: "(312) 555-01" + String(10 + Math.floor(Math.random() * 89)), ...extra });
+  await p.post("/api/auth/register", { email, name, password: PASSWORD, agree: true, phone: "(312) 555-01" + String(10 + Math.floor(Math.random() * 89)), ...extra });
   return p;
 }
 const next60 = (slots) => Object.fromEntries(Array.from({ length: 60 }, (_, i) => [addDays(todayStr(), i + 1), slots]));

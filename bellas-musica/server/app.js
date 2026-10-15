@@ -13,7 +13,7 @@ import { createNotifier } from "./notify.js";
 import { userFromRequest } from "./auth.js";
 import { HttpError, readBody, readJson, createLimiter, setTimezone } from "./util.js";
 import { MIME_BY_EXT } from "./media.js";
-import { expirePending } from "./shared.js";
+import { expirePending, showSampleStars } from "./shared.js";
 import { seedDemo } from "./seed.js";
 import { renderSharePage, renderLandingPage, robotsTxt, sitemapXml } from "./share.js";
 import { startJobs } from "./jobs.js";
@@ -82,6 +82,7 @@ export function createApp(config) {
   setTimezone(config.timezone);
   const db = openDb(config);
   const stripe = createStripe(config);
+  showSampleStars(!stripe.live); // no made-up stars on sample listings once real customers can pay (see shared.js)
   const alert = createAlerts(config);
   const sms = createSms(config, db, alert);
   const push = createPush(config, db, alert);

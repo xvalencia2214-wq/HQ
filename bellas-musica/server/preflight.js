@@ -21,7 +21,7 @@ export async function runPreflight(config) {
   out.push(major > 22 || (major === 22 && minor >= 13) ? ok("Node version", process.versions.node) : fail("Node version", `${process.versions.node}: Node 22.13 or newer is required`));
   out.push(config.prod ? ok("NODE_ENV=production") : warn("NODE_ENV", "not 'production': fine for testing, but set it on the live server"));
   out.push(config.baseUrl.startsWith("https://") ? ok("BASE_URL is https", config.baseUrl) : (config.prod ? fail("BASE_URL", `${config.baseUrl} is not https: cookies would be sent insecurely and Stripe redirects break`) : warn("BASE_URL", `${config.baseUrl}: use your real https address when you deploy`)));
-  out.push(config.prod && config.secretGenerated ? warn("SESSION_SECRET", "not set: the site made one and saved it on the disk. Set SESSION_SECRET in your host's environment (openssl rand -hex 32) so it survives a lost disk") : config.secret.length >= 32 && config.prod ? ok("SESSION_SECRET is long and set") : (config.prod ? fail("SESSION_SECRET", "must be at least 32 characters (openssl rand -hex 32)") : warn("SESSION_SECRET", "using a generated development secret")));
+  out.push(config.prod && config.secretGenerated ? warn("SESSION_SECRET", "not set: the site made one and saved it on the disk. Set SESSION_SECRET in your host's environment (openssl rand -hex 32) so it survives a lost disk") : config.secret.length >= 32 && config.prod ? ok("SESSION_SECRET is long and set") : (config.prod ? fail("SESSION_SECRET", "must be at least 32 characters (openssl rand -hex 32)") : config.secretGenerated ? warn("SESSION_SECRET", "using a generated development secret") : ok("SESSION_SECRET is set")));
   if (config.prod && !config.trustProxy) out.push(warn("TRUST_PROXY", "not set: behind a load balancer every visitor will look like one IP, and rate limits will punish everyone together"));
   try { const f = path.join(config.dataDir, ".preflight"); fs.writeFileSync(f, "x"); fs.rmSync(f); out.push(ok("DATA_DIR is writable", config.dataDir)); } catch (e) { out.push(fail("DATA_DIR", `cannot write to ${config.dataDir}: ${e.message}. Use a persistent disk!`)); }
   try { setTimezone(config.timezone); out.push(ok("BUSINESS_TZ", config.timezone)); } catch { out.push(fail("BUSINESS_TZ", `${config.timezone} is not a valid time zone`)); }
@@ -37,6 +37,7 @@ export async function runPreflight(config) {
   out.push(config.offsite.url && config.offsite.keyId && config.offsite.secret ? ok("BACKUP_S3_URL", `off-site copies to ${config.offsite.url.replace(/^https?:\/\//, "").split("/")[0]}`) : warn("BACKUP_S3_URL", "empty: backups stay on the same disk as the database (set BACKUP_S3_URL, BACKUP_S3_KEY_ID, BACKUP_S3_SECRET)"));
 
   // ---- Stripe ----
+  if (config.stripeKey && config.demoSeed) out.push(warn("DEMO_SEED", "sample listings still show next to real vendors (they can't be booked and show no stars). Set DEMO_SEED=0 once about 10 real vendors are live"));
   if (!config.stripeKey) out.push(warn("Stripe", "STRIPE_SECRET_KEY is empty: payments are SIMULATED (fine for testing, no real money moves)"));
   else {
     const H = { Authorization: `Bearer ${config.stripeKey}` };

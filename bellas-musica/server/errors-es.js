@@ -45,6 +45,7 @@ const EXACT = {
   "Too many sign-ups from this network. Try again later.": "Demasiados registros desde esta red. Intenta más tarde.",
   "Enter a valid email": "Escribe un correo electrónico válido.",
   "Password must be 8 to 200 characters": "La contraseña debe tener de 8 a 200 caracteres.",
+  "Please confirm you are 18 or older and agree to the Terms of Service and Privacy Policy": "Confirma que tienes 18 años o más y que aceptas los Términos de servicio y el Aviso de privacidad.",
   "That email already has an account. Try logging in.": "Ese correo ya tiene una cuenta. Intenta iniciar sesión.",
   "Too many login attempts. Try again in 15 minutes.": "Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.",
   "Too many login attempts from this network. Try again in 15 minutes.": "Demasiados intentos de inicio de sesión desde esta red. Intenta de nuevo en 15 minutos.",

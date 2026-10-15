@@ -575,6 +575,8 @@ export function openDb(config) {
   ensureColumn("users", "ref_code", "TEXT NOT NULL DEFAULT ''");          // a vendor's referral code
   ensureColumn("users", "referred_by", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn("users", "ref_rewarded", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn("users", "terms_version", "TEXT NOT NULL DEFAULT ''");     // which Terms/Privacy version they agreed to at sign-up
+  ensureColumn("users", "terms_at", "INTEGER NOT NULL DEFAULT 0");        // and when (accounts made before the box existed: 0)
   ensureColumn("users", "signup_source", "TEXT NOT NULL DEFAULT ''");     // ?src= partner link (church, dress shop...)
   ensureColumn("users", "notify_channel", "TEXT NOT NULL DEFAULT 'sms'"); // sms | whatsapp
   ensureColumn("groups", "fee_discount_until", "INTEGER NOT NULL DEFAULT 0"); // referral reward: half fee until then

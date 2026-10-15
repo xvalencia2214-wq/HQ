@@ -47,10 +47,15 @@ export function ratingMap(db, ids = null) {
   }
   return m;
 }
+// Sample listings come with made-up stars so the test drive looks real. With real payments on (real customers), they
+// never show: made-up ratings shown to the public break the FTC rule on fake reviews (16 CFR 465), even on a sample.
+let sampleStars = true;
+export const showSampleStars = (on) => { sampleStars = Boolean(on); };
 export function ratingOf(g, map) {
   const r = map.get(g.id) || { c: 0, s: 0 };
-  const n = g.seed_reviews + r.c;
-  return { rating: n ? (g.seed_rating * g.seed_reviews + r.s) / n : 0, reviews: n };
+  const seeded = sampleStars ? g.seed_reviews || 0 : 0;
+  const n = seeded + r.c;
+  return { rating: n ? ((seeded ? g.seed_rating * seeded : 0) + r.s) / n : 0, reviews: n };
 }
 
 // Custom offers this customer can still book: theirs, unexpired, and not already used by an active booking.

@@ -4,6 +4,13 @@ import { state } from "./state.js";
 export function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
+// The sign-up box: 18 or older, and agrees to the Terms of Service and the Privacy Policy (both open in a new tab, so
+// nothing typed is lost). Required: the server refuses a new account without it.
+export function agreeBox(id) {
+  const link = (href, key) => `<a href="${href}" target="_blank" rel="noopener">${esc(t(key))}</a>`;
+  return `<label class="chk agree"><input type="checkbox" id="${id}" name="agree"> <span>${esc(t("auth.agree")).replace("{terms}", link("terms.html", "auth.termsLink")).replace("{privacy}", link("privacy.html", "auth.privacyLink"))}</span></label>`;
+}
 export const money = (cents) => new Intl.NumberFormat(lang() === "es" ? "es-US" : "en-US", { style: "currency", currency: "USD", maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
 // A length: "3 hr" or, for a short set, "20 min".
 export const lenLabel = (min) => (min % 60 === 0 ? t("g.hours", { n: min / 60 }) : t("g.minutes", { n: min }));

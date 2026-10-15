@@ -89,3 +89,11 @@ Vercel is also connected but does not fit this app (it needs a persistent disk a
 - **Login**: wrong passwords from one IP are limited across all accounts (`loginFails` limiter, `RATE_LOGIN_IP`, default 30 per 15 min). Correct logins don't count.
 - **Indexes**: `idx_reviews_group`, `idx_photos_group`, `idx_packages_group`.
 - **One instance**: `numInstances: 1` in `render.yaml`. Never scale out (see the top of this skill).
+
+## Since Oct 15, 2026 (legal launch prep)
+
+- **Sign-up agreement**: `/api/auth/register` refuses a new account without `agree: true` (the 18+ / Terms / Privacy box on both sign-up screens) and stores `terms_version` + `terms_at`. When `public/terms.html` or `public/privacy.html` changes, update its "(version …)" date **and** `TERMS_VERSION` in `server/routes/auth.js`; `test/ops.test.js` fails if they differ.
+- **No made-up stars with real payments**: `showSampleStars(!stripe.live)` in `server/app.js`; `ratingOf` ignores `seed_rating`/`seed_reviews` then (FTC 16 CFR 465). Preflight warns while `DEMO_SEED` is on with Stripe live.
+- **Security sweep**: `NODE_PATH=$(npm root -g) node e2e/xss.mjs` before every launch.
+- **Lawyer and business prep**: `docs/launch-legal-prep.md`.
+

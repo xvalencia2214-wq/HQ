@@ -104,7 +104,7 @@ try {
   ok("the flow ends on the account step, which promises privacy", atAccount && (await stepText(V)) === "Step 10 of 10" && (await V.locator("#wiz").innerText()).includes("never share your phone or email"));
   await shot(V, "wizard-account.png");
   await V.click("#wnext"); await V.waitForSelector("#rqerr:not(:empty)");
-  await V.fill("#f-name", "Vera Visitante"); await V.fill("#f-email", "vera@example.com"); await V.fill("#f-pw", PW);
+  await V.fill("#f-name", "Vera Visitante"); await V.fill("#f-email", "vera@example.com"); await V.fill("#f-pw", PW); await V.check("#f-agree");
   await V.click("#wnext"); await V.waitForSelector(".rq-card");
   ok("creating the account sends the request in one go", S.db.get("SELECT COUNT(*) c FROM users WHERE email = 'vera@example.com'").c === 1 && S.db.get("SELECT COUNT(*) c FROM event_requests WHERE customer_id = (SELECT id FROM users WHERE email = 'vera@example.com')").c === 1 && (await V.locator("#nav a[data-r=account]").count()) === 1);
   ok("the saved answers are cleared once sent", (await V.evaluate(() => sessionStorage.getItem("bm_rq"))) === null);

@@ -2,7 +2,7 @@ import { api } from "../api.js";
 import { catChips } from "../cats.js";
 import { state, setUser, refreshAttention } from "../state.js";
 import { t, lang } from "../i18n.js";
-import { esc, money, fmtDate, sel, tomorrowKey, toast } from "../ui.js";
+import { esc, money, fmtDate, sel, tomorrowKey, toast, agreeBox } from "../ui.js";
 
 // "Get quotes": one question per screen with a progress ring. The account comes last, after the person has invested a minute,
 // and their answers survive a refresh. The request goes only to the few groups that can really do the job.
@@ -60,7 +60,7 @@ export async function quotes(app, params) {
       ? `<label for="f-name">${esc(t("auth.name"))}</label><input id="f-name" name="name" required maxlength="80" autocomplete="name">`
       : ""}<label for="f-email">${esc(t("auth.email"))}</label><input id="f-email" name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="254" autocomplete="email">
       <label for="f-pw">${esc(t("auth.password"))}</label><input id="f-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="${mode === "signup" ? "new-password" : "current-password"}">
-      ${mode === "signup" ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>` : ""}<p><button type="button" class="linkbtn-dark" id="swap">${esc(t(mode === "signup" ? "rq.hasAcct" : "rq.newAcct"))}</button></p>` : "";
+      ${mode === "signup" ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>${agreeBox("f-agree")}` : ""}<p><button type="button" class="linkbtn-dark" id="swap">${esc(t(mode === "signup" ? "rq.hasAcct" : "rq.newAcct"))}</button></p>` : "";
     document.getElementById("wizbox").innerHTML = `<form id="wiz" novalidate><div class="wiz-top"><div class="ring" style="--p:${pct}" aria-hidden="true"><span>${pct}%</span></div><div class="wiz-step" role="status">${esc(stepText)}</div></div>
       <h2 id="wiz-h" class="wiz-h">${esc(t(st.key === "hours" && a.category !== "music" ? "rq.q.hoursAny" : "rq.q." + st.key))}</h2>${HINTS.has(st.key) ? `<p class="dim small">${esc(t("rq.h." + st.key))}</p>` : ""}
       ${st.account ? acct : st.html()}
@@ -84,7 +84,8 @@ export async function quotes(app, params) {
     try {
       if (st.account) {
         const f = formData();
-        const r = await api.post(mode === "signup" ? "/api/auth/register" : "/api/auth/login", mode === "signup" ? { email: f.email, password: f.password, name: f.name, lang: lang() } : { email: f.email, password: f.password });
+        if (mode === "signup" && f.agree !== "on") { err.textContent = t("auth.agreeNeeded"); btn.disabled = false; document.getElementById("f-agree").focus(); return; }
+        const r = await api.post(mode === "signup" ? "/api/auth/register" : "/api/auth/login", mode === "signup" ? { email: f.email, password: f.password, name: f.name, agree: true, lang: lang() } : { email: f.email, password: f.password });
         setUser(r.user); refreshAttention();
       }
       const r = await api.post("/api/requests", { category: a.category, event: a.event, date: a.date, time: a.time, hours: Number(a.hours), zip: a.zip, guests: Number(a.guests), size: a.size, budgetMin: a.budgetMin, budgetMax: a.budgetMax, stage: a.stage, note: a.note });

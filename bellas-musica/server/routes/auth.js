@@ -2,6 +2,10 @@ import { HttpError, now, str, todayStr } from "../util.js";
 import { hashPassword, verifyPassword, createSession, destroySession, sessionCookie, createAuthToken, consumeAuthToken } from "../auth.js";
 import { normalizePhone } from "../sms.js";
 
+// The date on the Terms of Service and Privacy Policy now in force. Change it (and "Last updated" on both pages) whenever
+// either page changes, so each account shows which version its owner agreed to.
+export const TERMS_VERSION = "2026-10-15";
+
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
 
@@ -32,10 +36,13 @@ export default function authRoutes(ctx, add) {
     const sms = body.sms_opt_in === true && phone ? 1 : 0;
     const lang = body.lang === "es" ? "es" : "en"; // the language they signed up in decides the language of every email and text, starting with the confirmation email
     if (db.get("SELECT 1 AS x FROM users WHERE email = ?", email)) throw new HttpError(409, "That email already has an account. Try logging in.");
+    // the box on the sign-up screen: 18 or older, and agrees to the Terms and the Privacy Policy. Which version and when are
+    // kept with the account, so we can show who agreed to what.
+    if (body.agree !== true) throw new HttpError(400, "Please confirm you are 18 or older and agree to the Terms of Service and Privacy Policy");
     // who invited them (a vendor's referral code) and where they came from (a partner link, e.g. ?src=iglesia-san-pio)
     const ref = typeof body.ref === "string" && /^[A-Z0-9x]{4,12}$/i.test(body.ref) ? db.get("SELECT id FROM users WHERE ref_code = ?", body.ref.toUpperCase()) : null;
     const source = typeof body.source === "string" ? body.source.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40) : "";
-    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, lang, pass_hash, created_at, referred_by, signup_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", email, name, phone, sms, lang, await hashPassword(password), now(), ref ? ref.id : 0, source);
+    const info = db.run("INSERT INTO users (email, name, phone, sms_opt_in, lang, pass_hash, created_at, referred_by, signup_source, terms_version, terms_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", email, name, phone, sms, lang, await hashPassword(password), now(), ref ? ref.id : 0, source, TERMS_VERSION, now());
     startSession(res, req, Number(info.lastInsertRowid));
     ctx.stats.count("signup");
     sendVerification(Number(info.lastInsertRowid));

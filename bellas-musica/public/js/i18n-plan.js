@@ -17,6 +17,7 @@ export const EN7 = {
   "qr.title": "Quick replies", "qr.price": "Price", "qr.dates": "Free that day", "qr.travel": "Travel", "qr.songs": "Songs", "qr.details": "Details", "qr.thanks": "Thank you",
   "f.name": "Vendor name", "f.namePh": "Los Gallos", "home.showMore": "Show more", "home.showing": "Showing {n} of {total}",
   "event.Baptism": "Baptism", "event.First Communion": "First Communion", "event.Graduation": "Graduation", "event.Baby shower": "Baby shower", "event.Funeral / Memorial": "Funeral / Memorial",
+  "auth.agree": "I'm 18 or older and I agree to the {terms} and the {privacy}.", "auth.agreeNeeded": "Please check the box: you are 18 or older and agree to the Terms of Service and Privacy Policy.", "auth.termsLink": "Terms of Service", "auth.privacyLink": "Privacy Policy",
 };
 export const ES7 = {
   "brand.tag": "Música y todo para tu fiesta",
@@ -34,4 +35,5 @@ export const ES7 = {
   "qr.title": "Respuestas rápidas", "qr.price": "Precio", "qr.dates": "Libre ese día", "qr.travel": "Viaje", "qr.songs": "Canciones", "qr.details": "Detalles", "qr.thanks": "Gracias",
   "f.name": "Nombre del proveedor", "f.namePh": "Los Gallos", "home.showMore": "Ver más", "home.showing": "Mostrando {n} de {total}",
   "event.Baptism": "Bautizo", "event.First Communion": "Primera Comunión", "event.Graduation": "Graduación", "event.Baby shower": "Baby shower", "event.Funeral / Memorial": "Funeral / Misa",
+  "auth.agree": "Tengo 18 años o más y acepto los {terms} y el {privacy}.", "auth.agreeNeeded": "Marca la casilla: tienes 18 años o más y aceptas los Términos de servicio y el Aviso de privacidad.", "auth.termsLink": "Términos de servicio", "auth.privacyLink": "Aviso de privacidad",
 };

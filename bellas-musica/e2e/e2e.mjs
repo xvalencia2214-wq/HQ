@@ -34,7 +34,7 @@ try {
   await O.waitForSelector("#authform");
   ok("dashboard asks a logged-out visitor to log in", O.url().includes("#/login"));
   await O.click("text=Sign up >> nth=-1");
-  await O.fill("#a-name", "Olga Owner"); await O.fill("#a-email", "olga@example.com"); await O.fill("#a-pw", "a long password 1");
+  await O.fill("#a-name", "Olga Owner"); await O.fill("#a-email", "olga@example.com"); await O.fill("#a-pw", "a long password 1"); await O.check("#a-agree");
   await O.click("#authform button[type=submit]");
   await O.waitForSelector("#cform");
   ok("after signup the manager lands on 'List your group'", O.url().includes("dashboard"));
@@ -101,7 +101,7 @@ try {
   ok("must accept the policy before paying", /accept/i.test(await C.locator("#bookerr").innerText()));
   await C.check("#b-agree"); await C.click("#bookbtn");
   await C.waitForSelector("#authform");
-  await C.fill("#a-name", "Carlos Cliente"); await C.fill("#a-email", "carlos@example.com"); await C.fill("#a-pw", "another long pass 2"); await C.fill("#a-phone", "312-555-0142");
+  await C.fill("#a-name", "Carlos Cliente"); await C.fill("#a-email", "carlos@example.com"); await C.fill("#a-pw", "another long pass 2"); await C.check("#a-agree"); await C.fill("#a-phone", "312-555-0142");
   await C.click("#authform button[type=submit]");
   await C.waitForSelector("#bookform");
   ok("after signup the customer returns to the group page, the form as they left it", C.url().includes("#/group/e2e-mariachi") && (await C.inputValue("#b-addr")) === "Casa Blanca Hall, Chicago" && await C.locator("#b-agree").isChecked());
@@ -167,7 +167,7 @@ try {
   ok("featured group is first with a badge", (await C.locator(".card").first().innerText()).includes("Destacado") && (await C.locator(".card h3").first().innerText()) === "E2E Mariachi");
   // ---------------- account deletion ----------------
   const D = await newPerson("deleter");
-  await D.goto(S.base + "/#/signup"); await D.fill("#a-name", "Dana Delete"); await D.fill("#a-email", "dana@example.com"); await D.fill("#a-pw", "a long password 3"); await D.click("#authform button[type=submit]");
+  await D.goto(S.base + "/#/signup"); await D.fill("#a-name", "Dana Delete"); await D.fill("#a-email", "dana@example.com"); await D.fill("#a-pw", "a long password 3"); await D.check("#a-agree"); await D.click("#authform button[type=submit]");
   await D.waitForSelector("#nav a[data-r=account]", { state: "attached" }); await D.goto(S.base + "/#/account"); await D.waitForSelector("#dform", { state: "attached" });
   await D.click(".danger summary"); D.once("dialog", (d) => d.accept());
   await D.fill("#d-pw", "wrong password"); await D.click("#dform button"); await D.waitForSelector("#derr:not(:empty)");

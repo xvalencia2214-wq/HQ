@@ -58,13 +58,14 @@ Follow `docs/twilio-a2p.md`. Carriers need a registration that takes days to wee
 
 ## 5. Legal (do before real customers pay)
 
-- `public/terms.html` and `public/privacy.html` are **templates** with `[brackets]`. Fill them in. Have a lawyer review them; a marketplace that holds deposits has real obligations.
+- **Start with `docs/launch-legal-prep.md`**: what to fill in, the questions for the lawyer, the business setup (LLC, EIN, insurance, DMCA agent), and answers to what people will ask.
+- `public/terms.html` and `public/privacy.html` describe what the app really does (checked October 15, 2026) but still have `[brackets]` and red "Lawyer:" boxes. Fill them in and have a lawyer review them; a marketplace that holds deposits has real obligations. When either page changes, update its date **and** `TERMS_VERSION` in `server/routes/auth.js` (a test checks they match): new sign-ups are recorded against that version.
 - Ask an accountant about: sales tax on your fee, 1099-K/payment reporting (Stripe handles most of it for Connect), and whether to form an LLC first.
 - Groups are independent contractors. Decide your policy on no-shows, and whether you require insurance. The **Insured** badge is only for groups whose proof you have actually seen.
 
 ## 6. Launch
 
-1. Turn off the fictional samples only when there are **10+ real, published Chicago groups**: `DEMO_SEED=0`. Until then they keep search from looking empty; they are labelled "Sample listing".
+1. Turn off the fictional samples only when there are **10+ real, published Chicago groups**: `DEMO_SEED=0`. Until then they keep search from looking empty; they are labelled "Sample listing", can't be booked with real payments, and show no stars once real payments are on (the FTC rule on fake reviews). Preflight reminds you while they still show.
 2. Follow `docs/chicago-launch.md` to get the groups.
 3. Bookmark the **Admin** page. Look at it daily: sign-ups, waitlist by city, funnel, backups, alerts.
 

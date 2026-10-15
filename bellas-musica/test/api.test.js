@@ -10,15 +10,32 @@ after(async () => { await S.close(); });
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64, 1)]).toString("base64");
 
+test("accounts: a new account needs the 18+ / Terms and Privacy box, and the version agreed to is kept", async () => {
+  const { TERMS_VERSION } = await import("../server/routes/auth.js");
+  for (const agree of [undefined, false, "yes", 1]) {
+    const r = await client(S.base).post("/api/auth/register", { email: "noagree@example.com", password: "long enough pass", name: "No Agree", agree });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /18 or older and agree to the Terms of Service and Privacy Policy/);
+  }
+  assert.equal(S.db.get("SELECT COUNT(*) AS c FROM users WHERE email = 'noagree@example.com'").c, 0, "no account is made without the box");
+  const es = await client(S.base).raw("POST", "/api/auth/register", { email: "noagree@example.com", password: "long enough pass", name: "No Agree" }, { "X-Lang": "es" });
+  assert.match(es.json.error, /18 años o más/, "the refusal is in Spanish on a Spanish screen");
+  await client(S.base).signup("agree@example.com", "Sí Acepto");
+  const u = S.db.get("SELECT terms_version, terms_at, created_at FROM users WHERE email = 'agree@example.com'");
+  assert.equal(u.terms_version, TERMS_VERSION);
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(TERMS_VERSION));
+  assert.ok(u.terms_at > 0 && Math.abs(u.terms_at - u.created_at) < 5);
+});
+
 test("accounts: register, session, login, logout, validation", async () => {
   const a = client(S.base);
   assert.equal((await a.get("/api/me")).json.user, null);
   const u = await a.signup("ana@example.com", "Ana Garcia");
   assert.equal(u.email, "ana@example.com");
   assert.equal((await a.get("/api/me")).json.user.name, "Ana Garcia");
-  assert.equal((await a.post("/api/auth/register", { email: "ANA@example.com", password: "another long pass", name: "X" })).status, 409);
-  assert.equal((await client(S.base).post("/api/auth/register", { email: "b@example.com", password: "short", name: "B" })).status, 400);
-  assert.equal((await client(S.base).post("/api/auth/register", { email: "not-an-email", password: "long enough pass", name: "B" })).status, 400);
+  assert.equal((await a.post("/api/auth/register", { email: "ANA@example.com", password: "another long pass", name: "X", agree: true })).status, 409);
+  assert.equal((await client(S.base).post("/api/auth/register", { email: "b@example.com", password: "short", name: "B", agree: true })).status, 400);
+  assert.equal((await client(S.base).post("/api/auth/register", { email: "not-an-email", password: "long enough pass", name: "B", agree: true })).status, 400);
   await a.post("/api/auth/logout");
   assert.equal((await a.get("/api/me")).json.user, null);
   assert.equal((await a.post("/api/auth/login", { email: "ana@example.com", password: "wrong password" })).status, 401);
@@ -35,7 +52,7 @@ test("accounts: register, session, login, logout, validation", async () => {
 
 test("security: cookies, CSRF, content type, headers, static safety", async () => {
   const a = client(S.base);
-  const r = await a.raw("POST", "/api/auth/register", { email: "sec@example.com", password: "correct horse battery", name: "Sec" });
+  const r = await a.raw("POST", "/api/auth/register", { email: "sec@example.com", password: "correct horse battery", name: "Sec", agree: true });
   const cookie = r.headers.get("set-cookie");
   assert.match(cookie, /HttpOnly/); assert.match(cookie, /SameSite=Lax/);
   const cross = await a.raw("POST", "/api/auth/logout", {}, { Origin: "https://evil.example" });
@@ -435,7 +452,7 @@ test("delete account: needs the password, blocked by upcoming bookings, anonymiz
   assert.equal(S.db.get("SELECT status FROM bookings WHERE id = ?", hold.id).status, "cancelled"); // unpaid hold released
   assert.equal(S.db.get("SELECT COUNT(*) c FROM messages WHERE customer_id = (SELECT customer_id FROM bookings WHERE id = ?)", b.id).c, 0);
   assert.equal((await client(S.base).post("/api/auth/login", { email: "del-a@example.com", password: "correct horse battery" })).status, 401);
-  assert.equal((await client(S.base).post("/api/auth/register", { email: "del-a@example.com", password: "brand new password", name: "Delia Again" })).status, 200); // the email can be reused
+  assert.equal((await client(S.base).post("/api/auth/register", { email: "del-a@example.com", password: "brand new password", name: "Delia Again", agree: true })).status, 200); // the email can be reused
   // a group manager who deletes their account takes their listing offline
   const b2 = client(S.base); await b2.signup("del-g@example.com", "Del Group");
   const g2 = await makeGroup(b2, { name: "Vanishing Band" });

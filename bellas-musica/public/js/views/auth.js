@@ -2,7 +2,7 @@ import { api } from "../api.js";
 import { setUser, state } from "../state.js";
 import { setLang, lang } from "../i18n.js";
 import { t } from "../i18n.js";
-import { esc, toast } from "../ui.js";
+import { esc, toast, agreeBox } from "../ui.js";
 import { pushPanel } from "./app.js";
 
 const safeNext = (n) => (n && n.startsWith("#/") ? n : "#/");
@@ -17,7 +17,8 @@ export function authView(app, mode, params) {
       <label for="a-pw">${esc(t("auth.password"))}</label><input id="a-pw" name="password" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required minlength="8" maxlength="200" autocomplete="${signup ? "new-password" : "current-password"}">
       ${signup ? `<div class="dim small">${esc(t("auth.pwHint"))}</div>
       <label for="a-phone">${esc(t("auth.phone"))}</label><input id="a-phone" name="phone" inputmode="tel" maxlength="20" autocomplete="tel">
-      <label class="chk"><input type="checkbox" name="sms"> <span>${esc(t("auth.smsConsent"))}</span></label>` : ""}
+      <label class="chk"><input type="checkbox" name="sms"> <span>${esc(t("auth.smsConsent"))}</span></label>
+      ${agreeBox("a-agree")}` : ""}
       <div id="autherr" class="err" role="alert"></div>
       <button class="btn wide" type="submit">${esc(t(signup ? "nav.signup" : "nav.login"))}</button>
     </form>
@@ -27,9 +28,10 @@ export function authView(app, mode, params) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), err = document.getElementById("autherr");
     err.textContent = "";
+    if (signup && f.agree !== "on") { err.textContent = t("auth.agreeNeeded"); document.getElementById("a-agree").focus(); return; }
     try {
       const r = await api.post(signup ? "/api/auth/register" : "/api/auth/login", signup
-        ? { email: f.email, password: f.password, name: f.name, phone: f.phone || "", sms_opt_in: f.sms === "on", lang: lang(), ref: params.get("ref") || undefined, source: (() => { try { return localStorage.getItem("bm_src") || undefined; } catch { return undefined; } })() }
+        ? { email: f.email, password: f.password, name: f.name, phone: f.phone || "", sms_opt_in: f.sms === "on", agree: true, lang: lang(), ref: params.get("ref") || undefined, source: (() => { try { return localStorage.getItem("bm_src") || undefined; } catch { return undefined; } })() }
         : { email: f.email, password: f.password });
       setUser(r.user);
       if (r.user.lang && r.user.lang !== lang() && !signup) setLang(r.user.lang, { persist: false });

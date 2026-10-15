@@ -50,7 +50,7 @@ export function loadConfig(env = process.env) {
     proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
     spotlightPriceCents: int(env.SPOTLIGHT_PRICE_CENTS, 9900), // 30 days of Spotlight: Featured plus the top of every list
     proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
-    directFeePct: int(env.DIRECT_FEE_PCT, 3),
+    directFeePct: int(env.DIRECT_FEE_PCT, 3),               // the fee on a vendor's own client paid through its payment link
     // Founding vendors: the first FOUNDING_SLOTS real listings to go live pay FOUNDING_FEE_PCT for FOUNDING_DAYS (0 slots = off)
     foundingSlots: int(env.FOUNDING_SLOTS, 25),
     foundingFeePct: int(env.FOUNDING_FEE_PCT, 5),
@@ -60,7 +60,7 @@ export function loadConfig(env = process.env) {
     holdNewVendorEvents: int(env.HOLD_NEW_VENDOR_EVENTS, 3),
     // Past-client reviews can't come from the internet connection the vendor used to make the link (0 = allow it: the
     // test drive runs everyone on one computer). The Admin page still flags it.
-    pastReviewIpCheck: env.PAST_REVIEW_IP_CHECK !== "0",                // the fee on a vendor's own client paid through its payment link
+    pastReviewIpCheck: env.PAST_REVIEW_IP_CHECK !== "0",
     tipsCoverProcessing: env.TIPS_COVER_PROCESSING !== "0",  // tips: keep only the card processing cost (2.9% + 30¢), nothing else
     partyInsuranceUrl: env.PARTY_INSURANCE_URL || "",        // a partner's event-insurance page, shown on party pages when set
     icsAllowHttp: env.ICS_ALLOW_HTTP === "1",                 // tests only: calendar imports must be https

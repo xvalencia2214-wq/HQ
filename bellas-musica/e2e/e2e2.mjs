@@ -101,7 +101,7 @@ try {
   await G.goto(claimUrl); await G.waitForSelector("h1:has-text(\"You've been invited\")");
   ok("the invitation page names the group and asks them to sign up", (await G.locator("#app").innerText()).includes("Mariachi Invitado"));
   await G.click("#app a:has-text('Sign up')"); await G.waitForSelector("#authform");
-  await G.fill("#a-name", "Gabi Grupo"); await G.fill("#a-email", "gabi@example.com"); await G.fill("#a-pw", PW); await G.click("#authform button[type=submit]");
+  await G.fill("#a-name", "Gabi Grupo"); await G.fill("#a-email", "gabi@example.com"); await G.fill("#a-pw", PW); await G.check("#a-agree"); await G.click("#authform button[type=submit]");
   await G.waitForSelector("#claimbtn");
   ok("after signing up they return to the invitation", G.url().includes("#/claim/"));
   await G.click("#claimbtn"); await G.waitForSelector(".draft");

@@ -273,3 +273,30 @@ test("#19 #20 indexes by listing; wrong passwords from one network are limited a
     assert.equal(blocked.status, 429); assert.match(blocked.json.error, /from this network/);
   } finally { await S.close(); }
 });
+
+// Launch check: sample listings never show made-up stars to real customers (FTC rule on fake reviews, 16 CFR 465).
+test("sample listings: made-up stars show in the test drive, never once real payments are on", async () => {
+  const sim = await startApp({});
+  let F, live;
+  try {
+    const demo = sim.db.get("SELECT id FROM groups WHERE demo = 1 AND seed_reviews > 0");
+    assert.ok(demo, "the samples have made-up stars to hide");
+    const before = (await client(sim.base).get(`/api/groups/${demo.id}`)).json;
+    assert.ok(before.reviews > 0 && before.rating > 0, "test drive: the sample keeps its stars");
+    await sim.close();
+    F = await fakeStripe();
+    live = await startApp({ STRIPE_SECRET_KEY: "sk_test_stars", STRIPE_WEBHOOK_SECRET: "whsec_stars", STRIPE_API_BASE: F.url });
+    const g = (await client(live.base).get(`/api/groups/${demo.id}`)).json;
+    assert.equal(g.reviews, 0); assert.equal(g.rating, 0);
+    let samples = 0;
+    for (const x of (await client(live.base).get("/api/search?zip=60608")).json.results) {
+      const row = live.db.get("SELECT demo FROM groups WHERE id = ?", x.id);
+      if (row && row.demo) { samples++; assert.equal(x.reviews, 0, `no stars on sample ${x.name} in search`); assert.equal(x.rating, 0); }
+    }
+    assert.ok(samples > 0, "the search really had samples in it");
+    // a real review on a real listing still counts as usual: covered by the reviews tests
+  } finally {
+    if (live) await live.close();
+    if (F) await F.close();
+  }
+});

@@ -40,7 +40,13 @@ test("health endpoint and legal pages are served", async () => {
   const S = await startApp();
   try {
     assert.deepEqual(await (await fetch(S.base + "/api/health")).json(), { ok: true });
-    for (const p of ["/terms.html", "/privacy.html"]) { const r = await fetch(S.base + p); assert.equal(r.status, 200); assert.match(await r.text(), /Template/); }
+    const { TERMS_VERSION } = await import("../server/routes/auth.js");
+    for (const p of ["/terms.html", "/privacy.html"]) {
+      const r = await fetch(S.base + p), html = await r.text();
+      assert.equal(r.status, 200);
+      // the version people agree to at sign-up is the one on both pages (change both together)
+      assert.ok(html.includes(`(version ${TERMS_VERSION})`), `${p} shows version ${TERMS_VERSION}`);
+    }
   } finally { await S.close(); }
 });
 

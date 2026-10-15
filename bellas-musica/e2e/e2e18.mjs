@@ -153,7 +153,7 @@ try {
 
   // ---- the 48-hour rule is in the terms ----
   const terms = await (await fetch(S.base + "/terms.html")).text();
-  ok("the terms say a last-minute cancel (within 48 hours) keeps the deposit", /within 48 hours of the event/.test(terms));
+  ok("the terms say a last-minute cancel (within 48 hours) keeps the deposit", /last 3 calendar days before the event, which covers the final 48 hours/.test(terms));
 } catch (e) { failed++; console.log("FAIL crashed:", e.message); }
 finally {
   for (const p of problems) { console.log("PROBLEM", p); failed++; }

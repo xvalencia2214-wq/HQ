@@ -58,7 +58,7 @@ try {
   await G.click("#bookbtn");
   await G.waitForSelector("#authform");
   ok("#3 'Continue' leads to sign-up, coming back to the same page", /resume%3D1/.test(G.url()) || /resume=1/.test(decodeURIComponent(G.url())));
-  await G.fill("#a-name", "Rosa Martínez"); await G.fill("#a-email", "rosa19@example.com"); await G.fill("#a-pw", PW);
+  await G.fill("#a-name", "Rosa Martínez"); await G.fill("#a-email", "rosa19@example.com"); await G.fill("#a-pw", PW); await G.check("#a-agree");
   await G.click("#authform button[type=submit]");
   await G.waitForSelector("#bookform");
   ok("#3 after signing up, the same date and time are picked", (await G.locator("#bookform .sum").first().innerText()).includes("·"));

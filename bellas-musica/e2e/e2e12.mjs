@@ -115,7 +115,7 @@ try {
   const refUrl = (await vo.get("/api/my/referral")).json.url;
   const N = await person("newvendor");
   await N.goto(`${S.base}/?src=iglesia-san-pio${refUrl.slice(refUrl.indexOf("#"))}`); await N.waitForSelector("#authform");
-  await N.fill("#a-name", "Tacos Nuevos"); await N.fill("#a-email", "nuevo@example.com"); await N.fill("#a-pw", PW);
+  await N.fill("#a-name", "Tacos Nuevos"); await N.fill("#a-email", "nuevo@example.com"); await N.fill("#a-pw", PW); await N.check("#a-agree");
   await N.click("#authform button[type=submit]"); await N.waitForFunction(() => location.hash.startsWith("#/dashboard"));
   const nu = S.db.get("SELECT referred_by, signup_source FROM users WHERE email = 'nuevo@example.com'");
   ok("the sign-up records the partner and the vendor who referred them", nu.signup_source === "iglesia-san-pio" && nu.referred_by === S.db.get("SELECT id FROM users WHERE email = 'vendor@example.com'").id);

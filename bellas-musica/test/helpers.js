@@ -40,7 +40,7 @@ export function client(base) {
     del: (u) => call("DELETE", u),
     raw: call,
     async signup(email, name = "Test User", extra = {}) {
-      const r = await call("POST", "/api/auth/register", { email, password: "correct horse battery", name, ...extra });
+      const r = await call("POST", "/api/auth/register", { email, password: "correct horse battery", name, agree: true, ...extra });
       if (r.status !== 200) throw new Error("signup failed " + JSON.stringify(r.json));
       return r.json.user;
     }
