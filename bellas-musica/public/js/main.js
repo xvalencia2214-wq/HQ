@@ -26,6 +26,7 @@ import { admin } from "./views/admin.js";
 import { teamInvitePage, payLinkPage, specialsPage } from "./views/business.js";
 import { appPage, appLink } from "./views/app.js";
 import { syncPush, onInstallChange, isStandalone } from "./appmode.js";
+import { mountChuy, refreshChuy } from "./chuy.js";
 
 // Shared links (/g/<id>, /b/<zip>) are server-rendered for previews; inside the app they become normal routes.
 const landing = /^\/(g|b|c)\/([\w-]+)\/?$/.exec(location.pathname);
@@ -103,6 +104,7 @@ function renderChrome() {
   banner.hidden = state.meta.payments !== "simulated";
   banner.textContent = t("banner.test");
   renderVerifyBanner();
+  refreshChuy();
   const nav = document.getElementById("nav"), tog = document.getElementById("navtoggle");
   // a new page or language closes the menu; a refresh of the badges (every minute) leaves it as it is, keyboard and all
   const where = location.hash + "|" + lang();
@@ -217,6 +219,7 @@ window.addEventListener("bm:unauth", () => {
 initLang(() => { renderChrome(); route(); });
 await init();
 if (state.user && state.user.lang && !localStorage.getItem("bm_lang")) setLang(state.user.lang, { persist: false });
+mountChuy();
 onChange(renderChrome);
 onInstallChange(renderChrome);
 // a phone that already has notifications on: they follow whoever is logged in on it

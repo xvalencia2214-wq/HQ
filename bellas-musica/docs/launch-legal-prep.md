@@ -91,6 +91,10 @@ The red boxes on the two pages are these same questions.
 10. **Privacy laws.** "We're in Illinois. Which state privacy laws apply as we grow, and when? We keep no biometrics
     (so Illinois BIPA shouldn't apply), and we don't sell data or use ad trackers."
 11. **Trademark.** "Can we register 'Bella's Fiestas'? Is anyone else using it for events?"
+12. **Don Chuy, the AI helper.** "Our helper is an AI (Claude, by Anthropic). He says he's an AI in his title, in his
+    first message, and whenever someone asks. His answers can be wrong, so the Terms say the vendor page and the booking
+    control. Conversations go to Anthropic to be answered, but we don't store them. Is our disclaimer (Terms 11a) and
+    the Privacy section enough? Do any state chatbot or AI-disclosure laws require more?"
 
 **Bring to the meeting:** this document, the two pages (open `yourdomain.com/terms.html` on your iPad, or print them),
 and the fee list in section 6.
@@ -260,10 +264,47 @@ If you change a number in Render, change it in the Terms too.
 7. Run `npm run preflight` on the live server. No FAIL allowed. Read every warning.
 8. Sign up 10 or more real Chicago vendors (`docs/chicago-launch.md`), then set `DEMO_SEED=0` so the samples go away.
 9. Remove `PREVIEW_PASSWORD` on launch day so the public can get in.
+10. Optional: turn on Don Chuy for real (section 8).
 
 **Run all the checks again any time:**
 ```bash
-npm test                                         # 166 automatic tests
+npm test                                         # 170 automatic tests
 SIM_STEPS=1500 SIM_SEEDS=1,2,3,4 node --test test/sim.test.js
 NODE_PATH=$(npm root -g) node e2e/xss.mjs        # the security sweep
 ```
+NODE_PATH=$(npm root -g) node e2e/e2e20.mjs      # Don Chuy on screen
+```
+
+---
+
+## 8. Turning on Don Chuy, the AI helper
+
+Until you do this, Don Chuy runs in **free test mode**. He greets people and can list vendors near a ZIP code, but he
+doesn't really chat. **Nothing is charged until you finish all the steps below.**
+
+**On your iPad (about 10 minutes):**
+1. Go to **console.anthropic.com** and sign up with your business email. Confirm the email they send.
+2. Open **Billing**, add a card, and **buy credits** (start with $10–$20). It works like a prepaid phone: it can't spend
+   more than the credit you bought. Leave **auto-reload off** unless you want automatic top-ups.
+3. Open **API keys** → **Create key**. Name it "Bella's Fiestas" and **copy it** (it's shown only once; it starts with
+   `sk-ant-`). Don't paste it anywhere except Render.
+4. In **Render**, open your real service → **Environment** → add:
+   - `ANTHROPIC_API_KEY` = the key you copied
+   - `AI_DAILY_LIMIT_USD` = the most he may spend per day (default 5). Past it, he says he's resting until tomorrow,
+     and you get an alert.
+5. **Save, rebuild and deploy.** Open the site, tap Don Chuy and ask "¿Cuánto cuesta un mariachi?" The "test mode"
+   note is gone when he's live.
+6. Run `npm run preflight`. It checks the key works. Your **Admin** page shows what he cost today and this month.
+
+**What it costs:** he uses Claude Opus 5.5, Anthropic's best everyday model. A typical answer costs about 1–2 cents,
+so a whole conversation is about 5–10 cents. With the $5 daily limit, the most he can ever spend is about $150 a month,
+and much less if fewer people use him.
+
+**What he can and can't do:**
+- He can look up vendors, a vendor's page and open dates, and the person's own bookings (only when they're logged in,
+  and only their own).
+- He can't book, pay, cancel, message or change anything. He points to the right button.
+- He never sees anyone's email, phone, address, card or arrival code.
+
+**To turn him off completely:** set `AI_HELPER` = `0` in Render. The button disappears.
+

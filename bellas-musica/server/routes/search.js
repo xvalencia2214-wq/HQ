@@ -139,6 +139,7 @@ export default function searchRoutes(ctx, add) {
     events: EVENT_TYPES, group_types: GROUP_TYPES, categories: CATEGORIES, hourly_by_default: HOURLY_BY_DEFAULT, slots: SLOTS, times: TIMES, short_minutes: SHORT_MINUTES, needs_presets: NEEDS_PRESETS, addon_presets: ADDON_PRESETS, max_hours: MAX_HOURS,
     policies: Object.fromEntries(Object.entries(POLICIES).map(([k, v]) => [k, v.text])),
     market: { name: MARKET.name, area: MARKET.area, center_zip: MARKET.center.zip, radius_miles: MARKET.radiusMiles, neighborhoods: MARKET.neighborhoods },
+    helper: ctx.helper ? ctx.helper.mode : "off", support_email: config.supportEmail,
     payments: stripe.mode, sms: sms.mode, whatsapp: Boolean(config.twilioWhatsappFrom), pro_price_cents: config.proPriceCents, pro_fee_pct: config.proFeePct, fee_pct: config.platformFeePct, insurance_url: config.partyInsuranceUrl, email: ctx.email.mode, feature_price_cents: config.featurePriceCents, spotlight_price_cents: config.spotlightPriceCents, direct_fee_pct: config.directFeePct,
     hold_events: config.holdNewVendorEvents,
     founding: config.foundingSlots > 0 ? { left: foundingLeft(ctx.db, config), slots: config.foundingSlots, fee_pct: config.foundingFeePct, days: config.foundingDays } : null, holidays: upcomingHolidays(ctx.db, todayStr()), zip_count: zipCount(), today: todayStr(), timezone: getTimezone(),

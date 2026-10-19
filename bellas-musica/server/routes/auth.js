@@ -4,7 +4,7 @@ import { normalizePhone } from "../sms.js";
 
 // The date on the Terms of Service and Privacy Policy now in force. Change it (and "Last updated" on both pages) whenever
 // either page changes, so each account shows which version its owner agreed to.
-export const TERMS_VERSION = "2026-10-15";
+export const TERMS_VERSION = "2026-10-19";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails

@@ -65,3 +65,8 @@ NODE_PATH=$(npm root -g) node e2e/e2e18.mjs    # words per category in both lang
 - **When you add an `HttpError` message, add its Spanish to `errors-es.js`.** `test/errors-es.test.js` reads every throw in `server/` and fails otherwise. Do the same for a new field name in an input check.
 - New screen strings for the plan live in `public/js/i18n-plan.js` (`EN7`/`ES7`).
 - Still for a person to do: a native speaker reads the new Spanish (`npm run spanish-sheet`).
+
+## Don Chuy, the AI helper
+- His screen words live in `public/js/i18n-chuy.js` (EN8/ES8). His answers come from Claude in the screen's language; the rules for his tone (warm, "usted" in Spanish, short, simpler with Bigger text) are in the system prompt in `server/helper.js`.
+- His fixed server replies (resting, busy, refusal, test mode) are written in both languages in `server/helper.js`; keep both when changing one.
+

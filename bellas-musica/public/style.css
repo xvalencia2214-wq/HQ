@@ -721,6 +721,61 @@ body.nav-open { overflow: hidden; }
 body.is-landing #nav, body.is-landing .navshade { display: none !important; }
 body.is-landing .shell { display: block; max-width: none; padding: 0; }
 @media print { #nav, .navtoggle, .navshade { display: none !important; } .shell { display: block; } }
+/* ---- Don Chuy, the AI helper (public/js/chuy.js): a smiling sombrero button bottom right, and a chat that fills the
+   screen on a phone and sits in the corner on an iPad or a computer. Big targets, big type, his links as gold buttons. ---- */
+.chuy-fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 64px; padding: 4px 16px 4px 4px; border-radius: 999px; background: #fff;
+  border: 2px solid var(--gold-2); color: var(--ink); font: 800 1.05rem var(--display); cursor: pointer; box-shadow: 0 10px 28px rgba(11,24,56,.22); }
+.chuy-fab:hover { box-shadow: 0 12px 32px rgba(150,105,20,.35); }
+.chuy-fab[hidden], .chuy[hidden] { display: none !important; }
+.chuy-fab img { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 50% 60%, #fff 0, #fbf3e0 100%); animation: chuy-bob 3.2s ease-in-out infinite; }
+@keyframes chuy-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-3deg); } }
+body:has(.cta-bar) .chuy-fab { bottom: calc(92px + env(safe-area-inset-bottom)); }
+body.chuy-open .chuy-fab { display: none; }
+.chuy { position: fixed; right: 16px; bottom: 16px; z-index: 44; width: min(410px, calc(100vw - 32px)); height: min(660px, calc(100dvh - 32px));
+  display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: 0 24px 60px rgba(11,24,56,.28); }
+.chuy-top { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; background: linear-gradient(135deg, #fdf6e3, #fff 70%); border-bottom: 1px solid var(--line); }
+.chuy-top img { width: 52px; height: 52px; border-radius: 50%; background: #fff; border: 2px solid var(--gold-2); flex: none; }
+.chuy-who { flex: 1; min-width: 0; }
+.chuy-who h2 { font-size: 1.2rem; margin: 0; }
+.chuy-who p { margin: 0; font-size: .82rem; color: var(--ink-2); }
+.chuy-ic { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); background: #fff; color: var(--ink); font-size: 1.15rem; cursor: pointer; }
+.chuy-ic[aria-pressed="true"] { background: #fdf0cc; border-color: var(--gold-2); }
+.chuy-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--cream); }
+.chuy-msg { display: flex; gap: 8px; align-items: flex-end; max-width: 92%; }
+.chuy-msg.me { align-self: flex-end; }
+.chuy-av { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 1.5px solid var(--gold-2); flex: none; }
+.chuy-b { padding: 10px 14px; border-radius: 18px 18px 18px 6px; background: #fff; border: 1px solid var(--line); color: var(--ink); font-size: 1.02rem; line-height: 1.5; overflow-wrap: anywhere; }
+.chuy-msg.me .chuy-b { border-radius: 18px 18px 6px 18px; background: var(--ink); border-color: var(--ink); color: #fff; }
+.chuy-msg.err .chuy-b { border-color: #e6b3ae; background: #fff4f2; }
+.chuy-test { display: block; margin-top: 6px; font-size: .85rem; color: var(--gold-ink); }
+.chuy-link { display: inline-flex; align-items: center; min-height: 40px; margin: 4px 4px 2px 0; padding: 6px 14px; border-radius: 999px; background: linear-gradient(135deg, #f2d681, #dcb04c); border: 1px solid #c9962b; color: var(--ink); font-weight: 700; text-decoration: none; }
+.chuy-link::after { content: " ›"; margin-left: 4px; }
+.chuy-dots { display: inline-flex; gap: 5px; padding: 4px 2px; }
+.chuy-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--gold-2); animation: chuy-dot 1.2s infinite ease-in-out; }
+.chuy-dots i:nth-child(2) { animation-delay: .15s; } .chuy-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes chuy-dot { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+.chuy-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 10px; background: var(--cream); }
+.chuy-chips:empty { display: none; }
+.chuy-chip { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--gold-2); background: #fff; color: var(--ink); font: 600 .95rem var(--display); cursor: pointer; text-align: left; }
+.chuy-chip:hover { background: #fdf6e3; }
+.chuy-form { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: #fff; }
+.chuy-form textarea { flex: 1; min-height: 48px; max-height: 140px; resize: none; padding: 11px 14px; border-radius: 16px; font-size: 1.05rem; line-height: 1.4; }
+.chuy-mic { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--gold-2); background: #fff; color: var(--ink); font: 700 .95rem var(--display); cursor: pointer; }
+.chuy-mic[aria-pressed="true"] { background: var(--bad-fill); border-color: var(--bad-fill); color: #fff; }
+.chuy-mic[hidden] { display: none; }
+.chuy-send { min-height: 48px; padding: 0 18px; }
+.chuy-foot { margin: 0; padding: 0 14px 10px; font-size: .78rem; color: var(--ink-2); background: #fff; }
+.chuy-foot a { color: var(--ink-2); }
+@media (max-width: 600px) {
+  .chuy { inset: 0; width: auto; height: auto; border-radius: 0; border: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .chuy-fab-l { font-size: 1rem; }
+  .chuy-mic .l, .chuy-send .l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .chuy-mic { padding: 0 12px; } .chuy-send { padding: 0 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .chuy-fab img, .chuy-dots i { animation: none; } }
+@media print { .chuy-fab, .chuy { display: none !important; } }
+
 
 /* bigger text, for anyone who wants it (the "Bigger text" button in the menu): everything sized in rem grows with it */
 body { font-size: 1.0625rem; }

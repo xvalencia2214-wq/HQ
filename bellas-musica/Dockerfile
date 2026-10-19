@@ -1,6 +1,8 @@
 FROM node:22-slim
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
+# the only runtime package: the Claude library for Don Chuy (dev tools are left out)
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY server ./server
 COPY public ./public
 COPY start.sh ./

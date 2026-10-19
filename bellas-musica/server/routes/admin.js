@@ -43,7 +43,7 @@ export default function adminRoutes(ctx, add) {
         deposits_collected_cents: money.gross, refunded_cents: money.refunded, net_deposits_cents: money.gross - money.refunded, platform_fees_kept_cents: money.fees,
         featured_revenue_cents: one("SELECT COALESCE(SUM(amount_cents), 0) v FROM payments_feature WHERE status = 'paid'").v
       },
-      email: ctx.email.mode, backups: { ...backupStatus(config), offsite: offsiteStatus(ctx) }, alerts_on: Boolean(config.alertWebhook),
+      email: ctx.email.mode, helper: ctx.helper.usage(), backups: { ...backupStatus(config), offsite: offsiteStatus(ctx) }, alerts_on: Boolean(config.alertWebhook),
       funnel_30d: {
         searches: ctx.stats.total("search"), group_views: ctx.stats.total("group_view"), booking_started: ctx.stats.total("booking_started"),
         booking_paid: ctx.stats.total("booking_paid"), booking_confirmed: ctx.stats.total("booking_confirmed"), signups: ctx.stats.total("signup"), feed_views: ctx.stats.total("feed_view"), feed_taps: ctx.stats.total("feed_tap")

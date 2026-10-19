@@ -10,7 +10,7 @@ const routesDir = path.resolve("server/routes");
 const ROUTES = fs.readdirSync(routesDir).flatMap((f) => [...fs.readFileSync(path.join(routesDir, f), "utf8").matchAll(/add\("(GET|POST|PUT|PATCH|DELETE)", "([^"]+)"/g)].map((m) => ({ method: m[1], path: m[2], file: f })));
 // writes anyone may make without an account (sign-up and login, the Stripe webhook, anonymous counters and crash reports,
 // the waitlist, and the family-party link whose secret token is the permission)
-const PUBLIC_WRITES = new Set(["/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot", "/api/auth/reset", "/api/auth/verify", "/api/quote", "/api/stripe/webhook", "/api/feed/event", "/api/client-error", "/api/waitlist", "/api/fp/:token/vote", "/api/fp/:token/comments", "/api/fp/:token/picks"]);
+const PUBLIC_WRITES = new Set(["/api/helper", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot", "/api/auth/reset", "/api/auth/verify", "/api/quote", "/api/stripe/webhook", "/api/feed/event", "/api/client-error", "/api/waitlist", "/api/fp/:token/vote", "/api/fp/:token/comments", "/api/fp/:token/picks"]);
 
 test("access audit: logged out, every write is refused (except the public ones); a stranger can't change anyone else's things", async () => {
   assert.ok(ROUTES.length > 150, `found ${ROUTES.length} routes`);

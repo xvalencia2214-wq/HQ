@@ -44,6 +44,8 @@ import pushRoutes from "./routes/push.js";
 import agreementRoutes from "./routes/agreement.js";
 import clientReviewRoutes from "./routes/clientreviews.js";
 import guestRoutes from "./routes/guests.js";
+import helperRoutes from "./routes/helper.js";
+import { createHelper } from "./helper.js";
 import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
 import { translateError, requestLang } from "./errors-es.js";
@@ -100,13 +102,24 @@ export function createApp(config) {
     upload: createLimiter({ windowMs: 60 * 60_000, max: L.upload }),
     booking: createLimiter({ windowMs: 60 * 60_000, max: L.booking }),
     feedEvent: createLimiter({ windowMs: 30 * 60_000, max: L.feedEvent }),
-    clientError: createLimiter({ windowMs: 60_000, max: L.clientError })
+    clientError: createLimiter({ windowMs: 60_000, max: L.clientError }),
+    helper: createLimiter({ windowMs: 60 * 60_000, max: L.helper })
   } };
   ctx.notify = createNotifier(ctx);
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes, agreementRoutes, clientReviewRoutes, guestRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes, agreementRoutes, clientReviewRoutes, guestRoutes, helperRoutes]) mod(ctx, router.add);
+  // Read-only access to the app's own GET routes, as a given person (same permission checks as their screens). Don Chuy's
+  // tools go through this, so he can see exactly what the person could see, and can never change anything.
+  ctx.readApi = async (pathAndQuery, { user = null, req = null, ip = "" } = {}) => {
+    const u = new URL(pathAndQuery, "http://x");
+    const { route, params } = router.match("GET", u.pathname);
+    if (!route) throw new HttpError(404, "Not found");
+    if (route.opts.auth && !user) throw new HttpError(401, "Please log in");
+    return route.handler({ req, res: null, params, query: Object.fromEntries(u.searchParams), body: {}, user, ip, ctx });
+  };
+  ctx.helper = createHelper(ctx);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
@@ -128,7 +141,7 @@ export function createApp(config) {
     ].join("; "));
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(self), geolocation=(self)");
     if (isSecure(req)) res.setHeader("Strict-Transport-Security", "max-age=15552000");
   }
 

@@ -96,4 +96,5 @@ Vercel is also connected but does not fit this app (it needs a persistent disk a
 - **No made-up stars with real payments**: `showSampleStars(!stripe.live)` in `server/app.js`; `ratingOf` ignores `seed_rating`/`seed_reviews` then (FTC 16 CFR 465). Preflight warns while `DEMO_SEED` is on with Stripe live.
 - **Security sweep**: `NODE_PATH=$(npm root -g) node e2e/xss.mjs` before every launch.
 - **Lawyer and business prep**: `docs/launch-legal-prep.md`.
+- **Don Chuy, the AI helper** (`server/helper.js`, `server/routes/helper.js`, `public/js/chuy.js`): Claude Opus 5.5 through `@anthropic-ai/sdk` (the only runtime npm package; the Dockerfile runs `npm ci --omit=dev`, and the app still starts without it). Keep it **read-only**: tools go through `ctx.readApi` (GET routes only, as the person asking) and the trimmers in `helper.js`; never add a tool that writes. `ANTHROPIC_API_KEY` empty = free test mode; `AI_DAILY_LIMIT_USD` caps spend; `RATE_HELPER` per hour per network and account. Tests: `test/helper.test.js` (fake Claude API), `e2e/e2e20.mjs`. A change to what he sends to Anthropic needs the Privacy Policy updated (and `TERMS_VERSION`).
 

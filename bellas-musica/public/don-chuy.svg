@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Don Chuy">
+  <defs>
+    <radialGradient id="skin" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#f3c39c"/><stop offset="1" stop-color="#d99a6c"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7dc8a"/><stop offset=".5" stop-color="#d4a53c"/><stop offset="1" stop-color="#a87a1e"/></linearGradient>
+    <linearGradient id="hat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2b2e"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient>
+  </defs>
+  <!-- ears -->
+  <ellipse cx="31" cy="76" rx="6" ry="8" fill="#e0a77b"/>
+  <ellipse cx="89" cy="76" rx="6" ry="8" fill="#e0a77b"/>
+  <!-- face -->
+  <ellipse cx="60" cy="76" rx="29" ry="31" fill="url(#skin)"/>
+  <!-- silver sideburns -->
+  <path d="M32 66 q-1 12 4 18 q2-9 2-18z" fill="#b9b4ae"/>
+  <path d="M88 66 q1 12-4 18 q-2-9-2-18z" fill="#b9b4ae"/>
+  <!-- rosy cheeks -->
+  <ellipse cx="43" cy="84" rx="7" ry="4.5" fill="#e8737a" opacity=".35"/>
+  <ellipse cx="77" cy="84" rx="7" ry="4.5" fill="#e8737a" opacity=".35"/>
+  <!-- bushy silver eyebrows -->
+  <path d="M40 66 q8-6 15-1" stroke="#9c958d" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M65 65 q7-5 15 1" stroke="#9c958d" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- smiling eyes -->
+  <path d="M42 75 q5.5-6 11 0" stroke="#3b2a20" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M67 75 q5.5-6 11 0" stroke="#3b2a20" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <!-- nose -->
+  <ellipse cx="60" cy="84" rx="6" ry="5" fill="#cf8a5e"/>
+  <ellipse cx="58" cy="82.5" rx="2" ry="1.3" fill="#f6cfae" opacity=".8"/>
+  <!-- big smile -->
+  <path d="M49 95 q11 10 22 0 q-11 4-22 0z" fill="#8a2f2f"/>
+  <path d="M52 96.5 q8 3 16 0" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- grand mustache -->
+  <path d="M60 89 c-6-5-15-5-21-1 c-4 3-8 3-11 1 c3 7 12 9 19 6 c5-2 9-4 13-6z" fill="#e9e6e1" stroke="#b0aaa2" stroke-width="1"/>
+  <path d="M60 89 c6-5 15-5 21-1 c4 3 8 3 11 1 c-3 7-12 9-19 6 c-5-2-9-4-13-6z" fill="#e9e6e1" stroke="#b0aaa2" stroke-width="1"/>
+  <!-- sombrero crown -->
+  <path d="M41 46 C40 26 47 12 60 12 C73 12 80 26 79 46 Z" fill="url(#hat)"/>
+  <path d="M52 16 q8-5 16 0 q-8 3-16 0z" fill="#3a3a3e"/>
+  <!-- braided gold band and flower -->
+  <rect x="41" y="38" width="38" height="7" rx="2" fill="url(#gold)"/>
+  <path d="M43 41.5 l3-2.5 3 2.5 3-2.5 3 2.5 3-2.5 3 2.5 3-2.5 3 2.5 3-2.5 3 2.5 3-2.5 3 2.5" stroke="#8b6418" stroke-width="1" fill="none"/>
+  <g transform="translate(60 28)">
+    <circle r="2.6" fill="#8b6418"/>
+    <g fill="url(#gold)"><ellipse cy="-5" rx="2.6" ry="3.6"/><ellipse cy="5" rx="2.6" ry="3.6"/><ellipse cx="-5" rx="3.6" ry="2.6"/><ellipse cx="5" rx="3.6" ry="2.6"/></g>
+    <circle r="1.8" fill="#f7dc8a"/>
+  </g>
+  <!-- wide brim, curled up at the ends -->
+  <path d="M4 46 C10 38 24 44 60 44 C96 44 110 38 116 46 C110 56 92 54 60 54 C28 54 10 56 4 46 Z" fill="url(#hat)"/>
+  <path d="M4 46 C10 38 24 44 60 44 C96 44 110 38 116 46" stroke="url(#gold)" stroke-width="2.4" fill="none"/>
+  <path d="M8 48.5 C16 53 30 51.5 60 51.5 C90 51.5 104 53 112 48.5" stroke="url(#gold)" stroke-width="1.6" fill="none" stroke-dasharray="3 3"/>
+</svg>

@@ -29,6 +29,8 @@ Set these environment variables (see `.env.example` for the full list):
 | `SENTRY_DSN` | optional: also send those alerts to Sentry (free tier is plenty) |
 | `TWILIO_WHATSAPP_FROM` | optional: a WhatsApp-enabled Twilio number so people can pick WhatsApp for alerts. Twilio must approve your message templates before WhatsApp delivers messages you start; until then use texts |
 | `PRO_PRICE_CENTS`, `PRO_FEE_PCT` | the price of Bella's Pro (default 2900 = $29 for 30 days) and its platform fee (default 6%) |
+| `ANTHROPIC_API_KEY` | optional: turns on **Don Chuy**, the AI helper (Claude Opus 5.5). Without it he runs in free test mode. Steps and costs: `docs/launch-legal-prep.md` section 8 |
+| `AI_DAILY_LIMIT_USD` | default 5: the most Don Chuy may spend per day; past it he rests until tomorrow and you get an alert. `AI_HELPER=0` hides him |
 | `PARTY_INSURANCE_URL` | optional: an event-insurance partner's page, shown on party pages. Only set this once you have a real partner agreement |
 
 Run `npm run preflight` on the server. It checks every setting and calls Stripe/Resend/Twilio to make sure the keys work. **Fix every FAIL; read every WARN.**

@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadConfig } from "./config.js";
 import { setTimezone } from "./util.js";
 import { parseDsn } from "./alerts.js";
+import { HELPER_MODEL } from "./helper.js";
 
 const ok = (name, detail = "") => ({ name, status: "ok", detail });
 const warn = (name, detail) => ({ name, status: "warn", detail });
@@ -73,6 +74,24 @@ export async function runPreflight(config) {
       out.push(nums.ok && (nums.json.incoming_phone_numbers || []).length ? ok("Twilio number", config.twilioFrom) : fail("Twilio number", `${config.twilioFrom} is not a number on this account`));
       out.push(warn("Twilio A2P registration", "cannot be checked automatically: confirm your brand and campaign are APPROVED in the Twilio console, or US carriers will block your texts"));
     }
+  }
+
+  // ---- Don Chuy, the AI helper (Anthropic) ----
+  if (!config.aiHelper) out.push(ok("Don Chuy", "turned off (AI_HELPER=0)"));
+  else if (!config.aiKey) out.push(warn("Don Chuy", "ANTHROPIC_API_KEY is empty: he runs in free test mode (simple answers). Add a key from console.anthropic.com to turn him on (docs/launch-legal-prep.md)"));
+  else {
+    try {
+      const { default: Anthropic } = await import("@anthropic-ai/sdk");
+      const client = new Anthropic({ apiKey: config.aiKey, ...(config.aiApiBase ? { baseURL: config.aiApiBase } : {}), maxRetries: 1, timeout: 20_000 });
+      try {
+        const m = await client.models.retrieve(HELPER_MODEL);
+        out.push(ok("Don Chuy (Anthropic key)", `${m.display_name || HELPER_MODEL}, daily limit $${config.aiDailyLimitUsd} (AI_DAILY_LIMIT_USD)`));
+      } catch (e) {
+        if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) out.push(fail("ANTHROPIC_API_KEY", "the key was refused: copy it again from console.anthropic.com → API keys"));
+        else if (e instanceof Anthropic.NotFoundError) out.push(fail("Don Chuy model", `${HELPER_MODEL} is not available to this key`));
+        else out.push(warn("Don Chuy (Anthropic)", `could not check the key: ${e.message}`));
+      }
+    } catch (e) { out.push(fail("Don Chuy", `the Claude library is missing (${e.message}): run npm install`)); }
   }
 
   // ---- Email (Resend) ----
