@@ -731,6 +731,9 @@ body.is-landing .shell { display: block; max-width: none; padding: 0; }
 .chuy-fab img { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 50% 60%, #fff 0, #fbf3e0 100%); animation: chuy-bob 3.2s ease-in-out infinite; }
 @keyframes chuy-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-3deg); } }
 body:has(.cta-bar) .chuy-fab { bottom: calc(92px + env(safe-area-inset-bottom)); }
+/* room under the last line of every page, so his button never sits on the footer's links (Terms, Privacy, the app) */
+body:has(#chuyfab:not([hidden])) footer, body:has(#chuyfab:not([hidden])) .lp-foot { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+body:has(.cta-bar):has(#chuyfab:not([hidden])) footer { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
 body.chuy-open .chuy-fab { display: none; }
 .chuy { position: fixed; right: 16px; bottom: 16px; z-index: 44; width: min(410px, calc(100vw - 32px)); height: min(660px, calc(100dvh - 32px));
   display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: 0 24px 60px rgba(11,24,56,.28); }

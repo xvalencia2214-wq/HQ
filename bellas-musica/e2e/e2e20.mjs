@@ -107,6 +107,19 @@ try {
   ok("on the vendor dashboard he offers vendor questions", /¿Cómo consigo más reservas\?/.test(await P.locator("#chuy-chips").innerText()) && /panel/.test(await P.locator("#chuy-log").innerText()));
   await P.click("#chuy-close");
 
+  // ---- he never covers the links at the bottom of a page (phone, wide, and a vendor page with its bottom bar) ----
+  const reachable = (p) => p.evaluate(() => [...document.querySelectorAll("footer a, .lp-foot a")].filter((a) => a.offsetParent).every((a) => {
+    a.scrollIntoView({ block: "end" }); window.scrollTo(0, document.documentElement.scrollHeight);
+    const r = a.getClientRects()[0], hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); // first line of a link that wraps
+    return hit && (hit === a || a.contains(hit));
+  }));
+  for (const [label, page, hash] of [["phone", P, "#/?zip=60608"], ["wide", W, "#/?zip=60608"], ["phone vendor page", P, `#/group/${gid}`], ["phone welcome page", P, "#/welcome"]]) {
+    await go(page, hash); await page.waitForSelector("#chuyfab:not([hidden])"); await page.waitForTimeout(600);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); // the welcome page's opening curtain finishes...
+    await page.waitForSelector(".lp-curtain", { state: "detached", timeout: 8000 }).catch(() => {}); // ...and leaves first
+    ok(`${label}: every link at the bottom can still be tapped with Don Chuy there`, await reachable(page));
+  }
+
   // ---- the server says off: no button at all ----
   const off = await startApp({ DEMO_SEED: "0", AI_HELPER: "0" });
   try {
