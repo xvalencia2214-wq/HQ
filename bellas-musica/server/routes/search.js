@@ -11,13 +11,13 @@ import path from "node:path";
 // Which music suits which event when a group hasn't said what it plays.
 const EVENT_FIT = {
   "Serenata": ["Mariachi", "Trío romántico"],
-  "Wedding": ["Mariachi", "Banda", "Grupera", "DJ", "Trío romántico"],
-  "Quinceañera": ["Banda", "Mariachi", "Grupera", "DJ"],
+  "Wedding": ["Mariachi", "Banda", "Grupera", "DJ", "Trío romántico", "Sierreño", "Tierra Caliente", "Cumbia / Sonido", "Tamborazo"],
+  "Quinceañera": ["Banda", "Mariachi", "Grupera", "DJ", "Sierreño", "Tierra Caliente", "Cumbia / Sonido", "Tamborazo"],
   "Anniversary": ["Trío romántico", "Mariachi"],
-  "Corporate / Restaurant": ["Conjunto", "Trío romántico", "Mariachi", "DJ", "Norteño"],
+  "Corporate / Restaurant": ["Conjunto", "Trío romántico", "Mariachi", "DJ", "Norteño", "Sierreño"],
   "Baptism": ["Trío romántico", "Mariachi", "DJ"],
   "First Communion": ["Trío romántico", "Mariachi", "DJ"],
-  "Graduation": ["DJ", "Banda", "Norteño", "Grupera", "Mariachi"],
+  "Graduation": ["DJ", "Banda", "Norteño", "Grupera", "Mariachi", "Sierreño", "Cumbia / Sonido"],
   "Baby shower": ["DJ", "Trío romántico", "Mariachi"],
   "Funeral / Memorial": ["Mariachi", "Trío romántico"]
 };
@@ -165,6 +165,8 @@ export default function searchRoutes(ctx, add) {
     const out = search(query);
     if (!out.page) ctx.stats.count("search", out.origin.zip);
     ctx.stats.countMany("search_seen", out.results.map((g) => g.id)); // each vendor sees how often it shows up in searches
+    // a search that found nobody: the clearest sign of where vendors are missing (what kind | which ZIP), on the Admin page
+    if (!out.page && !out.results.length) ctx.stats.count("search_empty", `${query.type || query.category || "any"}|${out.origin.zip}`);
     return out;
   });
 

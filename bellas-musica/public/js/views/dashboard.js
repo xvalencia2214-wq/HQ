@@ -8,6 +8,7 @@ import { renderChat } from "../chat.js";
 import { CAT_ORDER, catLabel, catOfType } from "../cats.js";
 import { businessTab, bizBox, wireBiz, ownerOnly } from "./business.js";
 import { pushPanel } from "./app.js";
+import { qrSvg } from "../qr.js";
 
 // Type picker grouped by category (music, food, rentals...).
 const typeOptions = (meta, current) => CAT_ORDER.map((c) => `<optgroup label="${esc(catLabel(c))}">${meta.categories[c].map((x) => `<option value="${esc(x)}"${x === current ? " selected" : ""}>${esc(t("type." + x))}</option>`).join("")}</optgroup>`).join("");
@@ -33,6 +34,7 @@ export async function dashboard(app, params) {
     ${tab === "requests" && g.status !== "draft" ? todayCard(g) : ""}
     <div id="pushnudge" hidden></div>
     ${g.status === "draft" ? "" : checklistCard(g, link)}
+    ${tab === "requests" && g.status === "live" ? shareKit(g) : ""}
     <div class="tabs tabs-full" role="tablist">${TABS.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}${dot(k)}</a>`).join("")}</div>
     <div class="tabs tabs-grouped" role="tablist">${TAB_GROUPS.map(([k, tabs]) => `<a role="tab" class="${tabs.includes(tab) ? "on" : ""}" href="${esc(link({ tab: tabs[0] }))}">${esc(t(tabs.length > 1 ? "tabg." + k : "tab." + k))}${dot(k)}</a>`).join("")}</div>
     ${(() => { const grp = TAB_GROUPS.find(([, tabs]) => tabs.includes(tab))[1]; return grp.length > 1 ? `<div class="tabs tabs-sub" role="tablist">${grp.map((k) => `<a role="tab" class="${k === tab ? "on" : ""}" href="${esc(link({ tab: k }))}">${esc(t("tab." + k))}</a>`).join("")}</div>` : ""; })()}
@@ -44,7 +46,54 @@ export async function dashboard(app, params) {
   const refresh = () => dashboard(app, new URLSearchParams(location.hash.split("?")[1] || ""));
   const ctx = { g, body, refresh };
   wireStatus(app, g, refresh);
+  wireShareKit(g);
   await ({ requests, calendar: calTab, listing, extras, business: businessTab, media, reviews, payments, messages }[tab])(ctx);
+}
+
+// The share kit: a vendor's own TikTok, Instagram, Facebook and WhatsApp followers are its best customers, so give it the
+// booking link, captions ready to paste in both languages and a QR code for its stand and flyers. Open until the vendor
+// has copied something once (then it folds away, one tap to open again).
+const kitSeen = (g) => { try { return localStorage.getItem("bm_kit_" + g.id) === "1"; } catch { return false; } };
+const kitLink = (g) => `${location.origin}/g/${g.id}`;
+const tag = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+function kitCaptions(g) {
+  const link = kitLink(g), music = g.category === "music";
+  const tags = (en) => [`#${tag(g.type)}`, "#chicago", en ? "#party" : "#fiestas", "#quinceañera", en ? "#wedding" : "#boda"].filter((x, i, a) => x.length > 1 && a.indexOf(x) === i).join(" ");
+  return [
+    ["kit.capEs", `📅 ¡Ya puede reservar ${g.name} en línea! Vea nuestros precios y fechas libres, y aparte su fecha con depósito protegido 👉 ${link}\n\n${tags(false)}${music ? " #musicaenvivo" : ""}`],
+    ["kit.capEn", `📅 Book ${g.name} online! See our prices and open dates, and hold your date with a protected deposit 👉 ${link}\n\n${tags(true)}${music ? " #livemusic" : ""}`],
+    ["kit.capBio", `📅 Reserva aquí / Book here 👉 ${link}`]
+  ];
+}
+function shareKit(g) {
+  return `<details class="panel sharekit" id="sharekit"${kitSeen(g) ? "" : " open"}><summary><h2 class="sec">📣 ${esc(t("kit.title"))}</h2></summary>
+    <p>${esc(t("kit.lead"))}</p>
+    <label for="kit-link">${esc(t("kit.link"))}</label>
+    <div class="copyrow"><input readonly id="kit-link" value="${esc(kitLink(g))}"><button type="button" class="btn small" data-kit="kit-link">${esc(t("kit.copy"))}</button></div>
+    ${shareButtons(g.name, "#/group/" + g.id)}
+    <h3>${esc(t("kit.captions"))}</h3>
+    <div class="kit-caps">${kitCaptions(g).map(([k, text], i) => `<div class="kit-cap"><label for="kit-cap${i}">${esc(t(k))}</label><textarea readonly id="kit-cap${i}" rows="${k === "kit.capBio" ? 2 : 5}">${esc(text)}</textarea><button type="button" class="btn ghost small" data-kit="kit-cap${i}">${esc(t("kit.copy"))}</button></div>`).join("")}</div>
+    <div class="kit-bottom"><div class="kit-qrbox" id="kit-qrbox" hidden><h3>${esc(t("kit.qr"))}</h3><div id="kit-qr" class="kit-qr"></div><a class="btn ghost small" id="kit-qrdl" download="${esc(g.id)}-qr.svg">${esc(t("kit.qrDownload"))}</a></div>
+      <div><h3>${esc(t("kit.tips"))}</h3><ul class="kit-tips">${["kit.tip1", "kit.tip2", "kit.tip3", "kit.tip4", "kit.tip5"].map((k) => `<li>${esc(t(k))}</li>`).join("")}</ul></div></div>
+  </details>`;
+}
+function wireShareKit(g) {
+  const kit = document.getElementById("sharekit");
+  if (!kit) return;
+  kit.querySelectorAll("[data-kit]").forEach((b) => {
+    b.onclick = async () => {
+      const el = document.getElementById(b.dataset.kit);
+      try { await navigator.clipboard.writeText(el.value); toast(t("kit.copied")); } catch { el.select(); }
+      try { localStorage.setItem("bm_kit_" + g.id, "1"); } catch { /* private mode */ }
+    };
+  });
+  qrSvg(kitLink(g), { cell: 8, margin: 4 }).then((svg) => {
+    const box = document.getElementById("kit-qrbox");
+    if (!box) return;
+    document.getElementById("kit-qr").innerHTML = svg;
+    document.getElementById("kit-qrdl").href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    box.hidden = false;
+  }).catch(() => { /* no QR code library: the link and captions still work */ });
 }
 
 // "Today": the next gig, what's waiting for an answer, and money still to come, before anything else.

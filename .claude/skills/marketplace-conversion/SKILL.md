@@ -74,3 +74,10 @@ Next ideas, measured first:
 - Show the quote's deposit on the card.
 - A one-tap "Ask these 3" from a shortlist.
 - Remembering the family's event details across visits.
+
+## Since Oct 20, 2026 (lessons from Privada and Vibra Connect, `docs/competitors.md`)
+- Keep the whole booking in the app (price, deposit, Show-up guarantee, review request): an app that hands people a phone number never gets reviews or repeat visits.
+- **Liquidity is the number that matters**: `search_empty` (stats key, `type|zip` or `quotes:category|zip`) on the Admin page shows what families looked for and found nobody. Recruit there before opening new areas.
+- The vendor **share kit** (dashboard Requests tab: link, EN/ES captions, QR) turns a group's own TikTok/Instagram followers into bookings. Keep it on the first tab a vendor sees.
+- New music types must be added to `CATEGORIES.music` in `server/pricing.js`, `EVENT_FIT` in `server/routes/search.js`, and `type.*` labels in both languages in `public/js/i18n.js` (`test/growth.test.js` checks).
+

@@ -107,6 +107,23 @@ try {
   ok("on the vendor dashboard he offers vendor questions", /¿Cómo consigo más reservas\?/.test(await P.locator("#chuy-chips").innerText()) && /panel/.test(await P.locator("#chuy-log").innerText()));
   await P.click("#chuy-close");
 
+  // ---- the share kit on the vendor's Requests tab (its followers become bookings) ----
+  await P.waitForSelector("#sharekit");
+  ok("a live vendor sees the share kit open on Requests, in Spanish", await P.locator("#sharekit").evaluate((d) => d.open) && /Consiga reservas desde su TikTok/.test(await P.locator("#sharekit summary").innerText()));
+  const kitLink = await P.locator("#kit-link").inputValue();
+  ok("its booking link is the vendor's share page", kitLink === `${S.base}/g/${gid}`);
+  const caps = await P.locator(".kit-cap textarea").evaluateAll((els) => els.map((e) => e.value));
+  ok("three captions ready to paste: Spanish, English and a bio line, each with the link", caps.length === 3 && caps.every((c) => c.includes(kitLink)) && /reservar Mariachi Don Chuy Test en línea/.test(caps[0]) && /Book Mariachi Don Chuy Test online/.test(caps[1]) && /#mariachi #chicago/.test(caps[0]));
+  ok("the share page link really opens the vendor's preview", (await fetch(kitLink)).status === 200);
+  await until(() => P.locator("#kit-qrbox").isVisible(), 6000);
+  ok("a QR code to print, with a download button", (await P.locator("#kit-qr svg").count()) === 1 && /^blob:/.test(await P.locator("#kit-qrdl").getAttribute("href")) && (await P.locator("#kit-qrdl").getAttribute("download")) === `${gid}-qr.svg`);
+  ok("tips for TikTok, Instagram and gigs", (await P.locator(".kit-tips li").count()) === 5);
+  ok("no sideways scrolling with the kit on a phone", !(await P.evaluate(() => document.documentElement.scrollWidth > innerWidth)));
+  if (shots) await P.locator("#sharekit").screenshot({ path: path.join(shots, "e20-sharekit.png") });
+  await P.click("[data-kit='kit-cap0']");
+  await go(P, "#/dashboard"); await P.waitForSelector("#sharekit");
+  ok("after the first copy it folds away (one tap to open again)", !(await P.locator("#sharekit").evaluate((d) => d.open)));
+
   // ---- he never covers the links at the bottom of a page (phone, wide, and a vendor page with its bottom bar) ----
   const reachable = (p) => p.evaluate(() => [...document.querySelectorAll("footer a, .lp-foot a")].filter((a) => a.offsetParent).every((a) => {
     a.scrollIntoView({ block: "end" }); window.scrollTo(0, document.documentElement.scrollHeight);

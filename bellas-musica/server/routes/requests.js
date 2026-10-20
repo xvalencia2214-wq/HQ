@@ -118,7 +118,7 @@ export default function requestRoutes(ctx, add) {
     if (db.get("SELECT COUNT(*) c FROM event_requests WHERE customer_id = ? AND created_at > ?", user.id, since).c >= MAX_PER_DAY) throw new HttpError(429, `You can send ${MAX_PER_DAY} event requests a day. Check your quotes page for replies.`);
 
     const picked = matches(ctx, { event, date, guests, zip, customerId: user.id, time, size: category === "music" ? size : "", budgetMax, hours, category });
-    if (!picked.length) return { id: null, sent: 0, groups: [] }; // nothing sent, nothing stored: the page offers a wider search instead
+    if (!picked.length) { ctx.stats.count("search_empty", `quotes:${category}|${zip}`); return { id: null, sent: 0, groups: [] }; } // nothing sent, nothing stored: the page offers a wider search instead
     const id = rid(9);
     db.run("INSERT INTO event_requests (id, customer_id, event, date, guests, hours, zip, note, created_at, start_time, budget_min, budget_max, stage, size, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", id, user.id, event, date, guests, hours, zip, note, now(), time, budgetMin, budgetMax, stage, category === "music" ? size : "", category);
     deliver(ctx, db.get("SELECT * FROM event_requests WHERE id = ?", id), picked, 1);

@@ -22,7 +22,7 @@ export const EVENT_TYPES = ["Wedding", "Quinceañera", "Birthday", "Baptism", "F
 // Everything a party needs, in one place. Music came first; the other categories use the same listings, calendar, deposits,
 // reviews and chat. A listing's category follows from its type ("Other" stays music, as it always was).
 export const CATEGORIES = {
-  music: ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"],
+  music: ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "Sierreño", "Tierra Caliente", "Cumbia / Sonido", "Tamborazo", "DJ", "Other"],
   food: ["Food truck", "Taquería / taco catering", "Catering", "Cakes and desserts", "Aguas frescas and drinks"],
   rentals: ["Tents", "Tables and chairs", "Bounce house", "Dance floor and stage", "Linens and tableware"],
   decor: ["Balloon decorations", "Event decorator", "Flowers", "Backdrops and photo walls"],

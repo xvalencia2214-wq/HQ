@@ -7,6 +7,7 @@ import { EN5, ES5 } from "./i18n-win.js";
 import { EN6, ES6 } from "./i18n-look.js";
 import { EN7, ES7 } from "./i18n-plan.js";
 import { EN8, ES8 } from "./i18n-chuy.js";
+import { EN9, ES9 } from "./i18n-grow.js";
 
 const EN = {
   "cal.open": "available", "acct.delete": "Delete my account", "acct.deleteWarn": "This signs you out, removes your name, phone and messages, and takes your listings offline. Booking and payment records are kept without your personal details. You can't undo this.", "acct.deletePw": "Type your password to confirm", "acct.deleteBtn": "Delete my account", "acct.deleteConfirm": "Delete your account for good?", "acct.deleted": "Your account was deleted.",
@@ -84,7 +85,7 @@ const EN = {
   "dash.payStart": "Set up payouts", "dash.payContinue": "Continue setup", "dash.feeExplain": "Bella's Fiestas keeps a small platform fee from each booking's deposit; the rest is paid out to you. If a booking is refunded, the fee is refunded too.",
   "dash.featureTitle": "Featured placement", "dash.featureText": "For 30 days you appear first in local search with a Featured badge, and more often in the Discover feed (marked Promoted).", "dash.buyFeature": "Feature my group ({price})",
   "dash.featuredUntil": "Featured until {date}.", "dash.featured": "Your group is now featured!", "dash.noThreads": "No messages yet.",
-  "type.Mariachi": "Mariachi", "type.Banda": "Banda", "type.Norteño": "Norteño", "type.Trío romántico": "Romantic trio", "type.Grupera": "Grupera", "type.Conjunto": "Conjunto", "type.DJ": "DJ", "type.Other": "Other",
+  "type.Mariachi": "Mariachi", "type.Banda": "Banda", "type.Norteño": "Norteño", "type.Trío romántico": "Romantic trio", "type.Grupera": "Grupera", "type.Conjunto": "Conjunto", "type.Sierreño": "Sierreño", "type.Tierra Caliente": "Tierra Caliente", "type.Cumbia / Sonido": "Cumbia / Sonido", "type.Tamborazo": "Tamborazo", "type.DJ": "DJ", "type.Other": "Other",
   "event.Wedding": "Wedding", "event.Quinceañera": "Quinceañera", "event.Birthday": "Birthday", "event.Anniversary": "Anniversary", "event.Serenata": "Serenata", "event.Corporate / Restaurant": "Corporate / Restaurant", "event.Other": "Other"
 };
 
@@ -164,11 +165,11 @@ const ES = {
   "dash.payStart": "Configurar pagos", "dash.payContinue": "Continuar configuración", "dash.feeExplain": "Bella's Fiestas se queda con una pequeña comisión del depósito de cada reserva; el resto se te paga a ti. Si se reembolsa una reserva, la comisión también se reembolsa.",
   "dash.featureTitle": "Lugar destacado", "dash.featureText": "Por 30 días apareces primero en las búsquedas locales con una insignia de Destacado, y más seguido en Descubre (marcado como Promocionado).", "dash.buyFeature": "Destacar mi grupo ({price})",
   "dash.featuredUntil": "Destacado hasta el {date}.", "dash.featured": "¡Tu grupo ahora está destacado!", "dash.noThreads": "Aún no hay mensajes.",
-  "type.Mariachi": "Mariachi", "type.Banda": "Banda", "type.Norteño": "Norteño", "type.Trío romántico": "Trío romántico", "type.Grupera": "Grupera", "type.Conjunto": "Conjunto", "type.DJ": "DJ", "type.Other": "Otro",
+  "type.Mariachi": "Mariachi", "type.Banda": "Banda", "type.Norteño": "Norteño", "type.Trío romántico": "Trío romántico", "type.Grupera": "Grupera", "type.Conjunto": "Conjunto", "type.Sierreño": "Sierreño", "type.Tierra Caliente": "Tierra Caliente", "type.Cumbia / Sonido": "Cumbia / Sonido", "type.Tamborazo": "Tamborazo", "type.DJ": "DJ", "type.Other": "Otro",
   "event.Wedding": "Boda", "event.Quinceañera": "Quinceañera", "event.Birthday": "Cumpleaños", "event.Anniversary": "Aniversario", "event.Serenata": "Serenata", "event.Corporate / Restaurant": "Corporativo / Restaurante", "event.Other": "Otro"
 };
 
-Object.assign(EN, EN2, EN3, EN4, EN5, EN6, EN7, EN8); Object.assign(ES, ES2, ES3, ES4, ES5, ES6, ES7, ES8);
+Object.assign(EN, EN2, EN3, EN4, EN5, EN6, EN7, EN8, EN9); Object.assign(ES, ES2, ES3, ES4, ES5, ES6, ES7, ES8, ES9);
 export const DICT = { en: EN, es: ES };
 let current = "en";
 let onLang = () => {};

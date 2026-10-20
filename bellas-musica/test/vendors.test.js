@@ -27,7 +27,7 @@ test("party vendors: categories, package-only listings, search and feed filters,
     // meta: every type belongs to exactly one category, music types unchanged
     const meta = (await anon.get("/api/meta")).json;
     assert.deepEqual(Object.keys(meta.categories), ["music", "food", "rentals", "decor", "photo", "services", "venues"]);
-    assert.deepEqual(meta.categories.music, ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "DJ", "Other"]);
+    assert.deepEqual(meta.categories.music, ["Mariachi", "Banda", "Norteño", "Trío romántico", "Grupera", "Conjunto", "Sierreño", "Tierra Caliente", "Cumbia / Sonido", "Tamborazo", "DJ", "Other"]);
     assert.equal(new Set(meta.group_types).size, meta.group_types.length);
     for (const w of ["Tents", "Tables and chairs", "Food truck", "Taquería / taco catering", "Catering", "Security / bouncer", "Balloon decorations", "Event decorator", "Photographer", "Party hall"]) assert.ok(meta.group_types.includes(w), w);
     assert.equal(meta.hourly_by_default.rentals, false); assert.equal(meta.hourly_by_default.music, true);

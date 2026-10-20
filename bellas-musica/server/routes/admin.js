@@ -48,6 +48,8 @@ export default function adminRoutes(ctx, add) {
         searches: ctx.stats.total("search"), group_views: ctx.stats.total("group_view"), booking_started: ctx.stats.total("booking_started"),
         booking_paid: ctx.stats.total("booking_paid"), booking_confirmed: ctx.stats.total("booking_confirmed"), signups: ctx.stats.total("signup"), feed_views: ctx.stats.total("feed_view"), feed_taps: ctx.stats.total("feed_tap")
       },
+      // searches (and quote requests) that found nobody, last 30 days: where to go find vendors next
+      empty_searches: { total: ctx.stats.total("search_empty"), of: ctx.stats.total("search"), top: ctx.stats.top("search_empty", 30, 10).map((r) => { const [what, zip] = r.ref.split("|"); return { what, zip, city: lookupZip(zip)?.city || "", n: r.n }; }) },
       top_zips: ctx.stats.top("search", 30, 8).map((r) => ({ zip: r.ref, city: lookupZip(r.ref)?.city || "", searches: r.n })),
       waitlist: (() => {
         const rows = db.all("SELECT zip, kind, COUNT(*) n FROM waitlist GROUP BY zip, kind");

@@ -721,6 +721,20 @@ body.nav-open { overflow: hidden; }
 body.is-landing #nav, body.is-landing .navshade { display: none !important; }
 body.is-landing .shell { display: block; max-width: none; padding: 0; }
 @media print { #nav, .navtoggle, .navshade { display: none !important; } .shell { display: block; } }
+/* ---- the vendor share kit (dashboard, Requests tab) ---- */
+.sharekit > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.sharekit > summary::-webkit-details-marker { display: none; }
+.sharekit > summary::after { content: "▾"; margin-left: auto; color: var(--gold-ink); }
+.sharekit:not([open]) > summary::after { content: "▸"; }
+.sharekit > summary h2 { margin: 0; }
+.sharekit h3 { font-size: 1rem; margin: 16px 0 6px; }
+.kit-caps { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.kit-cap { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.kit-cap textarea { width: 100%; font-size: .95rem; resize: vertical; }
+.kit-bottom { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: start; }
+.kit-qr svg { width: 180px; height: 180px; background: #fff; border: 1px solid var(--line); border-radius: 12px; display: block; margin-bottom: 8px; }
+.kit-tips { margin: 0; padding-left: 20px; } .kit-tips li { margin: 6px 0; }
+
 /* ---- Don Chuy, the AI helper (public/js/chuy.js): a smiling sombrero button bottom right, and a chat that fills the
    screen on a phone and sits in the corner on an iPad or a computer. Big targets, big type, his links as gold buttons. ---- */
 .chuy-fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40;
