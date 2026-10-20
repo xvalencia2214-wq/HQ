@@ -92,11 +92,15 @@ try {
   await until(async () => (await P.locator(".chuy-link").count()) > 0);
   await P.click(".chuy-link >> nth=0"); await P.waitForFunction(() => location.hash.startsWith("#/group/"));
   ok("on a phone, tapping a vendor closes the chat so the page can be seen", !(await P.locator("#chuy").isVisible()) && await P.locator("#chuyfab").isVisible());
-  await P.evaluate(() => window.scrollTo(0, 600));
-  if (await until(() => P.locator(".cta-bar").isVisible(), 3000)) {
-    const bar = await P.locator(".cta-bar").boundingBox(), f2 = await P.locator("#chuyfab").boundingBox();
-    ok("on a vendor page the button sits above the Check dates bar, not on it", f2.y + f2.height <= bar.y + 2);
-  } else ok("the vendor page's Check dates bar shows on a phone", false);
+  // the Check dates bar shows while the calendar is off screen, with Don Chuy's button above it (not on it); scrolled to
+  // the calendar, the bar steps aside
+  await P.waitForSelector("#calpanel #calbox .day");
+  await P.evaluate(() => window.scrollTo(0, 0));
+  const offScreen = await until(() => P.evaluate(() => { const c = document.getElementById("calpanel").getBoundingClientRect(), b = document.getElementById("ctabar"); return c.top > innerHeight && !b.hidden && b.getBoundingClientRect().height > 0; }), 4000);
+  const rects = await P.evaluate(() => { const r = document.getElementById("ctabar").getBoundingClientRect(), f = document.getElementById("chuyfab").getBoundingClientRect(); return { barTop: r.top, fabBottom: f.bottom }; });
+  ok("on a vendor page the button sits above the Check dates bar, not on it", offScreen && rects.fabBottom <= rects.barTop + 2);
+  await P.evaluate(() => document.getElementById("calpanel").scrollIntoView({ block: "center" }));
+  ok("the Check dates bar steps aside when the calendar is on screen", await until(() => P.evaluate(() => document.getElementById("ctabar").hidden), 4000));
   await shot(P, "e20-phone-vendor.png");
   // a vendor on the dashboard gets vendor questions
   await P.evaluate(() => sessionStorage.removeItem("bm_chuy"));

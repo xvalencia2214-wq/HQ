@@ -83,8 +83,8 @@ function wireShareKit(g) {
   kit.querySelectorAll("[data-kit]").forEach((b) => {
     b.onclick = async () => {
       const el = document.getElementById(b.dataset.kit);
+      try { localStorage.setItem("bm_kit_" + g.id, "1"); } catch { /* private mode */ } // remembered at the tap, even if they leave before the copy finishes
       try { await navigator.clipboard.writeText(el.value); toast(t("kit.copied")); } catch { el.select(); }
-      try { localStorage.setItem("bm_kit_" + g.id, "1"); } catch { /* private mode */ }
     };
   });
   qrSvg(kitLink(g), { cell: 8, margin: 4 }).then((svg) => {
