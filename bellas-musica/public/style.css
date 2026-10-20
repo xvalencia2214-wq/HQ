@@ -862,3 +862,15 @@ html.big { font-size: 118.75%; }
   .of-brain { order: -1; flex-direction: column; gap: 4px; min-height: 110px; }
   .of-room { min-height: 130px; }
 }
+
+/* how far a vendor is from the family (vendor page) and the calendar's booked days */
+.dist { white-space: nowrap; }
+.fromyou { margin: 10px 0 4px; padding: 10px 14px; border-radius: 12px; background: rgba(14,107,59,.08); border: 1px solid rgba(14,107,59,.25); }
+.fromyou.far { background: rgba(180,35,24,.06); border-color: rgba(180,35,24,.3); }
+.day.booked { background: repeating-linear-gradient(135deg, rgba(180,35,24,.08) 0 5px, rgba(180,35,24,.16) 5px 10px); color: var(--bad); text-decoration: line-through; border-color: rgba(180,35,24,.35); }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: .88rem; color: var(--ink-2); }
+.cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-legend .lg { width: 16px; height: 16px; border-radius: 5px; display: inline-block; border: 1px solid transparent; }
+.cal-legend .lg.open { background: rgba(201,150,43,0.13); border-color: rgba(201,150,43,0.55); }
+.cal-legend .lg.booked { background: repeating-linear-gradient(135deg, rgba(180,35,24,.08) 0 3px, rgba(180,35,24,.2) 3px 6px); border-color: rgba(180,35,24,.35); }
+.cal-legend .lg.closed { background: rgba(11,24,56,.035); border-color: var(--line); }

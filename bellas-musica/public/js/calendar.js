@@ -2,7 +2,7 @@ import { dowLetters, dkey, fmtMonth, fmtDate } from "./ui.js";
 import { t } from "./i18n.js";
 
 // Month grid used by customers and by group managers.
-// cfg.dayState(dateObj) -> { enabled, open }, cfg.onPick(key), cfg.onMonth()
+// cfg.dayState(dateObj) -> { enabled, open, booked }, cfg.onPick(key), cfg.onMonth()
 export function calendar(box, st, cfg) {
   const m = st.month, first = new Date(m.getFullYear(), m.getMonth(), 1);
   const days = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
@@ -11,7 +11,7 @@ export function calendar(box, st, cfg) {
   for (let b = 0; b < first.getDay(); b++) html += '<div class="day blank"></div>';
   for (let d = 1; d <= days; d++) {
     const date = new Date(m.getFullYear(), m.getMonth(), d), s = cfg.dayState(date), k = dkey(date);
-    html += `<button type="button" class="day${s.open ? " open" : s.enabled ? " idle" : ""}${st.date === k ? " sel" : ""}" data-d="${k}" aria-label="${fmtDate(k)}${s.open ? ", " + t("cal.open") : ""}"${s.enabled ? "" : " disabled"}>${d}</button>`;
+    html += `<button type="button" class="day${s.open ? " open" : s.enabled ? " idle" : s.booked ? " booked" : ""}${st.date === k ? " sel" : ""}" data-d="${k}" aria-label="${fmtDate(k)}${s.open ? ", " + t("cal.open") : s.booked ? ", " + t("cal.booked") : ""}"${s.enabled ? "" : " disabled"}>${d}</button>`;
   }
   box.innerHTML = html + "</div>";
   box.querySelectorAll("[data-nav]").forEach((btn) => {

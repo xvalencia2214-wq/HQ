@@ -14,7 +14,9 @@ const DRAFT = "bm_bookdraft";
 export async function group(app, id, params = new URLSearchParams()) {
   const screen = currentScreen();
   let g;
-  try { g = await api.get("/api/groups/" + encodeURIComponent(id)); }
+  // the family's ZIP (from the search, or the last one they searched): the page says how far the vendor is
+  const zip0 = /^\d{5}$/.test(params.get("zip") || "") ? params.get("zip") : (() => { try { const z = localStorage.getItem("bm_zip"); return /^\d{5}$/.test(z || "") ? z : ""; } catch { return ""; } })();
+  try { g = await api.get("/api/groups/" + encodeURIComponent(id) + (zip0 ? "?zip=" + zip0 : "")); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
   document.title = `${g.name} · Bella's Fiestas`;
   setWho(g.category, screen); // "Request this venue", "Message this food vendor"...
@@ -27,9 +29,9 @@ export async function group(app, id, params = new URLSearchParams()) {
   try { deals = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/bundle-deals`)).bundles; } catch { /* none */ }
   const badges = (g.pro ? `<span class="tag pro" title="${esc(t("badge.proTip"))}">★ Pro</span>` : "") + (g.licensed ? `<span class="tag trust" title="${esc(t("badge.licensedTip"))}">📄 ${esc(t("badge.licensed"))}</span>` : "") + (g.verified ? `<span class="tag trust" title="${esc(t("badge.verifiedTip"))}">✓ ${esc(t("badge.verified"))}</span>` : "") + (g.id_checked ? `<span class="tag trust" title="${esc(t("badge.idTip"))}">🪪 ${esc(t("badge.idChecked"))}</span>` : "") + (g.insured ? `<span class="tag trust" title="${esc(t("badge.insuredTip"))}">🛡 ${esc(t("badge.insured"))}</span>` : "");
   const replies = g.response ? `<span class="dim">${esc(t("resp." + g.response.bucket))}</span>` : "";
-  const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {} };
+  const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {}, booked: {} };
   // What the customer already told us on the search page.
-  const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: params.get("zip") || "", date: params.get("date") || "" };
+  const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: zip0, date: params.get("date") || "" };
   const monthOf = (k) => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1);
   const policy = meta.policies[g.cancel_policy] || {};
   let draft = null;
@@ -49,6 +51,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   <div class="gp"><div class="gp-main">
   <div class="panel"><div class="titlebar"><h1>${esc(g.name)}${g.spotlight ? ` <span class="feat inline spot">★ ${esc(t("card.spotlight"))}</span>` : g.promoted ? ` <span class="feat inline">${esc(t("card.featured"))}</span>` : ""}${g.demo ? ` <span class="tag sample">${esc(t("card.sample"))}</span>` : ""}</h1><div class="titlebtns">${g.is_owner ? "" : heart(g.id, "big")}${shareButtons(g.name, "#/group/" + g.id)}</div></div>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${esc(t("g.reviews", { n: g.reviews }))})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${g.events_done ? `<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>` : ""}${g.min_hours > 1 ? `<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>` : ""}${badges}<span>${esc(g.city)}, ${esc(g.state)}</span>${replies}</div>
+    ${g.from && !g.is_owner ? `<p class="fromyou${g.from.reaches ? "" : " far"}"><span aria-hidden="true">📍</span> <strong>${esc(g.from.miles < 1 ? t("g.nearYou", { place: `${g.from.city} ${g.from.zip}` }) : t("g.fromYou", { n: g.from.miles, place: `${g.from.city} ${g.from.zip}` }))}</strong> · ${esc(!g.from.reaches ? t("g.tooFar") : g.from.travel_extra_cents ? t("g.travelAdds", { fee: money(g.from.travel_extra_cents) }) : t("g.noTravel"))}</p>` : ""}
     ${gallery}${video}
     <div class="facts">
       ${fact(music ? "g.members" : "g.team", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${music ? fact("g.set", esc(t("g.minutes", { n: g.set_minutes }))) : ""}
@@ -68,7 +71,9 @@ export async function group(app, id, params = new URLSearchParams()) {
   ${(g.needs || []).length ? `<div class="panel"><h2 class="sec">📋 ${esc(t("needs.publicTitle"))}</h2><ul class="needs-list">${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></div>` : ""}
   ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.past_reviews ? `<p class="dim small">${esc(t("pr.reviews", { n: g.past_reviews }))} · <span class="tag past" title="${esc(t("pr.labelTip"))}">${esc(t("pr.label"))}</span></p>` : ""}${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> ${r.past_client ? `<span class="tag past" title="${esc(t("pr.labelTip"))}">${esc(t("pr.label"))} · ${esc(t("event." + r.event))}</span>` : `<span class="tag trust">${esc(t("pr.booked"))}</span>`} <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photos && r.photos.length ? `<div class="rphotos">${r.photos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(t("rv.photo", { name: r.name }))}" loading="lazy"></a>`).join("")}</div>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
-    <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div><div class="legend">${esc(t("g.datesHint"))}</div></div>
+    <div class="panel" id="calpanel"><h2>${esc(t("g.dates"))}</h2><div id="calbox"></div><div id="slotbox"></div>
+      <div class="cal-legend" aria-hidden="true"><span><i class="lg open"></i>${esc(t("g.legendOpen"))}</span><span><i class="lg booked"></i>${esc(t("g.legendBooked"))}</span><span><i class="lg closed"></i>${esc(t("g.legendClosed"))}</span></div>
+      <div class="legend">${esc(t("g.datesLive"))}</div></div>
     <div class="panel" id="bookpanel"><h2>${esc(t(music ? "g.request" : "g.requestAny"))}</h2><div id="bookbox"></div></div>
     <div class="panel" id="chatpanel"><h2>${esc(t("g.message"))}</h2><div id="quotebox"></div><div id="chatbox"></div></div>
   </aside></div>
@@ -88,13 +93,13 @@ export async function group(app, id, params = new URLSearchParams()) {
   // calendar
   async function loadMonth() {
     const k = monthKey(st.month);
-    if (!st.days[k]) { try { st.days[k] = (await api.get(`/api/groups/${encodeURIComponent(g.id)}/availability?month=${k}`)).days; } catch { st.days[k] = {}; } }
+    if (!st.days[k]) { try { const r = await api.get(`/api/groups/${encodeURIComponent(g.id)}/availability?month=${k}`); st.days[k] = r.days; st.booked[k] = new Set(r.booked || []); } catch { st.days[k] = {}; st.booked[k] = new Set(); } }
   }
   async function drawCal() {
     await loadMonth();
     const days = st.days[monthKey(st.month)];
     calendar(document.getElementById("calbox"), st, {
-      dayState: (d) => { const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const ok = Boolean(days[key]); return { enabled: ok, open: ok }; },
+      dayState: (d) => { const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const ok = Boolean(days[key]); return { enabled: ok, open: ok, booked: !ok && (st.booked[monthKey(st.month)] || new Set()).has(key) }; },
       onPick: (k) => { st.date = k; st.time = null; drawCal(); drawBook(); },
       onMonth: drawCal
     });
@@ -190,7 +195,7 @@ export async function group(app, id, params = new URLSearchParams()) {
         goto(r.payment.url);
       } catch (ex) {
         err.textContent = ex.message; btn.disabled = false;
-        st.days = {}; await drawCal(); // the slot may have been taken
+        st.days = {}; st.booked = {}; await drawCal(); // the slot may have been taken
       }
     });
   }
@@ -241,6 +246,31 @@ export async function group(app, id, params = new URLSearchParams()) {
   }
   await initCalendar();
   await drawCal(); drawBook(); await drawChat();
+
+  // Keep the calendar current while the family looks at it: every 30 seconds while the page is on screen, and right away
+  // when they come back to it. A day someone just booked turns "Booked"; if it was the time they had picked, they're told.
+  const RECHECK_MS = Number(window.__bmRecheckMs) || 30_000; // the browser tests make it faster
+  let rechecking = false;
+  async function recheck() {
+    if (!app.isConnected) { clearInterval(tick); document.removeEventListener("visibilitychange", recheck); return; }
+    if (document.visibilityState !== "visible" || rechecking || g.is_owner) return;
+    rechecking = true;
+    try {
+      const k = monthKey(st.month);
+      const r = await api.get(`/api/groups/${encodeURIComponent(g.id)}/availability?month=${k}`);
+      if (!app.isConnected) return;
+      const same = JSON.stringify(r.days) === JSON.stringify(st.days[k] || {}) && JSON.stringify([...(st.booked[k] || [])].sort()) === JSON.stringify([...(r.booked || [])].sort());
+      if (same) return; // nothing changed: leave the screen (and the keyboard focus) alone
+      st.days = { [k]: r.days }; st.booked = { [k]: new Set(r.booked || []) };
+      if (st.date && st.date.slice(0, 7) === k && st.time && !((r.days[st.date] || []).includes(st.time))) {
+        st.time = null; if (!r.days[st.date]) st.date = null;
+        toast(t("g.justTaken"), "error"); drawBook();
+      }
+      await drawCal();
+    } catch { /* offline for a moment: try again next time */ } finally { rechecking = false; }
+  }
+  const tick = setInterval(recheck, RECHECK_MS);
+  document.addEventListener("visibilitychange", recheck);
   if (params.get("chat")) { const cp = document.getElementById("chatpanel"); if (cp && !cp.hidden) { cp.scrollIntoView({ behavior: "smooth", block: "center" }); document.getElementById("chatin")?.focus({ preventScroll: true }); } }
 
   const ctaBtn = document.getElementById("ctabtn");

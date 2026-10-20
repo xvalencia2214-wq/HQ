@@ -33,7 +33,7 @@ export function groupCard(g, i, ctx = "") {
   return `<article class="card">${i != null ? `<span class="rank">#${i + 1}</span>` : ""}${groupPhoto(g)}${heart(g.id, "on-card")}
     <h3>${esc(g.name)}</h3>
     <div class="meta">${g.reviews ? `<span class="stars">★ ${g.rating.toFixed(1)}</span><span>(${g.reviews})</span>` : `<span class="stars">★ ${esc(t("card.new"))}</span>`}<span class="tag">${esc(t("type." + g.type))}</span>${tags.join("")}</div>
-    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span>${g.distance_miles == null ? "" : `<span>${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span>`}${g.category === "music" || !g.category ? `<span>${esc(t("card.members", { n: g.members }))}</span>` : ""}</div>
+    <div class="meta"><span class="price">${esc(t("card.from", { price: money(g.from_cents) }))}</span>${g.distance_miles == null ? "" : `<span class="dist"><span aria-hidden="true">📍</span> ${esc(g.distance_miles < 1 ? t("card.nearby") : t("card.away", { n: g.distance_miles }))}</span>`}${g.category === "music" || !g.category ? `<span>${esc(t("card.members", { n: g.members }))}</span>` : ""}</div>
     ${g.fits_event ? `<div class="fit">✓ ${esc(t("card.fits"))}</div>` : ""}
     ${g.matched_songs?.length ? `<div class="fit">♪ ${esc(t("card.plays"))}: ${esc(g.matched_songs.join(", "))}</div>` : ""}
     ${g.open_slots?.length ? `<div class="fit">📅 ${esc(t("card.open"))}: ${esc(g.open_slots.join(", "))}</div>` : ""}
@@ -120,6 +120,7 @@ export async function home(app, params) {
 
   const viewLink = (v) => { const u = new URLSearchParams(location.hash.split("?")[1] || ""); if (v === "map") u.set("view", "map"); else u.delete("view"); return "#/?" + u.toString(); };
   const filtered = FIELDS.some((k) => k !== "zip" && k !== "category" && p[k]);
+  try { localStorage.setItem("bm_zip", data.origin.zip); } catch { /* private mode */ } // the vendor page then says how far each one is
   const clearHref = `#/?zip=${encodeURIComponent(data.origin.zip)}${music ? "" : "&category=" + encodeURIComponent(cat)}`;
   const ctx = carry(p), quotesCtx = ctx + (music ? "" : `${ctx ? "&" : ""}category=${encodeURIComponent(cat)}`); // Get quotes for this kind of vendor
   // Only unpaid cards carry a rank (#1, #2...): a paid spot is labelled, never ranked.

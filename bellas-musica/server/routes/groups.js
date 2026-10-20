@@ -3,11 +3,11 @@ import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
 import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, MAX_HOURS, MAX_NEEDS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, categoryOf } from "../pricing.js";
 import { cleanEntries, durationOf, peakLoad } from "../schedule.js";
-import { lookupZip } from "../geo.js";
+import { lookupZip, miles } from "../geo.js";
 import { inMarket } from "../market.js";
 import { parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
-import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner } from "../shared.js";
+import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner, reaches } from "../shared.js";
 import { normalizePhone } from "../sms.js";
 import { accountStatus, applyAccount } from "../stripe-events.js";
 import { priceInsight, todayBox } from "../vendor-insights.js";
@@ -138,11 +138,18 @@ export default function groupRoutes(ctx, add) {
       .map((g) => ({ ...manageView(g), my_role: g.owner_id === user.id ? "owner" : "manager" }))
   }), { auth: true });
 
-  add("GET", "/api/groups/:id", ({ params, user }) => {
+  add("GET", "/api/groups/:id", ({ params, user, query }) => {
     const g = getVisibleGroup(db, params.id, user);
     const isOwner = isTeam(db, user, g);
     if (!isOwner) ctx.stats.count("group_view", g.id); // a group looking at its own page is not a customer view
-    return { ...groupDetail(ctx, g), is_owner: isOwner };
+    // with the family's ZIP: how far the group is, whether it goes that far, and the travel fee it adds
+    let from = null;
+    const fz = isZip(query.zip) ? lookupZip(query.zip) : null, gz = lookupZip(g.zip);
+    if (fz && gz) {
+      const d = miles(fz, gz);
+      from = { zip: query.zip, city: fz.city, miles: Math.round(d), reaches: reaches(g, d), travel_extra_cents: d > g.travel_miles ? g.travel_fee_cents : 0 };
+    }
+    return { ...groupDetail(ctx, g), is_owner: isOwner, from };
   });
 
   add("PATCH", "/api/groups/:id", ({ params, body, user }) => {
@@ -315,8 +322,15 @@ export default function groupRoutes(ctx, add) {
     const today = todayStr(), days = {};
     // the open start times for the length the customer picked (or the shortest thing the listing sells)
     const minutes = query.minutes ? int(query.minutes, "Length", { min: 15, max: MAX_HOURS * 60 }) : undefined;
-    for (const d of monthDays(query.month)) if (d > today) { const s = openSlots(db, params.id, d, { expire: false, minutes }); if (s.length) days[d] = s; }
-    return { days };
+    // and the days that are taken: the group had opened them, but bookings (paid, waiting for the group, or being paid
+    // right now) left no time free, so the calendar can say "Booked" instead of just "not open"
+    const booked = [];
+    for (const d of monthDays(query.month)) if (d > today) {
+      const s = openSlots(db, params.id, d, { expire: false, minutes });
+      if (s.length) days[d] = s;
+      else if (db.get("SELECT 1 AS x FROM bookings WHERE group_id = ? AND date = ? AND status IN ('pending_payment','requested','confirmed') LIMIT 1", params.id, d)) booked.push(d);
+    }
+    return { days, booked };
   });
 
   // Owner: the slots they configured, plus which are already taken.
