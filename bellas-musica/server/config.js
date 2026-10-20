@@ -85,6 +85,7 @@ export function loadConfig(env = process.env) {
     // Mi Oficina, the owner's private AI office (server/office.js): its own daily cap, and the morning run + email
     officeDailyLimitUsd: int(env.OFFICE_DAILY_LIMIT_USD, 3),
     officeMorning: env.OFFICE_MORNING !== "0",
+    taxSetAsidePct: int(env.TAX_SETASIDE_PCT, 25),          // the Money & taxes desk's rule-of-thumb set-aside (not tax advice)
     // Operations
     sentryDsn: env.SENTRY_DSN || "",            // optional: errors also go to Sentry (https://sentry.io, free plan) with the same de-duplication
     alertWebhook: env.ALERT_WEBHOOK_URL || "",  // Slack/Discord/any JSON webhook: told when something breaks

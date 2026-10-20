@@ -1,4 +1,4 @@
-// "Mi Oficina": the owner's private AI office (server/office.js). Five desks around a shared memory work every morning
+// "Mi Oficina": the owner's private AI office (server/office.js). Six desks around a shared memory work every morning
 // and leave a report and drafts; nothing goes out until the owner taps Approve. Owner only, English only (like Admin).
 import { api } from "../api.js";
 import { esc, toast } from "../ui.js";
@@ -34,9 +34,10 @@ export async function office(app) {
     const btn = (d) => `<button type="button" class="of-room${pick === d.id ? " on" : ""}${d.working ? " working" : ""}" data-desk="${esc(d.id)}" aria-pressed="${pick === d.id}">
         ${room(d)}<span class="of-name"><span aria-hidden="true">${d.emoji}</span> ${esc(d.name)}</span>${light(d)}
         ${d.waiting ? `<span class="of-badge"><span aria-hidden="true">${d.waiting}</span><span class="sr-only">, ${d.waiting} waiting for you</span></span>` : ""}</button>`;
-    const [a, b, c, e, f] = v.desks;
-    return `<div class="of-floor">${btn(a)}<button type="button" class="of-brain${pick === "memory" ? " on" : ""}" data-desk="memory" aria-pressed="${pick === "memory"}">
-        <span class="of-orb" aria-hidden="true">🧠</span><span class="of-name">Shared memory</span><span class="of-light idle">${v.memory.length} notes</span></button>${btn(b)}${btn(c)}${btn(e)}${btn(f)}</div>`;
+    // the desks in two rows with the shared memory across the middle (on a phone: the memory on top, two desks per row)
+    const half = Math.ceil(v.desks.length / 2);
+    return `<div class="of-floor">${v.desks.slice(0, half).map(btn).join("")}<button type="button" class="of-brain${pick === "memory" ? " on" : ""}" data-desk="memory" aria-pressed="${pick === "memory"}">
+        <span class="of-orb" aria-hidden="true">🧠</span><span class="of-name">Shared memory</span><span class="of-light idle">${v.memory.length} notes</span></button>${v.desks.slice(half).map(btn).join("")}</div>`;
   }
 
   function draftCard(x) {
@@ -58,6 +59,7 @@ export async function office(app) {
     return `<div class="panel of-panel" id="ofpanel"><div class="of-ph"><h2 class="sec"><span aria-hidden="true">${d.emoji}</span> ${esc(d.name)}</h2>
         <button type="button" class="btn small" id="ofrun"${d.working || v.mode === "off" ? " disabled" : ""}>${d.working ? "Working…" : "Run now"}</button></div>
       <p class="dim small">${esc(d.about)}</p>
+      ${d.id === "money" ? `<p><a class="btn ghost small" id="ofcsv" href="/api/admin/office/money.csv?year=${new Date().getFullYear()}" download>Download this year for your accountant (spreadsheet)</a></p>` : ""}
       <h3>Latest report</h3>${d.report ? `<div class="of-report">${chuyFormat(d.report.text)}</div><p class="dim small">${esc(when(d.report.at))}</p>` : '<p class="dim">No report yet. It works every morning, or tap Run now.</p>'}
       <h3>Waiting for you (${drafts.length})</h3>${drafts.length ? drafts.map(draftCard).join("") : '<p class="dim">Nothing to approve from this desk.</p>'}</div>`;
   }

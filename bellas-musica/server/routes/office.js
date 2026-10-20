@@ -26,6 +26,15 @@ export default function officeRoutes(ctx, add) {
     return { ...out, office: ctx.office.view() };
   });
 
+  // the Money & taxes desk's spreadsheet for the accountant
+  add("GET", "/api/admin/office/money.csv", ({ query, user, res }) => {
+    ctx.office.admin(user);
+    const year = /^\d{4}$/.test(String(query.year || "")) ? query.year : "";
+    const csv = ctx.office.moneyCsv(year);
+    res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-fiestas-money-${year || "this-year"}.csv"`, "Cache-Control": "no-store" });
+    res.end(csv);
+  });
+
   add("POST", "/api/admin/office/chat", async ({ body, user }) => {
     ctx.office.admin(user); busy(user);
     return ctx.office.chat(user, ctx.office.readTurns(body));

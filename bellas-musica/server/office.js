@@ -1,5 +1,5 @@
-// "Mi Oficina": the owner's private AI office. Five desks (Morning briefing, Recruiting, Social media, Vendor quality,
-// Support) share one memory and work every morning; the owner can also talk to the whole office. Owner only (the Admin
+// "Mi Oficina": the owner's private AI office. Six desks (Morning briefing, Recruiting, Social media, Vendor quality,
+// Money & taxes, Support) share one memory and work every morning; the owner can also talk to the whole office. Owner only (the Admin
 // emails); everyone else gets a 404, like the Admin page.
 //
 // The same safety rules as Don Chuy:
@@ -8,7 +8,7 @@
 //     taps Approve: then the app itself (not the AI) emails the vendor or the family, or marks a post "ready to copy".
 //   - A daily spending cap (OFFICE_DAILY_LIMIT_USD) separate from Don Chuy's, and a free test mode without a key that
 //     still writes simple reports from the same numbers.
-import { HttpError, now, todayStr, addDays } from "./util.js";
+import { HttpError, now, todayStr, addDays, getTimezone } from "./util.js";
 import { HELPER_MODEL } from "./helper.js";
 import { defineTemplates } from "./emails.js";
 import { lookupZip } from "./geo.js";
@@ -17,7 +17,7 @@ import { upcomingHolidays } from "./routes/specials.js";
 const PRICE = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 }; // claude-opus-5-5, US$ per million tokens = µ$ per token
 const MAX_ROUNDS = 8, MAX_TURNS = 20, MAX_USER_CHARS = 2000;
 const DRAFT_KINDS = ["vendor_email", "customer_email", "social_post", "outreach", "task"];
-const usd = (c) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
+const usd = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(c % 100 ? 2 : 0)}`;
 const cut = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 const first = (n) => String(n || "").trim().split(/\s+/)[0] || "";
 const day = (unix) => (unix ? new Date(unix * 1000).toISOString().slice(0, 10) : "");
@@ -27,6 +27,7 @@ export const DESKS = [
   { id: "recruiting", emoji: "🔎", color: "#1d7a52", name: "Recruiting", about: "Where families searched and found nobody, which vendors to sign up next, and ready-to-send invitations for groups you find on TikTok or Instagram.", job: "Find where vendors are missing: searches that found nobody, the waitlist, thin categories near Chicago. Say which kinds of vendors to recruit first and where, and why. Save 1–3 'outreach' drafts: short, friendly Spanish-first messages the owner can send by DM or WhatsApp to a group they find on TikTok or Instagram (mention free listing, the founding-vendor deal if slots are left, and no fees for leads)." },
   { id: "social", emoji: "📱", color: "#b8336a", name: "Social media", about: "This week's TikTok and Instagram posts, made from real new vendors, real reviews and the holidays coming up.", job: "Plan this week's posts for TikTok and Instagram from real things in the app: new vendors, great reviews (first names only), upcoming holidays and popular events. Save 2–4 'social_post' drafts, Spanish first with an English line, with a hook, the idea for the video or photo, the caption and hashtags. Never invent reviews, numbers or vendors." },
   { id: "quality", emoji: "⭐", color: "#a8781c", name: "Vendor quality", about: "Vendors whose page is unfinished, who are slow to answer, or who have no open dates, with a kind email ready for each.", job: "Look after vendors: listings that are unfinished, requests waiting too long, no open dates, payouts not set up. Save a short, kind 'vendor_email' draft for each vendor who needs a nudge (at most 5), in Spanish unless the vendor writes in English, saying exactly what to do and why it brings more bookings." },
+  { id: "money", emoji: "💰", color: "#6b4fa0", name: "Money & taxes", about: "What the business earned and spent each month, how much to set aside for taxes, tax dates coming up, and a spreadsheet for your accountant.", job: "Track the owner's money with money_report: this month against last month, the year so far, income by kind (booking fees, promotions and Pro, extras, tips' card cost) and known costs (estimated card fees, AI). Say how much to set aside for taxes using the report's set-aside percent, and mention any estimated-tax date in the next 30 days. You are not an accountant: never state tax rules as facts; when something depends on tax law (what counts as income, Stripe's 1099-K forms, deductions), say what to ask the accountant. Save a 'task' draft only for something the owner must do soon, like moving money aside for taxes or paying an estimated tax by a date." },
   { id: "support", emoji: "🛟", color: "#16808a", name: "Support", about: "No-show reports, chargebacks, cancellations and reschedules that need you, with calm replies ready.", job: "Check the support queue: no-show reports, chargebacks, cancellations, reschedule requests waiting, refunds. Say what needs the owner and by when. Save 'customer_email' or 'vendor_email' drafts where a calm, fair reply would help. Never promise refunds the rules don't allow." }
 ];
 const DESK = Object.fromEntries(DESKS.map((d) => [d.id, d]));
@@ -59,6 +60,7 @@ const TOOLS = [
   { name: "vendor_health", description: "Every real vendor listing with what needs attention: status, photos, story, events, open dates in the next 30 days, payouts, requests waiting and how long, bookings and rating.", strict: true, input_schema: STRICT({}) },
   { name: "support_queue", description: "Things that may need the owner: no-show reports, open chargebacks, reschedule requests waiting, cancellations and refunds in the last N days.", strict: true, input_schema: STRICT({ days: { type: "integer", description: "1 to 30" } }) },
   { name: "content_ideas", description: "Material for social posts: vendors that went live in the last 30 days, good reviews from the last 60 days (first names only), upcoming holidays, and which events families book most.", strict: true, input_schema: STRICT({}) },
+  { name: "money_report", description: "The business's money by month for the last N months and the year so far: income by kind (booking fees after refunds, promotions and Pro passes, fees on extras, the card cost kept on tips), estimated card fees, AI cost, net, deposits processed and refunded, paid bookings, texts sent; plus the tax set-aside amount, the next estimated-tax dates and the accountant spreadsheet link.", strict: true, input_schema: STRICT({ months: { type: "integer", description: "1 to 24" } }) },
   { name: "memory_read", description: "The office's shared memory: the owner's notes first, then the desks' notes, newest first.", strict: true, input_schema: STRICT({}) },
   { name: "memory_write", description: "Add one short note to the shared memory for the other desks and for tomorrow.", strict: true, input_schema: STRICT({ note: { type: "string", description: "One or two sentences" } }) },
   {
@@ -181,6 +183,60 @@ export function createOffice(ctx) {
     let holidays = []; try { holidays = upcomingHolidays(db, todayStr()); } catch { /* none */ }
     return { new_vendors: fresh, good_reviews: reviews, upcoming_holidays: holidays, most_booked_events_90_days: events };
   }
+  // Money by month (business time zone): what the business kept (booking fees after refunds, promotions and Pro, fees on
+  // extras paid in the app, the card cost kept on tips) and the costs the app knows (estimated card fees, AI). Deposits
+  // are mostly the vendors' money passing through, shown apart.
+  const CARD_PCT = 0.029, CARD_FIXED = 30;
+  const card = (cents) => (cents > 0 ? Math.round(cents * CARD_PCT + CARD_FIXED) : 0);
+  const monthOf = (unix) => new Intl.DateTimeFormat("en-CA", { timeZone: getTimezone(), year: "numeric", month: "2-digit" }).format(new Date(unix * 1000)).slice(0, 7);
+  function moneyByMonth(from) { // from = "YYYY-MM"
+    const since = Date.parse(from + "-01T00:00:00Z") / 1000 - 86400 * 2, out = new Map();
+    const row = (m) => { if (m < from) return null; if (!out.has(m)) out.set(m, { month: m, booking_fees: 0, promotions: 0, extras_fees: 0, tip_card_cost_kept: 0, deposits_processed: 0, refunded: 0, card_fees_estimated: 0, ai_cost: 0, bookings_paid: 0, texts_sent: 0 }); return out.get(m); };
+    for (const b of db.all("SELECT created_at, deposit_cents, refund_cents, platform_fee_cents FROM bookings WHERE payment_status IN ('paid','partial_refund','refunded') AND deposit_cents > 0 AND created_at > ?", since)) {
+      const r = row(monthOf(b.created_at)); if (!r) continue;
+      r.booking_fees += Math.round(b.platform_fee_cents * (b.deposit_cents - b.refund_cents) / b.deposit_cents);
+      r.deposits_processed += b.deposit_cents; r.refunded += b.refund_cents; r.card_fees_estimated += card(b.deposit_cents); r.bookings_paid++;
+    }
+    for (const f of db.all("SELECT created_at, amount_cents FROM payments_feature WHERE status = 'paid' AND created_at > ?", since)) { const r = row(monthOf(f.created_at)); if (r) { r.promotions += f.amount_cents; r.card_fees_estimated += card(f.amount_cents); } }
+    for (const x of db.all("SELECT paid_at, amount_cents, fee_cents FROM extras WHERE status = 'paid' AND paid_at > ?", since)) { const r = row(monthOf(x.paid_at)); if (r) { r.extras_fees += x.fee_cents; r.card_fees_estimated += card(x.amount_cents); } }
+    for (const t of db.all("SELECT created_at, amount_cents, fee_cents FROM tips WHERE status = 'paid' AND created_at > ?", since)) { const r = row(monthOf(t.created_at)); if (r) { r.tip_card_cost_kept += t.fee_cents; r.card_fees_estimated += card(t.amount_cents); } }
+    for (const u of [...db.all("SELECT day, micro_usd FROM helper_usage WHERE day >= ?", from), ...db.all("SELECT day, micro_usd FROM office_usage WHERE day >= ?", from)]) { const r = row(u.day.slice(0, 7)); if (r) r.ai_cost += Math.round(u.micro_usd / 1e4); }
+    for (const s of db.all("SELECT created_at FROM sms_log WHERE sent = 1 AND created_at > ?", since)) { const r = row(monthOf(s.created_at)); if (r) r.texts_sent++; }
+    return [...out.values()].sort((a, b) => a.month.localeCompare(b.month)).map((r) => {
+      const income = r.booking_fees + r.promotions + r.extras_fees + r.tip_card_cost_kept, costs = r.card_fees_estimated + r.ai_cost;
+      return { ...r, income, known_costs: costs, net: income - costs };
+    });
+  }
+  // US federal (and Illinois) quarterly estimated-tax dates as usually set; the owner's accountant has the final word.
+  function taxDates(today) {
+    const y = Number(today.slice(0, 4));
+    return [`${y}-01-15`, `${y}-04-15`, `${y}-06-15`, `${y}-09-15`, `${y + 1}-01-15`, `${y + 1}-04-15`].filter((d) => d >= today).slice(0, 2)
+      .map((d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }));
+  }
+  function moneyReport(months) {
+    const n = Math.min(24, Math.max(1, Number(months) || 3)), today = todayStr(), year = today.slice(0, 4);
+    const start = new Date(Date.UTC(Number(year), Number(today.slice(5, 7)) - n, 1)).toISOString().slice(0, 7);
+    const list = moneyByMonth(start < `${year}-01` ? start : `${year}-01`);
+    const ytd = list.filter((r) => r.month.startsWith(year)).reduce((a, r) => { for (const k of ["income", "known_costs", "net", "booking_fees", "promotions", "deposits_processed", "refunded", "ai_cost"]) a[k] = (a[k] || 0) + r[k]; return a; }, {});
+    const pct = config.taxSetAsidePct, setAside = Math.max(0, Math.round((ytd.net || 0) * pct / 100));
+    const show = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === "number" && !["bookings_paid", "texts_sent"].includes(k) ? usd(v) : v]));
+    return {
+      today, months: list.filter((r) => r.month >= start).map(show), year_to_date: show(ytd),
+      tax_set_aside: { percent: pct, amount_on_net_so_far: usd(setAside), note: "A rule-of-thumb amount to keep aside (TAX_SETASIDE_PCT), not a tax calculation. The accountant decides what is owed." },
+      next_estimated_tax_dates: taxDates(today),
+      notes: ["Card fees are estimates (2.9% + 30¢ per payment); the exact amounts are in Stripe → Balances.", "Deposits processed are mostly the vendors' money: only the fee is the business's income.", "Text messages and hosting costs are not in the app: add them from those bills.", "Ask the accountant how Stripe's 1099-K forms count the vendors' share."],
+      spreadsheet: `${config.baseUrl}/api/admin/office/money.csv?year=${year}`
+    };
+  }
+  function moneyCsv(year) {
+    const y = /^\d{4}$/.test(String(year)) ? String(year) : todayStr().slice(0, 4);
+    const rows = moneyByMonth(`${y}-01`).filter((r) => r.month.startsWith(y));
+    const cols = ["month", "income", "booking_fees", "promotions", "extras_fees", "tip_card_cost_kept", "card_fees_estimated", "ai_cost", "known_costs", "net", "deposits_processed", "refunded", "bookings_paid", "texts_sent"];
+    const money = (k) => !["month", "bookings_paid", "texts_sent"].includes(k);
+    const total = Object.fromEntries(cols.map((k) => [k, k === "month" ? `${y} total` : rows.reduce((a, r) => a + r[k], 0)]));
+    return [cols.join(","), ...[...rows, total].map((r) => cols.map((k) => (money(k) ? (r[k] / 100).toFixed(2) : r[k])).join(","))].join("\n") + "\n";
+  }
+
   const memory = () => db.all("SELECT id, desk, text, created_at FROM office_memory ORDER BY (desk = 'owner') DESC, created_at DESC LIMIT 60").map((m) => ({ ...m, on: day(m.created_at) }));
   function remember(desk, note) {
     const text = cut(String(note || "").trim(), 400);
@@ -212,6 +268,7 @@ export function createOffice(ctx) {
       if (name === "vendor_health") return { vendors: vendorHealth() };
       if (name === "support_queue") return supportQueue(input.days);
       if (name === "content_ideas") return contentIdeas();
+      if (name === "money_report") return moneyReport(input.months);
       if (name === "memory_read") return { notes: memory().map(({ desk: who, text, on }) => ({ by: who, text, on })) };
       if (name === "memory_write") return remember(desk, input.note);
       if (name === "save_draft") return saveDraft(desk, input);
@@ -268,6 +325,12 @@ export function createOffice(ctx) {
       for (const v of c.new_vendors.slice(0, 2)) saveDraft("social", { kind: "social_post", target: "instagram", subject: `Welcome ${v.vendor}`, body: `🎉 ¡Bienvenidos a Bella's Fiestas, ${v.vendor}! ${v.type} en ${v.area}. Vea sus precios y fechas libres y reserve con depósito protegido 👉 ${v.link}\n\nWelcome to the family! #chicago #fiestas`, lang: "es" });
       return [tag, `New vendors this month: ${c.new_vendors.length}. Good reviews in 60 days: ${c.good_reviews.length}.`, ...c.new_vendors.slice(0, 2).map((v) => `- Drafted a welcome post for ${v.vendor}.`)].join("\n");
     }
+    if (desk === "money") {
+      const m = moneyReport(2), cur = m.months[m.months.length - 1], y = m.year_to_date;
+      return [tag, cur ? `- This month: ${cur.income} earned, ${cur.known_costs} in known costs, ${cur.net} net.` : "- No money in or out this month yet.",
+        `- This year so far: ${y.income || "$0"} earned, ${y.net || "$0"} net.`, `- Set aside for taxes (${m.tax_set_aside.percent}% rule of thumb): ${m.tax_set_aside.amount_on_net_so_far}.`,
+        `- Next estimated-tax dates: ${m.next_estimated_tax_dates.join(", ")} (check with your accountant).`].join("\n");
+    }
     if (desk === "quality") {
       const list = vendorHealth().filter((v) => v.needs.length);
       for (const v of list.slice(0, 3)) saveDraft("quality", { kind: "vendor_email", target: v.id, subject: "Un detalle para recibir más reservas", body: `Hola ${v.name}:\n\nSu página en Bella's Fiestas está casi lista. Para que más familias la encuentren: ${v.needs.map((n) => NEEDS_ES[n] || n).join("; ")}.\n\nCualquier duda, aquí estamos.\n— Bella's Fiestas`, lang: "es" });
@@ -303,7 +366,7 @@ export function createOffice(ctx) {
     if (mode === "off" || hour < 7 || hour >= 11) return false;
     if (morningBusy || db.get("SELECT 1 AS x FROM office_reports WHERE desk = 'briefing' AND day = ?", todayStr())) return false;
     morningBusy = true;
-    try { for (const d of ["recruiting", "social", "quality", "support", "briefing"]) await runDesk(d, { trigger: "morning" }); } finally { morningBusy = false; }
+    try { for (const d of ["recruiting", "social", "quality", "support", "money", "briefing"]) await runDesk(d, { trigger: "morning" }); } finally { morningBusy = false; }
     const brief = db.get("SELECT text FROM office_reports WHERE desk = 'briefing' ORDER BY created_at DESC, id DESC LIMIT 1");
     const waiting = db.get("SELECT COUNT(*) c FROM office_drafts WHERE status = 'pending'").c;
     for (const e of config.adminEmails) {
@@ -378,5 +441,5 @@ export function createOffice(ctx) {
     return turns;
   }
 
-  return { mode, deskIds: DESKS.map((d) => d.id), admin, isAdmin, view, runDesk, morning, decide, chat, readTurns, remember, forget: (id) => db.run("DELETE FROM office_memory WHERE id = ?", id), working };
+  return { moneyCsv, mode, deskIds: DESKS.map((d) => d.id), admin, isAdmin, view, runDesk, morning, decide, chat, readTurns, remember, forget: (id) => db.run("DELETE FROM office_memory WHERE id = ?", id), working };
 }

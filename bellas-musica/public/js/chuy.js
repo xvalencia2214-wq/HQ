@@ -113,11 +113,12 @@ export function setChuy(show) {
   }
 }
 
-// Labels in the screen's language, and whether he shows at all (AI_HELPER=0 hides him). Called on every redraw.
+// Labels in the screen's language, and whether he shows at all (AI_HELPER=0 hides him; the owner's office has its own
+// chat). Called on every redraw.
 export function refreshChuy() {
   const fab = $("chuyfab");
   if (!fab) return;
-  const off = !state.meta || state.meta.helper === "off";
+  const off = !state.meta || state.meta.helper === "off" || /^#\/office\b/.test(location.hash);
   fab.hidden = off;
   if (off && open) setChuy(false);
   fab.setAttribute("aria-label", t("chuy.open"));

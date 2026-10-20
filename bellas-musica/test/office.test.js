@@ -33,7 +33,7 @@ test("Mi Oficina is the owner's only: everyone else (and nobody logged in) gets 
     assert.equal(S.db.get("SELECT COUNT(*) c FROM office_memory").c, 1, "nothing changed");
     const v = (await boss.get("/api/admin/office")).json;
     assert.equal(v.mode, "test");
-    assert.deepEqual(v.desks.map((d) => d.id), ["briefing", "recruiting", "social", "quality", "support"]);
+    assert.deepEqual(v.desks.map((d) => d.id), ["briefing", "recruiting", "social", "quality", "money", "support"]);
     assert.ok(v.desks.every((d) => d.about && !("job" in d)), "the owner sees a plain description");
     assert.equal((await boss.post("/api/admin/office/run", { desk: "nope" })).status, 400);
     assert.equal((await boss.post("/api/admin/office/chat", { messages: [{ role: "assistant", text: "hi" }] })).status, 400);
@@ -137,12 +137,12 @@ test("Mi Oficina's daily cap stops the AI; the morning run works once, in the mo
   try {
     const boss = client(S.base); await boss.signup("boss@office.test", "Boss");
     assert.equal(await S.ctx.office.morning({ hour: 13 }), false, "not in the afternoon");
-    F.script.push(...Array.from({ length: 5 }, (_, i) => ({ stop_reason: "end_turn", content: [{ type: "text", text: `**Report ${i + 1}:** all good. See [the office](#/office).` }] })));
+    F.script.push(...Array.from({ length: 6 }, (_, i) => ({ stop_reason: "end_turn", content: [{ type: "text", text: `**Report ${i + 1}:** all good. See [the office](#/office).` }] })));
     assert.equal(await S.ctx.office.morning({ hour: 8 }), true);
-    assert.equal(F.calls.length, 5, "every desk worked once");
-    assert.equal(S.db.get("SELECT COUNT(DISTINCT desk) c FROM office_reports").c, 5);
+    assert.equal(F.calls.length, 6, "every desk worked once");
+    assert.equal(S.db.get("SELECT COUNT(DISTINCT desk) c FROM office_reports").c, 6);
     const mail = S.db.get("SELECT * FROM email_log WHERE kind = 'office.briefing'");
-    assert.equal(mail.to_email, "boss@office.test"); assert.match(mail.subject, /morning briefing/); assert.match(mail.body, /Report 5: all good. See the office\./, "the briefing (last) is in the email, as plain words");
+    assert.equal(mail.to_email, "boss@office.test"); assert.match(mail.subject, /morning briefing/); assert.match(mail.body, /Report 6: all good. See the office\./, "the briefing (last) is in the email, as plain words");
     assert.ok(!mail.body.includes("**") && !mail.body.includes("](#"), "no formatting marks in the email");
     assert.match(mail.body, /#\/office/);
     assert.equal(await S.ctx.office.morning({ hour: 9 }), false, "once a day");
@@ -152,7 +152,7 @@ test("Mi Oficina's daily cap stops the AI; the morning run works once, in the mo
     await boss.post("/api/admin/office/run", { desk: "social" });
     assert.ok(await until(async () => /spending limit/.test(S.db.get("SELECT text FROM office_reports WHERE desk = 'social' ORDER BY id DESC").text)));
     assert.match((await boss.post("/api/admin/office/chat", { messages: [{ role: "user", text: "hi" }] })).json.reply, /spending limit/);
-    assert.equal(F.calls.length, 5, "the AI wasn't called past the cap");
+    assert.equal(F.calls.length, 6, "the AI wasn't called past the cap");
   } finally { await S.close(); await F.close(); }
 });
 
@@ -164,8 +164,8 @@ test("Mi Oficina test mode (no key): simple reports from real numbers and Spanis
     const gid = await makeGroup(o, { name: "Mariachi Sin Historia", dates: [inDays(20)] });
     S.db.run("UPDATE groups SET story = '' WHERE id = ?", gid);
     await client(S.base).get("/api/search?zip=60608&category=venues");
-    for (const d of ["briefing", "recruiting", "quality", "social", "support"]) await boss.post("/api/admin/office/run", { desk: d });
-    assert.ok(await until(async () => S.db.get("SELECT COUNT(*) c FROM office_reports").c === 5));
+    for (const d of ["briefing", "recruiting", "quality", "social", "support", "money"]) await boss.post("/api/admin/office/run", { desk: d });
+    assert.ok(await until(async () => S.db.get("SELECT COUNT(*) c FROM office_reports").c === 6));
     const r = Object.fromEntries(S.db.all("SELECT desk, text FROM office_reports").map((x) => [x.desk, x.text]));
     assert.match(r.briefing, /Real vendors: 1/);
     assert.match(r.recruiting, /venues near Chicago/);
@@ -179,4 +179,66 @@ test("Mi Oficina test mode (no key): simple reports from real numbers and Spanis
     assert.equal(approve.json.status, "sent");
     assert.match(S.db.get("SELECT body FROM email_log WHERE kind = 'office.message'").body, /Abrir Bella's Fiestas|Open Bella's Fiestas/);
   } finally { await S.close(); }
+});
+
+test("Money & taxes desk: income after refunds, promotions, extras and tips, estimated card fees, AI cost, set-aside, the accountant's spreadsheet", async () => {
+  const F = await fakeClaude();
+  const S = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss@office.test", ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: F.url, TAX_SETASIDE_PCT: "30" });
+  try {
+    const boss = client(S.base), o = client(S.base), fam = client(S.base);
+    await boss.signup("boss@office.test", "Boss"); await o.signup("owner@office.test", "Dueño"); await fam.signup("rosa@office.test", "Rosa");
+    const gid = await makeGroup(o, { name: "Mariachi Dinero", dates: [inDays(20), inDays(21)] });
+    const b1 = (await fam.post("/api/bookings", bookingBody(gid, inDays(20)))).json.booking;
+    const b2 = (await fam.post("/api/bookings", bookingBody(gid, inDays(21)))).json.booking;
+    for (const b of [b1, b2]) await fam.post(`/api/bookings/${b.id}/simulate-pay`);
+    const { deposit_cents: dep, platform_fee_cents: fee } = S.db.get("SELECT deposit_cents, platform_fee_cents FROM bookings WHERE id = ?", b1.id);
+    S.db.run("UPDATE bookings SET refund_cents = ?, payment_status = 'partial_refund' WHERE id = ?", dep / 2, b2.id); // half the second deposit refunded: half its fee is gone
+    const t = Math.floor(Date.now() / 1000);
+    S.db.run("INSERT INTO payments_feature (id, group_id, amount_cents, status, kind, created_at) VALUES ('f1', ?, 4900, 'paid', 'feature', ?), ('f2', ?, 9900, 'pending', 'spotlight', ?)", gid, t, gid, t);
+    S.db.run("INSERT INTO tips (id, booking_id, customer_id, amount_cents, fee_cents, status, created_at) VALUES ('t1', ?, (SELECT id FROM users WHERE email = 'rosa@office.test'), 2000, 88, 'paid', ?)", b1.id, t);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date());
+    S.db.run("INSERT INTO helper_usage (day, requests, micro_usd) VALUES (?, 10, 1500000)", today);
+    S.db.run("INSERT INTO office_usage (day, requests, micro_usd) VALUES (?, 5, 500000)", today);
+
+    const income = fee + fee / 2 + 4900 + 88;
+    const cardFees = 2 * Math.round(dep * 0.029 + 30) + Math.round(4900 * 0.029 + 30) + Math.round(2000 * 0.029 + 30);
+    // AI: $1.50 Don Chuy + $0.50 office, plus the desk's own first request (2000 in, 500 out = 18,000 micro-dollars) counted before the report
+    const ai = 150 + Math.round((500000 + 2000 * 4 + 500 * 20) / 1e4);
+    const net = income - cardFees - ai;
+    const $ = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(c % 100 ? 2 : 0)}`;
+
+    // what the desk is given
+    F.script.push({ stop_reason: "tool_use", content: [{ type: "tool_use", id: "m1", name: "money_report", input: { months: 3 } }] }, { stop_reason: "end_turn", content: [{ type: "text", text: "Good month." }] });
+    await boss.post("/api/admin/office/run", { desk: "money" });
+    assert.ok(await until(async () => S.db.get("SELECT COUNT(*) c FROM office_reports WHERE desk = 'money'").c === 1));
+    assert.match(F.calls[0].body.system[1].text, /Money & taxes/);
+    assert.match(F.calls[0].body.system[1].text, /not an accountant/);
+    const r = JSON.parse(F.calls[1].body.messages.at(-1).content[0].content);
+    const m = r.months.at(-1);
+    assert.equal(m.booking_fees, $(fee + fee / 2), "fees after refunds");
+    assert.equal(m.promotions, "$49", "only paid promotions");
+    assert.equal(m.tip_card_cost_kept, "$0.88");
+    assert.equal(m.card_fees_estimated, $(cardFees));
+    assert.equal(m.ai_cost, $(ai), "Don Chuy and the office, its own work included");
+    assert.equal(m.income, $(income)); assert.equal(m.net, $(net));
+    assert.equal(m.deposits_processed, $(2 * dep)); assert.equal(m.bookings_paid, 2);
+    assert.equal(r.tax_set_aside.percent, 30);
+    assert.equal(r.tax_set_aside.amount_on_net_so_far, $(Math.round(net * 0.3)));
+    assert.ok(r.next_estimated_tax_dates.length === 2 && r.next_estimated_tax_dates.every((d) => /^[A-Z][a-z]+ 15, \d{4}$/.test(d)), r.next_estimated_tax_dates.join());
+    assert.ok(r.notes.some((n) => /accountant/.test(n)));
+    assert.ok(!JSON.stringify(r).includes("rosa@office.test"));
+
+    // the spreadsheet: the owner only
+    const year = today.slice(0, 4);
+    const get = (c) => fetch(`${S.base}/api/admin/office/money.csv?year=${year}`, { headers: c.cookie() ? { Cookie: c.cookie() } : {} });
+    assert.equal((await get(o)).status, 404); assert.equal((await get(client(S.base))).status, 404);
+    const res = await get(boss);
+    assert.equal(res.status, 200); assert.match(res.headers.get("content-type"), /text\/csv/); assert.match(res.headers.get("content-disposition"), /attachment/);
+    const lines = (await res.text()).trim().split("\n");
+    assert.match(lines[0], /^month,income,booking_fees,promotions/);
+    const thisMonth = lines.find((l) => l.startsWith(today.slice(0, 7))).split(","), total = lines.at(-1).split(",");
+    const netNow = income - cardFees - (150 + Math.round((500000 + 2 * 18000) / 1e4)); // by now both of the desk's requests are counted
+    assert.equal(thisMonth[1], (income / 100).toFixed(2)); assert.equal(thisMonth[9], (netNow / 100).toFixed(2));
+    assert.equal(total[0], `${year} total`); assert.equal(total[1], (income / 100).toFixed(2));
+  } finally { await S.close(); await F.close(); }
 });

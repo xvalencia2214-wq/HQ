@@ -54,7 +54,9 @@ try {
   ok("the owner's menu has Mi Oficina", (await B.locator('#nav a[data-r="office"]').count()) === 1);
   await B.goto(S.base + "/#/admin"); await B.waitForSelector('a[href="#/office"].btn');
   await B.click('a[href="#/office"].btn'); await B.waitForSelector(".of-floor");
-  ok("the office: five rooms and the shared memory", (await B.locator(".of-room").count()) === 5 && (await B.locator(".of-brain").count()) === 1);
+  ok("the office: six rooms and the shared memory", (await B.locator(".of-room").count()) === 6 && (await B.locator(".of-brain").count()) === 1);
+  ok("the memory runs across the middle", await B.evaluate(() => { const b = document.querySelector(".of-brain").getBoundingClientRect(), r = [...document.querySelectorAll(".of-room")].map((x) => x.getBoundingClientRect()); return r.slice(0, 3).every((x) => x.bottom <= b.top + 1) && r.slice(3).every((x) => x.top >= b.bottom - 1) && b.width > r[0].width * 2.5; }));
+  ok("Don Chuy steps aside here (the office has its own chat)", await B.locator("#chuyfab").isHidden());
   ok("it says nothing goes out without the owner", (await B.locator(".lead").innerText()).includes("nothing goes out until you approve it"));
   ok("test mode is explained", (await B.locator(".note").innerText()).includes("Test mode"));
   const wide = await B.locator(".of-room").evaluateAll((rs) => rs.map((r) => r.getBoundingClientRect().top));
@@ -92,6 +94,15 @@ try {
   await B.locator(".of-draft", { hasText: "ready to copy" }).locator('[data-act="done"]').click();
   ok("done removes it", await until(async () => (await B.locator(".of-draft").count()) === 1));
 
+  // Money & taxes
+  await B.click('.of-room[data-desk="money"]'); await B.click("#ofrun");
+  ok("the money desk reports earnings and a tax set-aside", await until(async () => (await B.locator(".of-report").count()) === 1 && /This year so far[\s\S]*Set aside for taxes/.test(await B.locator(".of-report").innerText())));
+  const csvHref = await B.locator("#ofcsv").getAttribute("href");
+  ok("with a spreadsheet for the accountant", /^\/api\/admin\/office\/money\.csv\?year=\d{4}$/.test(csvHref || ""));
+  const csv = await B.evaluate(async (h) => { const r = await fetch(h); return { s: r.status, t: await r.text() }; }, csvHref);
+  ok("that downloads", csv.s === 200 && csv.t.startsWith("month,income,"));
+  await shot(B, "office-money.png");
+
   // the shared memory
   await B.click(".of-brain");
   await B.fill("#ofmemtext", "Focus on Cicero this month"); await B.click("#ofmem button");
@@ -103,6 +114,8 @@ try {
   await B.fill("#ofq", "How did we do this week?"); await B.press("#ofq", "Enter");
   ok("the office answers (test mode)", await until(async () => (await B.locator(".of-msg.assistant").count()) === 1 && (await B.locator(".of-msg.assistant").innerText()).includes("Test mode")));
   await shot(B, "office-chat.png");
+  await B.click("#navtoggle"); await B.click('#nav a[data-r="admin"]'); await B.waitForSelector(".hero-fig");
+  ok("Don Chuy is back on the other screens", await until(async () => B.locator("#chuyfab").isVisible()));
 
   // the phone
   const P = await person("phone", { width: 390, height: 844 }, true);

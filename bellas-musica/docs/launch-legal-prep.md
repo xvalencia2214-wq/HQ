@@ -315,7 +315,7 @@ and much less if fewer people use him.
 ### Mi Oficina, your private AI office
 
 The same key also turns on **Mi Oficina**: open the menu → **Mi Oficina** (only you see it), or the button at the top of
-your Admin page. It's a little office with five desks around a shared memory:
+your Admin page. It's a little office with six desks around a shared memory:
 
 - 📊 **Morning briefing**: how the business is doing and the 3 most important things to do today. Emailed to you every
   morning between 7 and 11.
@@ -324,13 +324,19 @@ your Admin page. It's a little office with five desks around a shared memory:
 - 📱 **Social media**: posts for the week made from real new vendors, real reviews and the holidays coming up.
 - ⭐ **Vendor quality**: vendors with unfinished pages or slow answers, with a kind email ready for each.
 - 🛟 **Support**: no-shows, chargebacks, cancellations and reschedules that need you, with calm replies ready.
+- 💰 **Money & taxes**: what the business earned and spent each month and this year, an amount to set aside for taxes,
+  the next estimated-tax dates, and a **Download for your accountant** spreadsheet (one row per month). It counts your
+  fees after refunds, Featured/Spotlight/Pro payments, fees on extras and the card cost kept on tips; costs are
+  estimated card fees (2.9% + 30¢) and the AI. Text-message and hosting bills aren't in the app, so add those yourself.
+  The set-aside is a rule of thumb (`TAX_SETASIDE_PCT`, default 25%), **not tax advice**: ask your accountant what you
+  actually owe, and how Stripe's 1099-K forms count the vendors' share of deposits.
 
 **Nothing goes out on its own.** Tap a room to read its report and the drafts it left. Change any words you want, then
 tap **Approve and send email** (the app emails that vendor or family), **Approve** (a post or invitation becomes "ready
 to copy"), or **Reject**. Tap the 🧠 **Shared memory** to leave your own rules ("Focus on Cicero this month"), and use
 **Talk to your office** to ask anything.
 
-**What it costs:** a full morning (all five desks) is usually about $1–2 once you have real vendors and bookings, and less while it is quiet. `OFFICE_DAILY_LIMIT_USD` (default $3)
+**What it costs:** a full morning (all six desks) is usually about $1–2 once you have real vendors and bookings, and less while it is quiet. `OFFICE_DAILY_LIMIT_USD` (default $3)
 is the most it can spend in a day, separate from Don Chuy's limit. Today's and this month's cost are at the top of the
 office. `OFFICE_MORNING` = `0` stops the morning run and email.
 
