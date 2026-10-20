@@ -104,6 +104,18 @@ try {
   await go(V, "#/login"); await V.fill("#a-email", "o22@example.com"); await V.fill("#a-pw", "correct horse battery"); await V.click("#authform button[type=submit]"); await V.waitForFunction(() => !location.hash.startsWith("#/login"));
   await go(V, `#/group/${gid}?zip=60540`); await V.waitForSelector("#calbox");
   ok("the vendor looking at their own page sees no 'from you' line", (await V.locator(".fromyou").count()) === 0);
+  // ---- a dropped connection is not a crash; a real bug still is ----
+  const octx = await browser.newContext(); const O = await octx.newPage(); const oerr = [], reports = [];
+  O.on("pageerror", (e) => oerr.push(e.message)); O.on("request", (r) => { if (r.url().includes("/api/client-error")) reports.push(r.url()); });
+  await O.goto(S.base + "/#/?zip=60608"); await O.waitForSelector("#sform");
+  await octx.setOffline(true);
+  await O.evaluate(() => { import("/js/api.js").then((m) => { m.api.get("/api/meta"); }); }); // a request nobody waits for, with no signal
+  await O.waitForTimeout(800);
+  ok("losing the connection mid-request is not reported as an error", oerr.length === 0);
+  await octx.setOffline(false);
+  await O.evaluate(() => { setTimeout(() => { throw new Error("a real bug"); }); });
+  ok("a real error is still caught and reported", await until(async () => oerr.includes("a real bug") && reports.length === 1, 3000));
+  await octx.close();
 } catch (e) { failed++; console.log("FAIL crashed: " + (e.stack || e)); }
 finally {
   ok("no page errors", problems.length === 0); if (problems.length) console.log(problems.join("\n"));

@@ -58,7 +58,7 @@ const reportCrash = (message, source, line) => {
   fetch("/api/client-error", { method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true, body: JSON.stringify({ message: String(message).slice(0, 300), source: source || "", line: Number.isInteger(line) ? line : undefined, route: location.hash }) }).catch(() => {});
 };
 window.addEventListener("error", (e) => { if (e.filename && !e.filename.startsWith(location.origin)) return; reportCrash(e.message, e.filename, e.lineno); });
-window.addEventListener("unhandledrejection", (e) => { const r = e.reason; if (r instanceof ApiError && r.status < 500) return; reportCrash(r && r.message ? r.message : String(r), r && r.stack && (/\(?(https?:\/\/[^\s)]+?):\d+:\d+/.exec(r.stack) || [])[1]); });
+window.addEventListener("unhandledrejection", (e) => { const r = e.reason; if (r instanceof ApiError && r.status === 0) { e.preventDefault(); return; } /* no signal, or the page was left mid-request: expected, not an error */ if (r instanceof ApiError && r.status < 500) return; reportCrash(r && r.message ? r.message : String(r), r && r.stack && (/\(?(https?:\/\/[^\s)]+?):\d+:\d+/.exec(r.stack) || [])[1]); });
 
 const app = document.getElementById("app");
 // Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.
