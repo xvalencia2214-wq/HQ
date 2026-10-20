@@ -820,3 +820,46 @@ html.big { font-size: 118.75%; }
 .quick .chip { min-height: 40px; border: 1px solid var(--line); font: inherit; color: var(--ink); cursor: pointer; padding: 6px 12px; }
 .quick .qlang { margin-left: auto; display: flex; gap: 4px; }
 .quick .chip.on { border-color: var(--gold-ink); background: #fff8e6; font-weight: 600; }
+
+/* Mi Oficina (the owner's AI office): rooms around the shared memory, on a night-blue floor with gold */
+.of-floor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: radial-gradient(circle at 50% 30%, #1b2a52, #0b1838 70%); border: 2px solid var(--gold-2); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+.of-room, .of-brain { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(255,255,255,.04); color: #fdfbf6; border: 1px solid rgba(230,192,99,.35); border-radius: 14px; padding: 8px 6px 12px; min-height: 150px; font: inherit; cursor: pointer; transition: transform .25s var(--ease), border-color .2s, background .2s; }
+.of-room:hover, .of-brain:hover { transform: translateY(-2px); border-color: var(--gold-3); }
+.of-room.on, .of-brain.on { background: rgba(230,192,99,.16); border-color: var(--gold-3); box-shadow: 0 0 0 2px var(--gold-3) inset; }
+.of-room:focus-visible, .of-brain:focus-visible { outline: 3px solid var(--gold-3); outline-offset: 2px; }
+.of-svg { width: 100%; max-width: 170px; height: auto; }
+.of-name { font-weight: 700; text-align: center; line-height: 1.25; }
+.of-light { font-size: .8rem; padding: 2px 10px; border-radius: 999px; background: rgba(255,255,255,.12); color: #e9e2cf; }
+.of-light::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #8b93a8; vertical-align: 1px; }
+.of-light.done::before { background: #3ddc84; }
+.of-light.work::before { background: var(--gold-3); animation: of-pulse 1s infinite; }
+.of-badge { position: absolute; top: 8px; right: 8px; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 999px; background: var(--bad-fill); color: #fff; font-weight: 800; display: grid; place-items: center; }
+.of-brain { justify-content: center; background: radial-gradient(circle, rgba(230,192,99,.22), rgba(255,255,255,.03) 70%); }
+.of-orb { font-size: 3rem; line-height: 1; filter: drop-shadow(0 0 14px rgba(230,192,99,.8)); animation: of-float 4s ease-in-out infinite; }
+.of-room .of-glow { opacity: .55; }
+.of-room.working .of-glow { animation: of-pulse 1.2s infinite; opacity: 1; }
+.of-room.working .of-arm { animation: of-type .35s infinite alternate; transform-box: fill-box; }
+@keyframes of-pulse { 50% { opacity: .35; } }
+@keyframes of-float { 50% { transform: translateY(-5px); } }
+@keyframes of-type { to { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .of-orb, .of-room.working .of-glow, .of-room.working .of-arm, .of-light.work::before { animation: none; } }
+.of-ph { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.of-ph h2 { margin: 0; }
+.of-report { background: var(--cream-2); border-radius: 12px; padding: 12px 14px; line-height: 1.55; }
+.of-draft { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; background: var(--paper); }
+.of-draft label { display: block; margin-top: 8px; }
+.of-draft input, .of-draft textarea { width: 100%; margin-top: 4px; }
+.of-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.of-mem { list-style: none; padding: 0; margin: 12px 0 0; }
+.of-mem li { padding: 8px 0; border-top: 1px solid var(--line); }
+.of-msgs { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.of-msg { padding: 10px 14px; border-radius: 14px; max-width: 92%; line-height: 1.5; }
+.of-msg.user { align-self: flex-end; background: var(--gold); color: #fff; }
+.of-msg.assistant { align-self: flex-start; background: var(--cream-2); }
+#ofask textarea { flex: 1; min-width: 0; }
+@media (max-width: 720px) {
+  .of-floor { grid-template-columns: repeat(2, 1fr); padding: 10px; gap: 8px; }
+  .of-brain { grid-column: 1 / -1; order: -1; min-height: 110px; }
+  .of-room { min-height: 130px; }
+  .of-room:last-child { grid-column: 1 / -1; }
+}

@@ -76,7 +76,10 @@ try {
   await sweep("visitor", "", ["#/", "#/?zip=60608", "#/?zip=60608&q=Grupo", "#/chicago", "#/discover", "#/best/60608", g, "#/quotes", "#/signup"]);
   await sweep("family", "fam@xss.test", ["#/?zip=60608", g, "#/saved", "#/bookings", b ? `#/booking/${b.id}` : "#/bookings", past ? `#/booking/${past.id}` : "#/bookings", "#/messages", `#/messages?g=${gid}`, "#/quotes", "#/account", "#/party", pid ? `#/my-party/${pid}` : "#/party", b ? `#/agreement/${b.id}` : "#/"]);
   await sweep("vendor", "owner@xss.test", ["#/dashboard", d("requests"), d("calendar"), d("listing"), d("extras"), d("business"), d("media"), d("reviews"), d("payments"), d("messages"), g, "#/account"]);
-  await sweep("owner (Admin)", "boss@xss.test", ["#/admin", g]);
+  // Mi Oficina: every desk works (test mode), so its reports and drafts carry the vendors' and families' text; plus an owner note
+  for (const desk of S.ctx.office.deskIds) await S.ctx.office.runDesk(desk);
+  S.ctx.office.remember("owner", P("Note"));
+  await sweep("owner (Admin)", "boss@xss.test", ["#/admin", g, "#/office", ...S.ctx.office.deskIds.map((k) => `#/office?desk=${k}`), "#/office?desk=memory"]);
   if (fpToken) await sweep("family link", "", [`#/fp/${fpToken}`]);
   // the server-made pages: share card, vendor web page, Spanish Google page
   for (const path of [`/g/${gid}`, `/v/${gid}`, "/es/", "/chicago"]) {

@@ -29,6 +29,7 @@ export async function admin(app) {
   const statusLine = Object.entries(b).map(([k, v]) => `${v} ${k.replace("_", " ")}`).join(" · ") || "No bookings yet";
 
   app.innerHTML = `<div class="titlebar"><h1>Owner dashboard</h1><div class="chips"><span class="tag">${live ? "Payments: live" : "Payments: test mode (simulated)"}</span><span class="tag">${s.texts === "twilio" ? "Texts: live" : "Texts: simulated"}</span><span class="tag">${s.email === "resend" ? "Email: live" : "Email: simulated"}</span><span class="tag">Day = ${esc(s.timezone)}</span></div></div>
+    <p><a class="btn" href="#/office">🏢 Mi Oficina: your AI office</a></p>
     ${live ? "" : `<div class="note">Test mode: the numbers below are from simulated payments, not real money.</div>`}
     <div class="hero-fig"><div class="tile-l">Platform fees kept</div><div class="hero-v">${cents(s.money.platform_fees_kept_cents)}</div>
       <div class="tile-s">${s.platform_fee_pct}% of each booking, out of ${cents(s.money.net_deposits_cents)} net deposits. Featured, Spotlight and Pro passes add ${cents(s.money.featured_revenue_cents)}.</div></div>

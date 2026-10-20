@@ -86,7 +86,7 @@ function renderChrome() {
     `<div class="nav-top"><img src="logo.svg" alt="" width="40" height="40"><b>Bella's Fiestas</b><button type="button" id="navclose" class="navclose" aria-label="${esc(t("nav.close"))}"><span class="x" aria-hidden="true">✕</span><span>${esc(t("nav.close"))}</span></button></div>` +
     section("find", t("side.find"), link("home", "#/", "🔎", t("nav.find")) + link("quotes", "#/quotes", "✉️", t("nav.quotes")) + link("discover", "#/discover", "▶️", t("nav.discover")) + link("party", "#/party", "🎉", t("party.nav"))) +
     (u ? section("mine", t("side.mine"), link("saved", "#/saved", "♥", t("nav.saved")) + link("bookings", "#/bookings", "📅", t("nav.bookings")) + link("messages", "#/messages", "💬", t("nav.messages"), dot(a ? a.messages : 0))) : "") +
-    section("biz", t("side.biz"), link("dashboard", "#/dashboard", "🎤", t("nav.groups"), dot(managerCount)) + (u && u.is_admin ? link("admin", "#/admin", "🛠️", t("nav.admin")) : "")) +
+    section("biz", t("side.biz"), link("dashboard", "#/dashboard", "🎤", t("nav.groups"), dot(managerCount)) + (u && u.is_admin ? link("admin", "#/admin", "🛠️", t("nav.admin")) + link("office", "#/office", "🏢", "Mi Oficina") : "")) +
     section("you", t("side.you"), (u ? link("account", "#/account", "👤", u.name.split(" ")[0]) + `<button type="button" id="logout" class="navbtn"><span class="ni" aria-hidden="true">↩️</span><span class="nl">${esc(t("nav.logout"))}</span></button>`
       : link("login", "#/login", "🔑", t("nav.login")) + link("signup", "#/signup", "✨", t("nav.signup"), "", "cta")) +
       `<button type="button" id="langbtn" class="navbtn" aria-label="Español / English"><span class="ni" aria-hidden="true">🌐</span><span class="nl" lang="${lang() === "es" ? "en" : "es"}">${lang() === "es" ? "English" : "Español"}</span></button>` +
@@ -118,7 +118,7 @@ function renderChrome() {
   document.querySelectorAll("#nav a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === cur));
 }
 
-const needsLogin = new Set(["my-party", "bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin"]);
+const needsLogin = new Set(["my-party", "bookings", "booking", "agreement", "saved", "pay", "dashboard", "account", "messages", "admin", "office"]);
 
 async function route() {
   const token = ++routeToken;
@@ -172,6 +172,7 @@ async function route() {
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);
     else if (seg[0] === "admin") await admin(box);
+    else if (seg[0] === "office") { const { office } = await import("./views/office.js"); await office(box); }
     else if (seg[0] === "booking" && seg[1]) await bookingPage(box, seg[1], params);
     else if (seg[0] === "pay" && seg[1] && seg[2]) await simulatedPay(box, seg[1], seg[2]);
     else if (seg[0] === "dashboard") { if (params.get("new")) newGroup(box); else await dashboard(box, params); }

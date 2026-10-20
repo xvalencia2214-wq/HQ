@@ -141,10 +141,16 @@ export async function releaseHeldPayouts(ctx) {
   return n;
 }
 
+// Mi Oficina's morning: once a day between 7 and 11 a.m. every desk works, then the owner gets the briefing by email.
+export function officeMorning(ctx, { hour = businessHour() } = {}) {
+  if (!ctx.office || !ctx.config.officeMorning) return;
+  ctx.office.morning({ hour }).catch((e) => ctx.alert("Mi Oficina morning run failed: " + e.message, "office|morning"));
+}
+
 export function startJobs(ctx) {
   const timers = [
     setInterval(() => expirePending(ctx.db), 5 * 60_000),
-    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); releaseHeldPayouts(ctx).catch((e) => ctx.alert("Held payouts failed: " + e.message, "job")); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); recheckAccounts(ctx).catch((e) => ctx.alert("Payout account check failed: " + e.message, "job")); backupIfNeeded(ctx); offsiteBackup(ctx).catch((e) => ctx.alert("Off-site backup failed: " + e.message, "offsite")); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
+    setInterval(() => { try { housekeeping(ctx); fillDemoAvailability(ctx.db); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); expireUnansweredRequests(ctx).catch((e) => ctx.alert("Request expiry failed: " + e.message, "job")); retryCartTransfers(ctx); releaseHeldPayouts(ctx).catch((e) => ctx.alert("Held payouts failed: " + e.message, "job")); ctx.expireDocuments?.(); ctx.syncCalendars?.().catch(() => {}); recheckAccounts(ctx).catch((e) => ctx.alert("Payout account check failed: " + e.message, "job")); backupIfNeeded(ctx); offsiteBackup(ctx).catch((e) => ctx.alert("Off-site backup failed: " + e.message, "offsite")); officeMorning(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); } }, 60 * 60_000)
   ];
   timers.forEach((t) => t.unref());
   try { housekeeping(ctx); sendReviewReminders(ctx); sendEventReminders(ctx); sendDailyTexts(ctx); expandSilentRequests(ctx); backupIfNeeded(ctx); } catch (e) { ctx.alert("Background job failed: " + e.message, "job"); }

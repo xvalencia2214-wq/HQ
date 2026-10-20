@@ -82,6 +82,9 @@ export function loadConfig(env = process.env) {
     aiApiBase: env.ANTHROPIC_BASE_URL || "",                  // tests point this at a fake; leave unset in production
     aiHelper: env.AI_HELPER !== "0",
     aiDailyLimitUsd: int(env.AI_DAILY_LIMIT_USD, 5),         // past this many dollars in a day, he rests until tomorrow
+    // Mi Oficina, the owner's private AI office (server/office.js): its own daily cap, and the morning run + email
+    officeDailyLimitUsd: int(env.OFFICE_DAILY_LIMIT_USD, 3),
+    officeMorning: env.OFFICE_MORNING !== "0",
     // Operations
     sentryDsn: env.SENTRY_DSN || "",            // optional: errors also go to Sentry (https://sentry.io, free plan) with the same de-duplication
     alertWebhook: env.ALERT_WEBHOOK_URL || "",  // Slack/Discord/any JSON webhook: told when something breaks

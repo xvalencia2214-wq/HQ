@@ -48,6 +48,16 @@ const EXACT = {
   "Don Chuy needs a short break. Try again in a few minutes.": "Don Chuy necesita un descansito. Intente otra vez en unos minutos.",
   "Start a new conversation with Don Chuy": "Empiece una conversación nueva con Don Chuy.",
   "That message is too long for Don Chuy. Try a shorter one.": "Ese mensaje es muy largo para Don Chuy. Intente uno más corto.",
+  // Mi Oficina (the owner's office; English on screen, but every message has Spanish)
+  "No such desk": "Ese escritorio no existe.",
+  "The office is off (AI_HELPER=0)": "La oficina está apagada (AI_HELPER=0).",
+  "Approve or reject": "Apruebe o rechace.",
+  "Already decided": "Eso ya se decidió.",
+  "The message is empty": "El mensaje está vacío.",
+  "That vendor has no account to email": "Ese proveedor no tiene una cuenta a la que escribir.",
+  "That booking no longer exists": "Esa reserva ya no existe.",
+  "Start a new conversation with your office": "Empiece una conversación nueva con su oficina.",
+  "Your office needs a short break. Try again in a few minutes.": "Su oficina necesita un descansito. Intente otra vez en unos minutos.",
   "Please confirm you are 18 or older and agree to the Terms of Service and Privacy Policy": "Confirma que tienes 18 años o más y que aceptas los Términos de servicio y el Aviso de privacidad.",
   "That email already has an account. Try logging in.": "Ese correo ya tiene una cuenta. Intenta iniciar sesión.",
   "Too many login attempts. Try again in 15 minutes.": "Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.",
@@ -337,6 +347,7 @@ const PATTERNS = [
 
 // The names of form fields used by those checks.
 const FIELDS = {
+  Desk: "Escritorio", Draft: "Borrador", Subject: "Asunto",
   "Add-on": "Extra", "Add-on name": "Nombre del extra", Amount: "Cantidad", Answer: "Respuesta", "Bookings at the same time": "Reservas a la misma hora",
   Budget: "Presupuesto", "Bundle name": "Nombre del paquete en conjunto", "Calendar link": "Enlace del calendario", "Cancellation policy": "Política de cancelación",
   "Client's email": "Correo del cliente", "Client's name": "Nombre del cliente", Code: "Código", Comment: "Comentario", "Days the link stays open": "Días que el enlace está abierto",

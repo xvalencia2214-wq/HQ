@@ -96,6 +96,10 @@ The red boxes on the two pages are these same questions.
     control. Conversations go to Anthropic to be answered, but we don't store them. Is our disclaimer (Terms 11a) and
     the Privacy section enough? Do any state chatbot or AI-disclosure laws require more?"
 
+13. **Mi Oficina (AI used to run the business).** "We use AI to draft vendor emails, support replies and social posts,
+    and to summarize the business. It sees bookings with the customer's first name only, never contact details. A person
+    approves every message before it goes out. Is the Privacy section 'AI that helps us run Bella's Fiestas' enough?"
+
 **Bring to the meeting:** this document, the two pages (open `yourdomain.com/terms.html` on your iPad, or print them),
 and the fee list in section 6.
 
@@ -307,4 +311,26 @@ and much less if fewer people use him.
 - He never sees anyone's email, phone, address, card or arrival code.
 
 **To turn him off completely:** set `AI_HELPER` = `0` in Render. The button disappears.
+
+### Mi Oficina, your private AI office
+
+The same key also turns on **Mi Oficina**: open the menu → **Mi Oficina** (only you see it), or the button at the top of
+your Admin page. It's a little office with five desks around a shared memory:
+
+- 📊 **Morning briefing**: how the business is doing and the 3 most important things to do today. Emailed to you every
+  morning between 7 and 11.
+- 🔎 **Recruiting**: where families searched and found nobody, and invitations ready to send to groups you find on
+  TikTok or Instagram.
+- 📱 **Social media**: posts for the week made from real new vendors, real reviews and the holidays coming up.
+- ⭐ **Vendor quality**: vendors with unfinished pages or slow answers, with a kind email ready for each.
+- 🛟 **Support**: no-shows, chargebacks, cancellations and reschedules that need you, with calm replies ready.
+
+**Nothing goes out on its own.** Tap a room to read its report and the drafts it left. Change any words you want, then
+tap **Approve and send email** (the app emails that vendor or family), **Approve** (a post or invitation becomes "ready
+to copy"), or **Reject**. Tap the 🧠 **Shared memory** to leave your own rules ("Focus on Cicero this month"), and use
+**Talk to your office** to ask anything.
+
+**What it costs:** a full morning (all five desks) is usually about $1–2 once you have real vendors and bookings, and less while it is quiet. `OFFICE_DAILY_LIMIT_USD` (default $3)
+is the most it can spend in a day, separate from Don Chuy's limit. Today's and this month's cost are at the top of the
+office. `OFFICE_MORNING` = `0` stops the morning run and email.
 

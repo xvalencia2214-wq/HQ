@@ -687,6 +687,13 @@ export function openDb(config) {
   // Don Chuy's daily use of the Claude API (tokens and cost in millionths of a dollar), for the spending cap and Admin
   db.exec(`CREATE TABLE IF NOT EXISTS helper_usage (day TEXT PRIMARY KEY, requests INTEGER NOT NULL DEFAULT 0, input INTEGER NOT NULL DEFAULT 0,
     output INTEGER NOT NULL DEFAULT 0, cache_read INTEGER NOT NULL DEFAULT 0, cache_write INTEGER NOT NULL DEFAULT 0, micro_usd INTEGER NOT NULL DEFAULT 0)`);
+  // Mi Oficina (server/office.js): the desks' reports, the drafts waiting for the owner, the shared memory and the AI cost.
+  db.exec(`CREATE TABLE IF NOT EXISTS office_reports (id INTEGER PRIMARY KEY, desk TEXT NOT NULL, day TEXT NOT NULL, text TEXT NOT NULL, cost_micro INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)`);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_office_reports ON office_reports(desk, created_at)");
+  db.exec(`CREATE TABLE IF NOT EXISTS office_drafts (id INTEGER PRIMARY KEY, desk TEXT NOT NULL, kind TEXT NOT NULL, target TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL, lang TEXT NOT NULL DEFAULT 'es', status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL, decided_at INTEGER NOT NULL DEFAULT 0)`);
+  db.exec(`CREATE TABLE IF NOT EXISTS office_memory (id INTEGER PRIMARY KEY, desk TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL)`);
+  db.exec(`CREATE TABLE IF NOT EXISTS office_usage (day TEXT PRIMARY KEY, requests INTEGER NOT NULL DEFAULT 0, micro_usd INTEGER NOT NULL DEFAULT 0)`);
   // Lookups by listing that grow with the marketplace (search cards, ratings, the vendor page).
   db.exec("CREATE INDEX IF NOT EXISTS idx_reviews_group ON reviews(group_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_photos_group ON photos(group_id, position)");

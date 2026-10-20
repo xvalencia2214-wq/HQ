@@ -46,6 +46,8 @@ import clientReviewRoutes from "./routes/clientreviews.js";
 import guestRoutes from "./routes/guests.js";
 import helperRoutes from "./routes/helper.js";
 import { createHelper } from "./helper.js";
+import { createOffice } from "./office.js";
+import officeRoutes from "./routes/office.js";
 import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
 import { translateError, requestLang } from "./errors-es.js";
@@ -103,13 +105,14 @@ export function createApp(config) {
     booking: createLimiter({ windowMs: 60 * 60_000, max: L.booking }),
     feedEvent: createLimiter({ windowMs: 30 * 60_000, max: L.feedEvent }),
     clientError: createLimiter({ windowMs: 60_000, max: L.clientError }),
-    helper: createLimiter({ windowMs: 60 * 60_000, max: L.helper })
+    helper: createLimiter({ windowMs: 60 * 60_000, max: L.helper }),
+    office: createLimiter({ windowMs: 60 * 60_000, max: 120 })
   } };
   ctx.notify = createNotifier(ctx);
   if (config.demoSeed) seedDemo(db);
 
   const router = createRouter();
-  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes, agreementRoutes, clientReviewRoutes, guestRoutes, helperRoutes]) mod(ctx, router.add);
+  for (const mod of [authRoutes, searchRoutes, groupRoutes, bookingRoutes, messageRoutes, reviewRoutes, adminRoutes, waitlistRoutes, claimRoutes, feedRoutes, favoriteRoutes, requestRoutes, telemetryRoutes, partyRoutes, payPlusRoutes, vendorRoutes, teamRoutes, payLinkRoutes, crewRoutes, extrasRoutes, specialsRoutes, tipRoutes, seriesRoutes, pushRoutes, agreementRoutes, clientReviewRoutes, guestRoutes, helperRoutes, officeRoutes]) mod(ctx, router.add);
   // Read-only access to the app's own GET routes, as a given person (same permission checks as their screens). Don Chuy's
   // tools go through this, so he can see exactly what the person could see, and can never change anything.
   ctx.readApi = async (pathAndQuery, { user = null, req = null, ip = "" } = {}) => {
@@ -120,6 +123,7 @@ export function createApp(config) {
     return route.handler({ req, res: null, params, query: Object.fromEntries(u.searchParams), body: {}, user, ip, ctx });
   };
   ctx.helper = createHelper(ctx);
+  ctx.office = createOffice(ctx);
 
   const clientIp = (req) => {
     if (config.trustProxy) {
