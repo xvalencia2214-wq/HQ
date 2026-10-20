@@ -215,6 +215,9 @@ export function createApp(config) {
       return sendText(res, "application/json", JSON.stringify({ applinks: { apps: [], details: [{ appID: config.appleAppId, paths: ["*"] }] }, webcredentials: { apps: [config.appleAppId] } }));
     }
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
+    // people type the short form ("/terms", "/términos"): send them to the page
+    const short = { "/terms": "/terms.html", "/privacy": "/privacy.html", "/terminos": "/terms.html", "/privacidad": "/privacy.html" }[pathname.replace(/\/$/, "").toLowerCase()];
+    if (short) { res.writeHead(301, { Location: short, "Cache-Control": "public, max-age=86400" }); res.end(); return; }
     let root = config.publicDir, rel = pathname, cache = "no-cache";
     if (pathname.startsWith("/uploads/")) { root = config.uploadDir; rel = pathname.slice("/uploads".length); cache = "public, max-age=86400"; }
     else if (pathname.startsWith("/vendor/")) cache = "public, max-age=604800";

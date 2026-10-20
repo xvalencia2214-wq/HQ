@@ -100,3 +100,15 @@ test("the vendor page says how far the group is from the family and what travel 
     assert.equal(card.distance_miles, dist("60540")); assert.equal(card.travel_extra_cents, 6000);
   } finally { await S.close(); }
 });
+
+test("the Terms and Privacy pages open with or without .html (people type the short form)", async () => {
+  const S = await startApp({ DEMO_SEED: "0", WEATHER: "0" });
+  try {
+    for (const [from, to] of [["/terms", "/terms.html"], ["/privacy", "/privacy.html"], ["/Terms/", "/terms.html"], ["/terminos", "/terms.html"], ["/privacidad", "/privacy.html"]]) {
+      const r = await fetch(S.base + from, { redirect: "manual" });
+      assert.equal(r.status, 301, from); assert.equal(r.headers.get("location"), to, from);
+    }
+    for (const p of ["/terms.html", "/privacy.html"]) { const r = await fetch(S.base + p); assert.equal(r.status, 200, p); assert.match(await r.text(), /version 2026-10-20/); }
+    const followed = await fetch(S.base + "/terms"); assert.equal(followed.status, 200); assert.match(await followed.text(), /Terms of Service/);
+  } finally { await S.close(); }
+});
