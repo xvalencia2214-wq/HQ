@@ -137,3 +137,49 @@ test("Spanish emails name the event in Spanish, with the right article (never 't
     assert.match(en, /Wedding/); // the group (English) still sees the event type as before
   } finally { await S.close(); }
 });
+
+test("every email the app sends has a template, and every template reads cleanly in English and Spanish", async () => {
+  const fs = await import("node:fs"), path = await import("node:path");
+  const S = await startApp({ DEMO_SEED: "0", WEATHER: "0" }); // loads every feature, and with it every template it adds
+  try {
+    const { TEMPLATES, renderEmail } = await import("../server/emails.js");
+    // 1. every kind the code sends exists (an unknown one would make that action fail)
+    const files = [];
+    const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".js")) files.push(p); } };
+    walk(path.resolve("server"));
+    const used = new Set();
+    for (const f of files) for (const m of fs.readFileSync(f, "utf8").matchAll(/notify\.(?:to|toGroup|toEmail)\(([\s\S]{0,200}?)\)/g)) for (const k of m[1].matchAll(/"([a-z_]+(?:\.[a-z_]+)+)"/g)) used.add(k[1]);
+    assert.ok(used.size > 40, `found ${used.size} kinds`);
+    assert.deepEqual([...used].filter((k) => !TEMPLATES[k]).sort(), [], "sent but no template");
+    // 2. every template, both languages, with sample details: no blanks, no "undefined", a subject, a working button
+    const sample = new Proxy({}, { get: (_, k) => {
+      if (typeof k !== "string") return undefined;
+      if (k === "lines") return ["First line", "Second line"];
+      if (k === "body") return "Hola.\nUna línea más.";
+      if (/date|^day$|^when$/i.test(k)) return "2026-12-12";
+      if (/url|link|href/i.test(k)) return "https://bellas.example/#/x";
+      if (/_cents$|^cents$/.test(k)) return 12345;
+      if (/^(n|count|days|hours|minutes|seats|guests|coming|weeks|pct|minutes_before|left)$/.test(k)) return 3;
+      if (k === "event") return "Quinceañera";
+      if (k === "time") return "6:00 PM";
+      if (k === "policyKey") return "moderate";
+      if (/list|items|names|skipped|dates/i.test(k)) return ["Uno", "Dos"];
+      return "Muestra";
+    }, has: () => true });
+    const config = S.ctx.config, problems = [];
+    for (const [kind, tpl] of Object.entries(TEMPLATES)) for (const lang of ["en", "es"]) {
+      let msg, out;
+      try { msg = tpl[lang](sample); out = renderEmail(msg, { lang, config, unsubUrl: tpl.transactional ? "" : "https://bellas.example/u" }); }
+      catch (e) { problems.push(`${kind} ${lang}: throws ${e.message}`); continue; }
+      const all = [out.subject, out.text, out.html, msg.sms || ""].join("\n");
+      if (!out.subject || !String(out.subject).trim()) problems.push(`${kind} ${lang}: no subject`);
+      const bad = /\bundefined\b|\bNaN\b|\[object |\bnull\b|\bInfinity\b/.exec(all);
+      if (bad) problems.push(`${kind} ${lang}: shows "${bad[0]}" → ${all.slice(Math.max(0, bad.index - 60), bad.index + 30).replace(/\s+/g, " ")}`);
+      if (msg.cta && !/^https?:\/\//.test(String(msg.cta.url))) problems.push(`${kind} ${lang}: button without a full link`);
+    }
+    assert.deepEqual(problems, []);
+    // and the Spanish isn't just the English again
+    const same = Object.keys(TEMPLATES).filter((k) => TEMPLATES[k].en(sample).subject === TEMPLATES[k].es(sample).subject && !/^Muestra$|Bella's Fiestas/.test(TEMPLATES[k].en(sample).subject));
+    assert.deepEqual(same, [], "templates whose Spanish subject is the English one");
+  } finally { await S.close(); }
+});
