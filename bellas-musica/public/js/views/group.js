@@ -31,7 +31,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   const replies = g.response ? `<span class="dim">${esc(t("resp." + g.response.bucket))}</span>` : "";
   const st = { month: new Date(today().getFullYear(), today().getMonth(), 1), date: null, time: null, days: {}, booked: {} };
   // What the customer already told us on the search page.
-  const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: zip0, date: params.get("date") || "" };
+  const ctx = { event: params.get("event") || "", guests: params.get("guests") || "", zip: params.get("zip") || "", date: params.get("date") || "" }; // the event ZIP: only what they searched just now
   const monthOf = (k) => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1);
   const policy = meta.policies[g.cancel_policy] || {};
   let draft = null;
@@ -189,9 +189,10 @@ export async function group(app, id, params = new URLSearchParams()) {
         if (Number(f.weeks) > 1) {
           const sr = await api.post("/api/series", { ...bookBody, weeks: Number(f.weeks) });
           if (sr.skipped.length) toast(t("wk.skipped", { list: sr.skipped.map(fmtDate).join(", ") }));
-          goto(sr.cart.payment.url); return;
+          st.myHold = `${st.date}|${st.time}`; goto(sr.cart.payment.url); return;
         }
         const r = await api.post("/api/bookings", bookBody);
+        st.myHold = `${st.date}|${st.time}`; // their own hold while they pay: coming back to this page isn't "someone else booked it"
         goto(r.payment.url);
       } catch (ex) {
         err.textContent = ex.message; btn.disabled = false;
@@ -262,7 +263,10 @@ export async function group(app, id, params = new URLSearchParams()) {
       const same = JSON.stringify(r.days) === JSON.stringify(st.days[k] || {}) && JSON.stringify([...(st.booked[k] || [])].sort()) === JSON.stringify([...(r.booked || [])].sort());
       if (same) return; // nothing changed: leave the screen (and the keyboard focus) alone
       st.days = { [k]: r.days }; st.booked = { [k]: new Set(r.booked || []) };
-      if (st.date && st.date.slice(0, 7) === k && st.time && !((r.days[st.date] || []).includes(st.time))) {
+      if (st.date && st.date.slice(0, 7) === k && st.time && !((r.days[st.date] || []).includes(st.time)) && st.myHold !== `${st.date}|${st.time}`) {
+        // keep what they already typed (guests, address, notes) for the time they pick next
+        const form = document.getElementById("bookform");
+        if (form) { const fd = new FormData(form); draft = { gid: g.id, fields: Object.fromEntries(fd), addons: fd.getAll("addon") }; }
         st.time = null; if (!r.days[st.date]) st.date = null;
         toast(t("g.justTaken"), "error"); drawBook();
       }

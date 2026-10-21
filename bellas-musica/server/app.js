@@ -216,7 +216,8 @@ export function createApp(config) {
     }
     if (pathname === "/sitemap.xml") return sendText(res, "application/xml; charset=utf-8", sitemapXml(ctx));
     // people type the short form ("/terms", "/términos"): send them to the page
-    const short = { "/terms": "/terms.html", "/privacy": "/privacy.html", "/terminos": "/terms.html", "/privacidad": "/privacy.html" }[pathname.replace(/\/$/, "").toLowerCase()];
+    let plain = pathname; try { plain = decodeURIComponent(pathname); } catch { /* a broken address: no match */ }
+    const short = { "/terms": "/terms.html", "/privacy": "/privacy.html", "/terminos": "/terms.html", "/términos": "/terms.html", "/privacidad": "/privacy.html" }[plain.replace(/\/$/, "").toLowerCase()];
     if (short) { res.writeHead(301, { Location: short, "Cache-Control": "public, max-age=86400" }); res.end(); return; }
     let root = config.publicDir, rel = pathname, cache = "no-cache";
     if (pathname.startsWith("/uploads/")) { root = config.uploadDir; rel = pathname.slice("/uploads".length); cache = "public, max-age=86400"; }

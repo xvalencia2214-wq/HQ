@@ -71,12 +71,15 @@ try {
   // the family picks the only time on one day... and someone else books it first
   await W.click(`#calbox .day[data-d="${one}"]`); await W.click('#slotbox .slot[data-t="2:00 PM"]');
   ok("the family picked a time", (await W.locator("#bookform").count()) === 1);
+  await W.fill("#b-guests", "120"); await W.fill("#b-addr", "2500 W Cermak Rd"); await W.fill("#b-msg", "Las Mañanitas a las 7");
   await shot(W, "calendar-before.png");
   const other = (await x.post("/api/bookings", bookingBody(gid, one))).json.booking;
   ok("someone else books it", Boolean(other && other.id));
   ok("the calendar turns that day Booked by itself", await until(async () => (await W.locator(`#calbox .day[data-d="${one}"]`).getAttribute("class")).includes("booked")));
   ok("the family is told the time was just booked", (await W.locator("#toast").innerText()).includes("just booked"));
   ok("and their pick is cleared, so they can't send it", (await W.locator("#bookform").count()) === 0);
+  await W.click(`#calbox .day[data-d="${three}"]`); await W.click("#slotbox .slot >> nth=0"); await W.waitForSelector("#bookform");
+  ok("picking another time keeps what they already typed", (await W.inputValue("#b-guests")) === "120" && (await W.inputValue("#b-addr")) === "2500 W Cermak Rd" && (await W.inputValue("#b-msg")) === "Las Mañanitas a las 7");
   await shot(W, "calendar-after.png");
   // the other family pays, then the group declines: the day opens again by itself
   await x.post(`/api/bookings/${other.id}/simulate-pay`);

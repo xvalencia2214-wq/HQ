@@ -76,14 +76,20 @@ try {
   // edit one and send it
   const card = B.locator(".of-draft", { hasText: "Mariachi Oficina" });
   await card.locator(".of-body").fill("Hola Mariachi Oficina:\nAgregue su historia, por favor.\n— Bella's Fiestas");
+  // the screen redraws while the owner is editing (a desk starts working): the edit and the cursor stay
+  await card.locator(".of-body").focus();
+  await B.click("#ofrun"); await B.waitForTimeout(400);
+  await card.locator(".of-body").focus();
+  await B.evaluate(() => document.querySelector("#ofrun").click()); await B.waitForTimeout(400);
+  ok("a redraw keeps the owner's edits to a draft", (await card.locator(".of-body").inputValue()).includes("Agregue su historia, por favor."));
   await card.locator('[data-act="approve"]').click();
   ok("approving sends it", await until(async () => (await B.locator("#toast").innerText()).includes("Sent")));
-  const mail = S.db.get("SELECT * FROM email_log WHERE kind = 'office.message' ORDER BY id DESC LIMIT 1");
+  const mail = S.db.get("SELECT * FROM email_log WHERE kind = 'office.note' ORDER BY id DESC LIMIT 1");
   ok("the vendor gets the edited email", mail && mail.to_email === "o21@example.com" && mail.body.includes("Agregue su historia"));
   ok("the badge goes down", (await B.locator('.of-room[data-desk="quality"] .of-badge [aria-hidden]').innerText()) === "1");
   await B.locator(".of-draft").first().locator('[data-act="reject"]').click();
   ok("reject removes the other", await until(async () => (await B.locator(".of-draft").count()) === 0 && (await B.locator('.of-room[data-desk="quality"] .of-badge').count()) === 0));
-  ok("and nothing else was emailed", S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind = 'office.message'").c === 1);
+  ok("and nothing else was emailed", S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind LIKE 'office.%'").c === 1);
   ok("every decision is in the admin log", S.db.get("SELECT COUNT(*) c FROM admin_log WHERE action LIKE 'office %'").c === 1);
 
   // Social media: a post is approved, then ready to copy, then done

@@ -58,6 +58,7 @@ const EXACT = {
   "That booking no longer exists": "Esa reserva ya no existe.",
   "Start a new conversation with your office": "Empiece una conversación nueva con su oficina.",
   "Your office needs a short break. Try again in a few minutes.": "Su oficina necesita un descansito. Intente otra vez en unos minutos.",
+  "This person turned off optional emails, so it can't be sent. Message them in the app instead.": "Esta persona apagó los correos opcionales, así que no se puede enviar. Escríbale en la aplicación.",
   "Please confirm you are 18 or older and agree to the Terms of Service and Privacy Policy": "Confirma que tienes 18 años o más y que aceptas los Términos de servicio y el Aviso de privacidad.",
   "That email already has an account. Try logging in.": "Ese correo ya tiene una cuenta. Intenta iniciar sesión.",
   "Too many login attempts. Try again in 15 minutes.": "Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos.",

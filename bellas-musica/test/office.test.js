@@ -96,7 +96,7 @@ test("Mi Oficina live: Claude with fallbacks, the desk's lookups, nothing privat
 
     // the drafts wait; nothing was sent yet
     assert.deepEqual(v.drafts.map((d) => d.kind).sort(), ["customer_email", "vendor_email"]);
-    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind = 'office.message'").c, 0, "nothing goes out on its own");
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind LIKE 'office.%'").c, 0, "nothing goes out on its own");
     assert.equal(v.desks[0].waiting, 2);
     assert.ok(v.memory.some((m) => m.desk === "briefing" && /5-star/.test(m.text)), "the desk left a note for tomorrow");
     assert.ok(S.db.get("SELECT micro_usd FROM office_usage").micro_usd > 0, "the cost is counted");
@@ -107,12 +107,12 @@ test("Mi Oficina live: Claude with fallbacks, the desk's lookups, nothing privat
     assert.match(toFam.target_label, /Rosa/);
     const ok = await boss.post(`/api/admin/office/drafts/${toFam.id}`, { action: "approve", subject: "¡Gracias, Rosa!", body: "Gracias por reservar con nosotros.\nNos vemos en la fiesta." });
     assert.equal(ok.json.status, "sent");
-    const mail = S.db.get("SELECT * FROM email_log WHERE kind = 'office.message'");
+    const mail = S.db.get("SELECT * FROM email_log WHERE kind = 'office.note'"); // from the briefing desk: optional mail (respects opt-outs, has an unsubscribe link)
     assert.equal(mail.to_email, "rosa@office.test"); assert.equal(mail.subject, "¡Gracias, Rosa!"); assert.match(mail.body, /Nos vemos en la fiesta/);
     assert.equal((await boss.post(`/api/admin/office/drafts/${toFam.id}`, { action: "approve" })).status, 409, "only once");
     const toVendor = v.drafts.find((d) => d.kind === "vendor_email");
     assert.equal((await boss.post(`/api/admin/office/drafts/${toVendor.id}`, { action: "reject" })).json.status, "rejected");
-    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind = 'office.message'").c, 1);
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind LIKE 'office.%'").c, 1);
     assert.match(S.db.get("SELECT action FROM admin_log ORDER BY id DESC").action, /office customer_email sent/);
 
     // the chat: effort low, the conversation sent along
@@ -177,7 +177,7 @@ test("Mi Oficina test mode (no key): simple reports from real numbers and Spanis
     // the office's own words and the vendor emails it sends exist in both languages
     const approve = await boss.post(`/api/admin/office/drafts/${d.id}`, { action: "approve" });
     assert.equal(approve.json.status, "sent");
-    assert.match(S.db.get("SELECT body FROM email_log WHERE kind = 'office.message'").body, /Abrir Bella's Fiestas|Open Bella's Fiestas/);
+    assert.match(S.db.get("SELECT body FROM email_log WHERE kind = 'office.note'").body, /Abrir Bella's Fiestas|Open Bella's Fiestas/);
   } finally { await S.close(); }
 });
 
@@ -240,5 +240,46 @@ test("Money & taxes desk: income after refunds, promotions, extras and tips, est
     const netNow = income - cardFees - (150 + Math.round((500000 + 2 * 18000) / 1e4)); // by now both of the desk's requests are counted
     assert.equal(thisMonth[1], (income / 100).toFixed(2)); assert.equal(thisMonth[9], (netNow / 100).toFixed(2));
     assert.equal(total[0], `${year} total`); assert.equal(total[1], (income / 100).toFixed(2));
+  } finally { await S.close(); await F.close(); }
+});
+
+test("Mi Oficina fixes: the morning run isn't skipped by a hand-run briefing; long chat answers don't jam the chat; nudges respect 'no optional emails'", async () => {
+  const F = await fakeClaude();
+  const S = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss@office.test", ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: F.url });
+  try {
+    const boss = client(S.base), o = client(S.base), o2 = client(S.base);
+    await boss.signup("boss@office.test", "Boss"); await o.signup("quiet@office.test", "Callado"); await o2.signup("loud@office.test", "Alegre");
+    const quiet = await makeGroup(o, { name: "Mariachi Callado", dates: [inDays(20)] }), loud = await makeGroup(o2, { name: "Banda Alegre", dates: [inDays(21)] });
+
+    // 1. the owner runs the briefing by hand at 6:30; the morning run still happens later and emails the briefing
+    F.script.push({ stop_reason: "end_turn", content: [{ type: "text", text: "Early check by hand." }] });
+    await S.ctx.office.runDesk("briefing");
+    F.script.push(...Array.from({ length: 6 }, (_, i) => ({ stop_reason: "end_turn", content: [{ type: "text", text: `Morning ${i + 1}` }] })));
+    assert.equal(await S.ctx.office.morning({ hour: 8 }), true, "the morning run happens anyway");
+    assert.equal(F.calls.length, 7);
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE kind = 'office.briefing'").c, 1);
+    assert.equal(await S.ctx.office.morning({ hour: 9 }), false, "and only once");
+
+    // 2. a very long answer is cut to what the chat can send back, so the next question still works
+    F.script.push({ stop_reason: "end_turn", content: [{ type: "text", text: "Muy largo. ".repeat(1500) }] });
+    const long = (await boss.post("/api/admin/office/chat", { messages: [{ role: "user", text: "Everything about this month" }] })).json.reply;
+    assert.ok(long.length <= 8000, String(long.length));
+    F.script.push({ stop_reason: "end_turn", content: [{ type: "text", text: "Short answer." }] });
+    const next = await boss.post("/api/admin/office/chat", { messages: [{ role: "user", text: "Everything about this month" }, { role: "assistant", text: long }, { role: "user", text: "And in one line?" }] });
+    assert.equal(next.status, 200); assert.equal(next.json.reply, "Short answer.");
+
+    // 3. optional mail: a vendor who turned off optional emails isn't nudged (the owner is told); a support reply still goes
+    S.db.run("UPDATE users SET email_notify = 0 WHERE email = 'quiet@office.test'");
+    const mk = (desk, target) => S.db.run("INSERT INTO office_drafts (desk, kind, target, subject, body, lang, status, created_at) VALUES (?, 'vendor_email', ?, 'Hola', 'Un detalle para su página.', 'es', 'pending', 1)", desk, target).lastInsertRowid;
+    const nudgeQuiet = mk("quality", quiet), nudgeLoud = mk("quality", loud), supportQuiet = mk("support", quiet);
+    const refused = await boss.post(`/api/admin/office/drafts/${nudgeQuiet}`, { action: "approve" });
+    assert.equal(refused.status, 400); assert.match(refused.json.error, /turned off optional emails/);
+    assert.equal(S.db.get("SELECT status FROM office_drafts WHERE id = ?", nudgeQuiet).status, "pending", "still there to reject or copy");
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE to_email = 'quiet@office.test' AND kind LIKE 'office.%'").c, 0);
+    assert.equal((await boss.post(`/api/admin/office/drafts/${nudgeLoud}`, { action: "approve" })).json.status, "sent");
+    const note = S.db.get("SELECT * FROM email_log WHERE to_email = 'loud@office.test' AND kind = 'office.note'");
+    assert.ok(note, "the nudge went out as optional mail"); assert.match(note.body, /Dejar de recibir estos avisos|Stop these notifications/, "with an unsubscribe link");
+    assert.equal((await boss.post(`/api/admin/office/drafts/${supportQuiet}`, { action: "approve" })).json.status, "sent");
+    assert.equal(S.db.get("SELECT COUNT(*) c FROM email_log WHERE to_email = 'quiet@office.test' AND kind = 'office.message'").c, 1, "a support reply about their booking still reaches them");
   } finally { await S.close(); await F.close(); }
 });

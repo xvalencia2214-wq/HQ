@@ -694,6 +694,7 @@ export function openDb(config) {
     body TEXT NOT NULL, lang TEXT NOT NULL DEFAULT 'es', status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL, decided_at INTEGER NOT NULL DEFAULT 0)`);
   db.exec(`CREATE TABLE IF NOT EXISTS office_memory (id INTEGER PRIMARY KEY, desk TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL)`);
   db.exec(`CREATE TABLE IF NOT EXISTS office_usage (day TEXT PRIMARY KEY, requests INTEGER NOT NULL DEFAULT 0, micro_usd INTEGER NOT NULL DEFAULT 0)`);
+  db.exec(`CREATE TABLE IF NOT EXISTS office_mornings (day TEXT PRIMARY KEY, at INTEGER NOT NULL)`); // the days the morning run happened
   // Lookups by listing that grow with the marketplace (search cards, ratings, the vendor page).
   db.exec("CREATE INDEX IF NOT EXISTS idx_reviews_group ON reviews(group_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_photos_group ON photos(group_id, position)");

@@ -112,3 +112,11 @@ test("the Terms and Privacy pages open with or without .html (people type the sh
     const followed = await fetch(S.base + "/terms"); assert.equal(followed.status, 200); assert.match(await followed.text(), /Terms of Service/);
   } finally { await S.close(); }
 });
+
+test("/términos with the accent opens the Terms too", async () => {
+  const S = await startApp({ DEMO_SEED: "0", WEATHER: "0" });
+  try {
+    for (const p of ["/t%C3%A9rminos", "/T%C3%A9RMINOS/"]) { const r = await fetch(S.base + p, { redirect: "manual" }); assert.equal(r.status, 301, p); assert.equal(r.headers.get("location"), "/terms.html"); }
+    assert.equal((await fetch(S.base + "/%E0%A4%A")).status < 500, true, "a broken address doesn't crash");
+  } finally { await S.close(); }
+});

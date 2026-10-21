@@ -15,7 +15,7 @@ import { lookupZip } from "./geo.js";
 import { upcomingHolidays } from "./routes/specials.js";
 
 const PRICE = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 }; // claude-opus-5-5, US$ per million tokens = µ$ per token
-const MAX_ROUNDS = 8, MAX_TURNS = 20, MAX_USER_CHARS = 2000;
+const MAX_ROUNDS = 8, MAX_TURNS = 20, MAX_USER_CHARS = 2000, MAX_REPLY_CHARS = 8000; // replies are cut to what readTurns accepts back
 const DRAFT_KINDS = ["vendor_email", "customer_email", "social_post", "outreach", "task"];
 const usd = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(c % 100 ? 2 : 0)}`;
 const cut = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
@@ -81,7 +81,12 @@ defineTemplates({
   "office.briefing": { transactional: true,
     en: (v) => ({ subject: v.subject, lines: v.lines, cta: { label: "Open my office", url: v.url } }),
     es: (v) => ({ subject: v.subject, lines: v.lines, cta: { label: "Abrir mi oficina", url: v.url } }) },
-  // a message the owner approved, sent exactly as written (email only)
+  // a message the owner approved, sent exactly as written (email only). Support replies are about the person's own
+  // booking (always sent); nudges and anything else from the other desks are optional mail: they respect "no optional
+  // emails" and carry an unsubscribe link.
+  "office.note": { transactional: false,
+    en: (v) => ({ subject: v.subject, lines: String(v.body).split(/\n+/), cta: v.url ? { label: v.cta || "Open Bella's Fiestas", url: v.url } : null }),
+    es: (v) => ({ subject: v.subject, lines: String(v.body).split(/\n+/), cta: v.url ? { label: v.cta || "Abrir Bella's Fiestas", url: v.url } : null }) },
   "office.message": { transactional: true,
     en: (v) => ({ subject: v.subject, lines: String(v.body).split(/\n+/), cta: v.url ? { label: v.cta || "Open Bella's Fiestas", url: v.url } : null }),
     es: (v) => ({ subject: v.subject, lines: String(v.body).split(/\n+/), cta: v.url ? { label: v.cta || "Abrir Bella's Fiestas", url: v.url } : null }) }
@@ -188,7 +193,8 @@ export function createOffice(ctx) {
   // are mostly the vendors' money passing through, shown apart.
   const CARD_PCT = 0.029, CARD_FIXED = 30;
   const card = (cents) => (cents > 0 ? Math.round(cents * CARD_PCT + CARD_FIXED) : 0);
-  const monthOf = (unix) => new Intl.DateTimeFormat("en-CA", { timeZone: getTimezone(), year: "numeric", month: "2-digit" }).format(new Date(unix * 1000)).slice(0, 7);
+  let monthFmt = null, monthTz = "";
+  const monthOf = (unix) => { if (monthTz !== getTimezone()) { monthTz = getTimezone(); monthFmt = new Intl.DateTimeFormat("en-CA", { timeZone: monthTz, year: "numeric", month: "2-digit" }); } return monthFmt.format(new Date(unix * 1000)).slice(0, 7); };
   function moneyByMonth(from) { // from = "YYYY-MM"
     const since = Date.parse(from + "-01T00:00:00Z") / 1000 - 86400 * 2, out = new Map();
     const row = (m) => { if (m < from) return null; if (!out.has(m)) out.set(m, { month: m, booking_fees: 0, promotions: 0, extras_fees: 0, tip_card_cost_kept: 0, deposits_processed: 0, refunded: 0, card_fees_estimated: 0, ai_cost: 0, bookings_paid: 0, texts_sent: 0 }); return out.get(m); };
@@ -364,9 +370,11 @@ export function createOffice(ctx) {
   // Every morning (7–11 a.m. business time), once a day: every desk works, then the owner gets the briefing by email.
   async function morning({ hour }) {
     if (mode === "off" || hour < 7 || hour >= 11) return false;
-    if (morningBusy || db.get("SELECT 1 AS x FROM office_reports WHERE desk = 'briefing' AND day = ?", todayStr())) return false;
+    // its own record (a briefing the owner ran by hand earlier doesn't count as the morning run)
+    if (morningBusy || db.get("SELECT 1 AS x FROM office_mornings WHERE day = ?", todayStr())) return false;
     morningBusy = true;
     try { for (const d of ["recruiting", "social", "quality", "support", "money", "briefing"]) await runDesk(d, { trigger: "morning" }); } finally { morningBusy = false; }
+    db.run("INSERT OR IGNORE INTO office_mornings (day, at) VALUES (?, ?)", todayStr(), now());
     const brief = db.get("SELECT text FROM office_reports WHERE desk = 'briefing' ORDER BY created_at DESC, id DESC LIMIT 1");
     const waiting = db.get("SELECT COUNT(*) c FROM office_drafts WHERE status = 'pending'").c;
     for (const e of config.adminEmails) {
@@ -404,15 +412,20 @@ export function createOffice(ctx) {
     if (action === "reject" || action === "done") { db.run("UPDATE office_drafts SET status = ?, decided_at = ? WHERE id = ?", action === "reject" ? "rejected" : "done", now(), id); return { status: action === "reject" ? "rejected" : "done" }; }
     if (!txt) throw new HttpError(400, "The message is empty");
     let status = "ready";
+    const kindOf = d.desk === "support" ? "office.message" : "office.note";
+    const send = (userId, url) => {
+      if (kindOf === "office.note" && !db.get("SELECT email_notify FROM users WHERE id = ?", userId)?.email_notify) throw new HttpError(400, "This person turned off optional emails, so it can't be sent. Message them in the app instead.");
+      ctx.notify.to(userId, kindOf, { subject: sub || "Bella's Fiestas", body: txt, url }, { noSms: true });
+    };
     if (d.kind === "vendor_email") {
       const g = db.get("SELECT owner_id, name FROM groups WHERE id = ? AND demo = 0", d.target);
       if (!g || !g.owner_id) throw new HttpError(400, "That vendor has no account to email");
-      ctx.notify.to(g.owner_id, "office.message", { subject: sub || "Bella's Fiestas", body: txt, url: `${config.baseUrl}/#/dashboard` }, { noSms: true });
+      send(g.owner_id, `${config.baseUrl}/#/dashboard`);
       status = "sent";
     } else if (d.kind === "customer_email") {
       const b = db.get("SELECT customer_id FROM bookings WHERE id = ?", d.target);
       if (!b) throw new HttpError(400, "That booking no longer exists");
-      ctx.notify.to(b.customer_id, "office.message", { subject: sub || "Bella's Fiestas", body: txt, url: `${config.baseUrl}/#/booking/${d.target}` }, { noSms: true });
+      send(b.customer_id, `${config.baseUrl}/#/booking/${d.target}`);
       status = "sent";
     }
     db.run("UPDATE office_drafts SET status = ?, subject = ?, body = ?, decided_at = ? WHERE id = ?", status, sub, txt, now(), id);
@@ -426,7 +439,7 @@ export function createOffice(ctx) {
     if (overLimit()) return { reply: "The office reached today's spending limit. It's back tomorrow.", mode };
     try {
       const { text } = await converse("office", turns.map((t, i) => ({ role: t.role, content: i === turns.length - 1 ? `(Today is ${todayStr()}.)\n\n${t.text}` : t.text })), { effort: "low" });
-      return { reply: text, mode };
+      return { reply: cut(text, MAX_REPLY_CHARS), mode };
     } catch (e) { alert(`Mi Oficina chat failed: ${e.message}`, "office|chat"); return { reply: "Sorry, the office couldn't answer right now. Try again in a minute.", mode }; }
   }
   function readTurns(body) {
@@ -434,7 +447,7 @@ export function createOffice(ctx) {
     if (!list || !list.length || list.length > MAX_TURNS) throw new HttpError(400, "Start a new conversation with your office");
     const turns = list.map((m, i) => {
       const role = m && m.role === "assistant" ? "assistant" : m && m.role === "user" ? "user" : null, text = m && typeof m.text === "string" ? m.text.trim() : "";
-      if (!role || !text || (i % 2 === 0) !== (role === "user") || text.length > (role === "user" ? MAX_USER_CHARS : 8000)) throw new HttpError(400, "Start a new conversation with your office");
+      if (!role || !text || (i % 2 === 0) !== (role === "user") || text.length > (role === "user" ? MAX_USER_CHARS : MAX_REPLY_CHARS)) throw new HttpError(400, "Start a new conversation with your office");
       return { role, text };
     });
     if (turns[turns.length - 1].role !== "user") throw new HttpError(400, "Start a new conversation with your office");

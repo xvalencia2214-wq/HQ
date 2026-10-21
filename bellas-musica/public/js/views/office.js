@@ -72,11 +72,28 @@ export async function office(app) {
 
   function draw() {
     if (!app.isConnected) return;
+    // A redraw (the screen checks on working desks every few seconds) keeps what the owner is typing: edits to drafts,
+    // the chat question, a memory note, and the cursor.
+    const kept = {};
+    app.querySelectorAll(".of-draft").forEach((c) => { const s = c.querySelector(".of-sub"), b = c.querySelector(".of-body"); kept[c.dataset.id] = { sub: s ? s.value : null, body: b ? b.value : null }; });
+    const typed = { ofq: document.getElementById("ofq")?.value || "", ofmemtext: document.getElementById("ofmemtext")?.value || "" };
+    const act = app.contains(document.activeElement) ? document.activeElement : null;
+    const where = act && (act.id ? `#${act.id}` : act.closest(".of-draft") ? `.of-draft[data-id="${act.closest(".of-draft").dataset.id}"] .${act.classList[0]}` : "");
+    const caret = act && typeof act.selectionStart === "number" ? [act.selectionStart, act.selectionEnd] : null;
     const u = v.usage;
     app.innerHTML = `<div class="titlebar"><h1>Mi Oficina</h1><div class="chips"><span class="tag">${v.mode === "live" ? "AI: on" : v.mode === "test" ? "AI: test mode (no key)" : "AI: off"}</span><span class="tag">Today $${u.today_usd.toFixed(2)} of $${u.daily_limit_usd} · month $${u.month_usd.toFixed(2)}</span><a class="tag" href="#/admin">Owner dashboard</a></div></div>
       <p class="lead">Your team works every morning and emails you the briefing. They only look things up and write drafts: <strong>nothing goes out until you approve it.</strong></p>
       ${v.mode === "test" ? `<div class="note">Test mode: the desks write simple reports from your real numbers, without AI. Add ANTHROPIC_API_KEY on Render to turn on the full office.</div>` : ""}
       ${floor()}${panel()}${chatBox()}`;
+    for (const [id, k] of Object.entries(kept)) {
+      const c = app.querySelector(`.of-draft[data-id="${id}"]`); if (!c) continue;
+      const s = c.querySelector(".of-sub:not([readonly])"), b = c.querySelector(".of-body:not([readonly])");
+      if (s && k.sub !== null) s.value = k.sub;
+      if (b && k.body !== null) b.value = k.body;
+    }
+    for (const [id, val] of Object.entries(typed)) { const el = document.getElementById(id); if (el && val) el.value = val; }
+    const back = where ? app.querySelector(where) : null;
+    if (back) { back.focus({ preventScroll: true }); if (caret) try { back.setSelectionRange(caret[0], caret[1]); } catch { /* not a text field */ } }
     wire();
   }
 
@@ -101,7 +118,7 @@ export async function office(app) {
       } catch (e) { toast(e.message, "error"); b.disabled = false; }
     })));
     const mem = document.getElementById("ofmem");
-    if (mem) mem.onsubmit = async (e) => { e.preventDefault(); const text = document.getElementById("ofmemtext").value.trim(); if (!text) return; try { v = await api.post("/api/admin/office/memory", { text }); draw(); toast("Saved to memory"); } catch (er) { toast(er.message, "error"); } };
+    if (mem) mem.onsubmit = async (e) => { e.preventDefault(); const text = document.getElementById("ofmemtext").value.trim(); if (!text) return; try { v = await api.post("/api/admin/office/memory", { text }); document.getElementById("ofmemtext").value = ""; draw(); toast("Saved to memory"); } catch (er) { toast(er.message, "error"); } };
     app.querySelectorAll("[data-forget]").forEach((b) => (b.onclick = async () => { try { v = await api.del(`/api/admin/office/memory/${b.dataset.forget}`); draw(); } catch (e) { toast(e.message, "error"); } }));
     const ask = document.getElementById("ofask"), q = document.getElementById("ofq");
     q.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask.requestSubmit(); } };
@@ -110,9 +127,9 @@ export async function office(app) {
       const text = q.value.trim();
       if (!text || chatBusy) return;
       if (chat.length >= 18) chat = chat.slice(-16); // the server takes up to 20 turns, starting with yours
-      chat.push({ role: "user", text }); chatBusy = true; draw();
+      chat.push({ role: "user", text }); chatBusy = true; q.value = ""; draw();
       try { const r = await api.post("/api/admin/office/chat", { messages: chat }); chat.push({ role: "assistant", text: r.reply }); }
-      catch (er) { chat.pop(); toast(er.message, "error"); }
+      catch (er) { chat.pop(); toast(er.message, "error"); chatBusy = false; draw(); const box = document.getElementById("ofq"); if (box) { box.value = text; box.focus(); } return; } // the question comes back to try again
       chatBusy = false;
       try { await load(); } catch { /* keep */ }
       draw(); document.getElementById("ofq")?.focus();
