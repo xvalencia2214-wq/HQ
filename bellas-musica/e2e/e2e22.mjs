@@ -107,6 +107,27 @@ try {
   await go(V, "#/login"); await V.fill("#a-email", "o22@example.com"); await V.fill("#a-pw", "correct horse battery"); await V.click("#authform button[type=submit]"); await V.waitForFunction(() => !location.hash.startsWith("#/login"));
   await go(V, `#/group/${gid}?zip=60540`); await V.waitForSelector("#calbox");
   ok("the vendor looking at their own page sees no 'from you' line", (await V.locator(".fromyou").count()) === 0);
+  // ---- the vendor flyer: one printed page, Spanish first, its QR code is this site's sign-up link ----
+  const FL = await person("flyer", { width: 1000, height: 1300 });
+  await go(FL, "#/flyer"); await FL.waitForSelector("#flyer-qr svg");
+  const flyerText = await FL.locator(".flyer").innerText();
+  ok("the flyer: Spanish first, English under it, every kind of vendor", /¿Tu negocio trabaja en fiestas\?[\s\S]*Do you work parties\?/.test(flyerText) && /Fotógrafos y videógrafos/.test(flyerText) && /Escanea y regístrate gratis/.test(flyerText));
+  const qrLink = await FL.evaluate(() => document.querySelector("#flyer-qr svg").textContent.trim() || document.querySelector("#flyer-qr svg title")?.textContent);
+  ok("its QR code is this site's vendor sign-up link", qrLink === `${S.base}/?src=vendor-flyer#/signup?next=${encodeURIComponent("#/dashboard?new=1")}`);
+  ok("Don Chuy steps aside on the flyer", await FL.locator("#chuyfab").isHidden());
+  await FL.emulateMedia({ media: "print" });
+  const pdf = await FL.pdf({ format: "Letter", printBackground: true });
+  ok("it prints on exactly one letter page, logo and all", (String(pdf).match(/\/Type\s*\/Page[^s]/g) || []).length === 1 && await FL.evaluate(() => { const f = document.querySelector(".flyer"), h = document.querySelector(".fl-head"); return f.scrollHeight <= f.clientHeight + 1 && getComputedStyle(h).display !== "none"; }));
+  ok("the print button and notes don't print", await FL.locator(".flyer-tools").isHidden());
+  await FL.emulateMedia({ media: "screen" });
+  // a vendor scans it and signs up: counted as coming from the flyer, and sent on to make their page
+  const VF = await person("vendor-from-flyer", { width: 390, height: 844 }, true);
+  await VF.goto(qrLink); await VF.waitForSelector("#a-name");
+  await VF.fill("#a-name", "Banda del Volante"); await VF.fill("#a-email", "volante22@example.com"); await VF.fill("#a-pw", "correct horse battery"); await VF.check("#a-agree");
+  await VF.click("#authform button[type=submit]");
+  ok("they land on 'make your page'", await until(() => VF.evaluate(() => location.hash.startsWith("#/dashboard"))));
+  ok("the sign-up is counted as from the flyer", S.db.get("SELECT signup_source FROM users WHERE email = 'volante22@example.com'")?.signup_source === "vendor-flyer");
+
   // ---- a dropped connection is not a crash; a real bug still is ----
   const octx = await browser.newContext(); const O = await octx.newPage(); const oerr = [], reports = [];
   O.on("pageerror", (e) => oerr.push(e.message)); O.on("request", (r) => { if (r.url().includes("/api/client-error")) reports.push(r.url()); });

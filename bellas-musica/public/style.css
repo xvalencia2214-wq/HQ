@@ -874,3 +874,49 @@ html.big { font-size: 118.75%; }
 .cal-legend .lg.open { background: rgba(201,150,43,0.13); border-color: rgba(201,150,43,0.55); }
 .cal-legend .lg.booked { background: repeating-linear-gradient(135deg, rgba(180,35,24,.08) 0 3px, rgba(180,35,24,.2) 3px 6px); border-color: rgba(180,35,24,.35); }
 .cal-legend .lg.closed { background: rgba(11,24,56,.035); border-color: var(--line); }
+
+/* the vendor flyer (#/flyer): one letter-size page, Spanish first with English under it */
+.flyer-tools { max-width: 8.5in; margin: 0 auto 16px; }
+.flyer-tools .warn { color: var(--bad); }
+.flyer { max-width: 8.5in; margin: 0 auto; background: #fff; color: var(--ink); border: 3px solid var(--gold-2); border-radius: 22px; padding: 34px 40px 26px; box-shadow: 0 10px 30px rgba(11,24,56,.08); }
+.flyer [lang="en"] { color: var(--ink-2); }
+.fl-head { display: flex; align-items: center; gap: 14px; }
+.fl-brand { font-family: var(--serif); font-size: 2.1rem; line-height: 1; }
+.fl-tag { font-size: .9rem; color: var(--gold-ink); letter-spacing: .02em; }
+.fl-title { font-size: 2.35rem; line-height: 1.08; margin: 22px 0 6px; letter-spacing: -.01em; }
+.fl-sub { font-size: 1.25rem; margin: 0 0 14px; font-weight: 600; }
+.fl-who { background: var(--gold); color: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 700; font-size: .98rem; line-height: 1.45; margin: 0 0 20px; }
+.fl-body { display: grid; grid-template-columns: 1fr 2.6in; gap: 26px; align-items: center; }
+.fl-perks { list-style: none; padding: 0; margin: 0; display: grid; gap: 13px; }
+.fl-perks li { padding-left: 34px; position: relative; font-size: 1.08rem; line-height: 1.3; }
+.fl-perks li::before { content: "✓"; position: absolute; left: 0; top: -1px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold-3); color: var(--ink); font-weight: 800; display: grid; place-items: center; font-size: .9rem; }
+.fl-perks span { display: block; font-size: .92rem; margin-top: 2px; }
+.fl-qrbox { text-align: center; border: 2px solid var(--gold-2); border-radius: 18px; padding: 14px 12px; }
+.fl-qr svg { width: 100%; height: auto; display: block; }
+.fl-scan { font-weight: 800; font-size: 1.1rem; margin-top: 8px; }
+.fl-scan-en { font-size: .95rem; }
+.fl-url { margin-top: 6px; font-weight: 700; color: var(--gold-ink); word-break: break-all; }
+.fl-offer { margin-top: 22px; border: 2px dashed var(--gold-2); background: #fdf6e3; border-radius: 14px; padding: 12px 16px; font-size: 1.02rem; line-height: 1.4; }
+.fl-foot { margin-top: 18px; text-align: center; font-size: .92rem; color: var(--ink-2); }
+@media (max-width: 640px) {
+  .flyer { padding: 22px 18px; }
+  .fl-title { font-size: 1.7rem; }
+  .fl-body { grid-template-columns: 1fr; }
+  .fl-qrbox { max-width: 260px; margin: 0 auto; }
+}
+@media print {
+  @page { size: letter; margin: 0.35in; }
+  body:has(.flyer) #chuyfab, body:has(.flyer) #chuy, body:has(.flyer) #nav, body:has(.flyer) #navtoggle, body:has(.flyer) #navshade, body:has(.flyer) .top, body:has(.flyer) .banner { display: none !important; }
+  body:has(.flyer) main, body:has(.flyer) #app { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  /* fill the letter page (11in minus the margins), the parts spread top to bottom, everything larger */
+  .flyer { box-shadow: none; max-width: none; border-radius: 18px; -webkit-print-color-adjust: exact; print-color-adjust: exact; break-inside: avoid;
+    height: 10.25in; display: flex; flex-direction: column; justify-content: space-between; padding: 0.42in 0.45in 0.32in; }
+  .fl-brand { font-size: 2.3rem; } .fl-tag { font-size: .95rem; }
+  .fl-title { font-size: 2.55rem; margin: 0; } .fl-sub { font-size: 1.3rem; margin: 0; }
+  .fl-who { font-size: 1rem; padding: 10px 14px; margin: 0; }
+  .fl-body { grid-template-columns: 1fr 2.75in; gap: 26px; }
+  .fl-perks { gap: 14px; } .fl-perks li { font-size: 1.13rem; padding-left: 36px; } .fl-perks span { font-size: .95rem; }
+  .fl-scan { font-size: 1.2rem; } .fl-scan-en { font-size: 1rem; } .fl-url { font-size: 1.05rem; }
+  .fl-offer { font-size: 1.02rem; margin-top: 0; padding: 10px 16px; } .fl-foot { font-size: .95rem; margin-top: 0; }
+  .fl-who, .fl-offer, .fl-perks li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

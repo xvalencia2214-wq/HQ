@@ -118,7 +118,7 @@ export function setChuy(show) {
 export function refreshChuy() {
   const fab = $("chuyfab");
   if (!fab) return;
-  const off = !state.meta || state.meta.helper === "off" || /^#\/office\b/.test(location.hash);
+  const off = !state.meta || state.meta.helper === "off" || /^#\/(office|flyer)\b/.test(location.hash);
   fab.hidden = off;
   if (off && open) setChuy(false);
   fab.setAttribute("aria-label", t("chuy.open"));

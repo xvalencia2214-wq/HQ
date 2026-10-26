@@ -172,6 +172,7 @@ async function route() {
     else if (seg[0] === "bookings") await myBookings(box);
     else if (seg[0] === "messages") await messagesView(box, params);
     else if (seg[0] === "admin") await admin(box);
+    else if (seg[0] === "flyer") { const { flyer } = await import("./views/flyer.js"); await flyer(box); }
     else if (seg[0] === "office") { const { office } = await import("./views/office.js"); await office(box); }
     else if (seg[0] === "booking" && seg[1]) await bookingPage(box, seg[1], params);
     else if (seg[0] === "pay" && seg[1] && seg[2]) await simulatedPay(box, seg[1], seg[2]);
