@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<title>Bella's Fiestas social media kit (source)</title>
+<!-- The source of the social media kit: every image is one .art element at its exact pixel size. Render each to a PNG
+     (a browser screenshot of the element). Same colors and fonts as the app. -->
+<style>
+  @font-face { font-family: "Bricolage"; font-weight: 200 800; font-stretch: 75% 100%; src: url(../public/vendor/fonts/bricolage-grotesque-latin-standard-normal.woff2) format("woff2-variations"); unicode-range: U+0000-00FF,U+2000-206F,U+20AC; }
+  @font-face { font-family: "Bricolage"; font-weight: 200 800; font-stretch: 75% 100%; src: url(../public/vendor/fonts/bricolage-grotesque-latin-ext-standard-normal.woff2) format("woff2-variations"); unicode-range: U+0100-02BA,U+1E00-1E9F; }
+  @font-face { font-family: "BFSerif"; src: url(../public/vendor/fonts/instrument-serif-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "BFSerif"; font-style: italic; src: url(../public/vendor/fonts/instrument-serif-latin-400-italic.woff2) format("woff2"); }
+  :root { --navy: #0b1838; --navy2: #14285e; --gold: #c9962b; --gold2: #e6c063; --gold3: #f6dc8a; --cream: #fdfbf6; --cream2: #f6f0e2; --ink2: #46526e; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #888; font-family: "Bricolage", system-ui, sans-serif; color: var(--navy); padding: 20px; display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+  .art { position: relative; overflow: hidden; flex: none; }
+  .sq { width: 1080px; height: 1080px; }
+  .story { width: 1080px; height: 1920px; }
+  .cover { width: 1640px; height: 624px; }
+  .light { background: radial-gradient(circle at 85% 10%, #fff7df 0, var(--cream) 45%, var(--cream2) 100%); }
+  .dark { background: radial-gradient(circle at 80% 0%, #1f3a7a 0, var(--navy2) 35%, var(--navy) 100%); color: #fff; }
+  .frame::after { content: ""; position: absolute; inset: 34px; border: 4px solid var(--gold); border-radius: 36px; pointer-events: none; }
+  .pad { position: absolute; inset: 0; padding: 96px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 22px; }
+  .brand img { width: 108px; height: 108px; border-radius: 26px; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+  .brand b { font-family: "BFSerif"; font-weight: 400; font-size: 64px; line-height: 1; }
+  .brand small { display: block; font-size: 24px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin-top: 6px; font-weight: 600; }
+  .dark .brand small { color: var(--gold2); }
+  .kicker { font-size: 34px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+  .dark .kicker { color: var(--gold2); }
+  h1 { font-size: 104px; line-height: .98; letter-spacing: -.02em; font-weight: 800; font-stretch: 85%; }
+  h1 em { font-family: "BFSerif"; font-weight: 400; font-style: italic; letter-spacing: 0; color: var(--gold); }
+  .dark h1 em { color: var(--gold2); }
+  .en { font-size: 40px; color: var(--ink2); font-weight: 500; margin-top: 18px; line-height: 1.2; }
+  .dark .en { color: #c9d2e6; }
+  .chips { display: flex; flex-wrap: wrap; gap: 14px; }
+  .chip { background: var(--navy2); color: #fff; border-radius: 999px; padding: 14px 26px; font-size: 32px; font-weight: 700; }
+  .dark .chip { background: rgba(255,255,255,.1); border: 2px solid rgba(230,192,99,.6); }
+  .gold-btn { display: inline-block; background: linear-gradient(135deg, var(--gold3), #dcb04c); color: var(--navy); border: 2px solid #c9962b; border-radius: 999px; padding: 22px 40px; font-size: 38px; font-weight: 800; }
+  .steps { display: grid; gap: 30px; }
+  .step { display: grid; grid-template-columns: 110px 1fr; gap: 28px; align-items: center; }
+  .num { width: 110px; height: 110px; border-radius: 50%; background: var(--gold2); color: var(--navy); font-size: 60px; font-weight: 800; display: grid; place-items: center; }
+  .step b { display: block; font-size: 50px; line-height: 1.05; font-weight: 800; }
+  .step span { display: block; font-size: 32px; color: var(--ink2); margin-top: 4px; }
+  .dark .step span { color: #c9d2e6; }
+  .checks { display: grid; gap: 26px; }
+  .check { display: grid; grid-template-columns: 70px 1fr; gap: 22px; align-items: start; }
+  .check i { width: 64px; height: 64px; border-radius: 50%; background: var(--gold2); color: var(--navy); display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 38px; }
+  .check b { display: block; font-size: 46px; line-height: 1.08; font-weight: 800; }
+  .check span { display: block; font-size: 30px; color: var(--ink2); margin-top: 4px; }
+  .dark .check span { color: #c9d2e6; }
+  .big-num { font-size: 300px; font-weight: 800; line-height: .85; font-stretch: 80%; color: var(--gold2); letter-spacing: -.04em; }
+  .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 30px; font-weight: 600; }
+  .shield { width: 220px; height: 260px; }
+  .sombrero { position: absolute; opacity: .08; width: 900px; right: -220px; bottom: -160px; transform: rotate(-12deg); }
+</style></head>
+<body>
+
+<!-- 1. Profile picture (Instagram, TikTok, Facebook, WhatsApp): the logo, with room so a round crop never cuts it -->
+<div class="art sq" id="profile" style="background: radial-gradient(circle, #fffaf0 0, #f3ead6 100%); display: grid; place-items: center;">
+  <img src="../public/logo.svg" style="width: 820px; height: 820px; border-radius: 180px; box-shadow: 0 30px 60px rgba(11,24,56,.25);" alt="">
+</div>
+
+<!-- 2. Facebook cover 1640x624 (Facebook trims the sides on phones: the words stay in the middle) -->
+<div class="art cover dark" id="facebook-cover">
+  <img class="sombrero" src="../public/logo.svg" alt="" style="width: 760px; right: -120px; bottom: -260px;">
+  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 46px; padding: 0 260px;">
+    <img src="../public/logo.svg" style="width: 230px; height: 230px; border-radius: 52px; box-shadow: 0 16px 40px rgba(0,0,0,.35);" alt="">
+    <div>
+      <div style="font-family: BFSerif; white-space: nowrap; font-size: 120px; line-height: .95;">Bella's Fiestas</div>
+      <div style="font-size: 40px; font-weight: 700; color: var(--gold2); margin-top: 14px;">Música y todo para tu fiesta</div>
+      <div style="font-size: 32px; color: #c9d2e6; margin-top: 6px;">Music and everything for your fiesta · Chicago</div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Post: coming soon -->
+<div class="art sq dark frame" id="post-1-coming-soon">
+  <img class="sombrero" src="../public/logo.svg" alt="">
+  <div class="pad">
+    <div class="brand"><img src="../public/logo.svg" alt=""><div><b>Bella's Fiestas</b><small>Chicago</small></div></div>
+    <div style="margin-top: 120px;" class="kicker">Muy pronto · Coming soon</div>
+    <h1 style="margin-top: 22px;">Todo para tu fiesta, <em>en un solo lugar.</em></h1>
+    <p class="en">Everything for your fiesta, in one place.</p>
+    <div class="foot"><span style="color: var(--gold2);">Mariachi · Banda · DJ · Comida · Salones</span></div>
+  </div>
+</div>
+
+<!-- 4. Post: launch -->
+<div class="art sq light frame" id="post-2-launch">
+  <div class="pad">
+    <div class="brand"><img src="../public/logo.svg" alt=""><div><b>Bella's Fiestas</b><small>Ya llegó · It's here</small></div></div>
+    <h1 style="margin-top: 70px;">Contrata tu <em>mariachi</em> en 2 minutos.</h1>
+    <p class="en">Book your mariachi in 2 minutes. Real prices, open dates, a protected deposit.</p>
+    <div class="chips" style="margin-top: 44px;"><span class="chip">Mariachi</span><span class="chip">Banda</span><span class="chip">Norteño</span><span class="chip">DJ</span><span class="chip">Comida</span><span class="chip">Carpas</span><span class="chip">Fotógrafos</span><span class="chip">Salones</span></div>
+    <div class="foot"><span class="gold-btn">Link en la bio 👆</span><span style="color: var(--ink2);">Español · English</span></div>
+  </div>
+</div>
+
+<!-- 5. Post: how it works -->
+<div class="art sq light frame" id="post-3-how-it-works">
+  <div class="pad">
+    <div class="kicker">Así de fácil · That easy</div>
+    <h1 style="font-size: 88px; margin: 14px 0 54px;">¿Cómo funciona?</h1>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><b>Busca con tu código postal</b><span>Search by your ZIP code</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>Mira precios y fechas libres</b><span>See prices and open dates</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>Reserva con depósito protegido</b><span>Book with a protected deposit</span></div></div>
+    </div>
+    <div class="foot"><div class="brand"><img src="../public/logo.svg" alt="" style="width: 80px; height: 80px; border-radius: 20px;"><div><b style="font-size: 46px;">Bella's Fiestas</b></div></div><span class="gold-btn" style="font-size: 32px;">Link en la bio</span></div>
+  </div>
+</div>
+
+<!-- 6. Post: show-up guarantee -->
+<div class="art sq dark frame" id="post-4-protected">
+  <div class="pad">
+    <div class="kicker">Tu depósito, protegido</div>
+    <h1 style="margin-top: 26px; font-size: 96px;">¿El grupo no llegó? <em>Te devolvemos tu dinero.</em></h1>
+    <p class="en">The group didn't show? You get your money back.</p>
+    <div class="checks" style="margin-top: 50px;">
+      <div class="check"><i>✓</i><div><b>Código de llegada el día de la fiesta</b><span>An arrival code on the day</span></div></div>
+      <div class="check"><i>✓</i><div><b>Reseñas solo de reservas reales</b><span>Reviews only from real bookings</span></div></div>
+    </div>
+    <div class="foot"><span style="font-size: 24px; color: #9fb0d0; font-weight: 500;">Lo pagado en la app, si se reporta en 3 días. Ver Términos.</span><span style="font-family: BFSerif; white-space: nowrap; font-size: 44px; font-weight: 400;">Bella's Fiestas</span></div>
+  </div>
+</div>
+
+<!-- 7. Post: vendors join free -->
+<div class="art sq light frame" id="post-5-vendors">
+  <div class="pad">
+    <div class="kicker">Para grupos y negocios</div>
+    <h1 style="margin-top: 16px; font-size: 96px;">¿Trabajas en fiestas? <em>Anúnciate gratis.</em></h1>
+    <p class="en">Work parties? List your business for free.</p>
+    <div class="checks" style="margin-top: 44px;">
+      <div class="check"><i>✓</i><div><b>Nunca pagas por clientes</b><span>Never pay for leads</span></div></div>
+      <div class="check"><i>✓</i><div><b>Las familias reservan con depósito</b><span>Families book with a deposit</span></div></div>
+      <div class="check"><i>✓</i><div><b>Tu calendario, sin reservas dobles</b><span>Your calendar, never double-booked</span></div></div>
+    </div>
+    <div class="foot"><span class="gold-btn" style="font-size: 32px;">Regístrate: link en la bio</span><span style="font-family: BFSerif; white-space: nowrap; font-size: 44px; font-weight: 400;">Bella's Fiestas</span></div>
+  </div>
+</div>
+
+<!-- 8. Post: founding vendors -->
+<div class="art sq dark frame" id="post-6-founding">
+  <img class="sombrero" src="../public/logo.svg" alt="">
+  <div class="pad">
+    <div class="kicker">Oferta de fundadores · Founding offer</div>
+    <div style="display: flex; align-items: flex-end; gap: 24px; margin-top: 40px;"><div class="big-num">5%</div><div style="font-size: 54px; font-weight: 800; padding-bottom: 30px; line-height: 1.05;">por 6 meses<br><span style="color: #c9d2e6; font-size: 38px; font-weight: 500;">for 6 months</span></div></div>
+    <h1 style="font-size: 76px; margin-top: 36px;">Solo para los <em>primeros 25</em> negocios.</h1>
+    <p class="en">Only for the first 25 businesses. No membership, no lead fees.</p>
+    <div class="foot"><span class="gold-btn" style="font-size: 32px;">Aparta tu lugar</span><span style="font-family: BFSerif; white-space: nowrap; font-size: 44px; font-weight: 400;">Bella's Fiestas</span></div>
+  </div>
+</div>
+
+<!-- 9. Story: launch -->
+<div class="art story dark" id="story-1-launch">
+  <img class="sombrero" src="../public/logo.svg" alt="" style="width: 1300px; right: -420px; bottom: -200px;">
+  <div class="pad" style="padding: 220px 90px 240px;">
+    <div class="brand"><img src="../public/logo.svg" alt=""><div><b>Bella's Fiestas</b><small>Chicago</small></div></div>
+    <div class="kicker" style="margin-top: 160px;">Ya llegó · It's here</div>
+    <h1 style="font-size: 130px; margin-top: 24px;">Tu fiesta, <em>sin estrés.</em></h1>
+    <p class="en" style="font-size: 48px;">Your fiesta, without the stress.</p>
+    <div class="chips" style="margin-top: 70px;"><span class="chip">Mariachi</span><span class="chip">Banda</span><span class="chip">DJ</span><span class="chip">Comida</span><span class="chip">Carpas</span><span class="chip">Fotógrafos</span><span class="chip">Salones</span></div>
+    <div style="margin-top: auto; text-align: center;"><span class="gold-btn" style="font-size: 46px;">Toca el link 👆</span></div>
+  </div>
+</div>
+
+<!-- 10. Story: how it works -->
+<div class="art story light" id="story-2-how-it-works">
+  <div class="pad" style="padding: 220px 90px 240px;">
+    <div class="kicker">¿Cómo funciona?</div>
+    <h1 style="font-size: 116px; margin: 20px 0 90px;">3 pasos y <em>listo.</em></h1>
+    <div class="steps" style="gap: 60px;">
+      <div class="step"><div class="num">1</div><div><b>Busca con tu código postal</b><span>Search by your ZIP code</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>Mira precios y fechas libres</b><span>See prices and open dates</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>Reserva con depósito protegido</b><span>Book with a protected deposit</span></div></div>
+    </div>
+    <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center;"><div class="brand"><img src="../public/logo.svg" alt=""><div><b>Bella's Fiestas</b></div></div></div>
+  </div>
+</div>
+
+<!-- 11. Story: vendors -->
+<div class="art story dark" id="story-3-vendors">
+  <div class="pad" style="padding: 220px 90px 240px;">
+    <div class="kicker">Para grupos y negocios</div>
+    <h1 style="font-size: 116px; margin-top: 20px;">Más fiestas, <em>menos mensajes.</em></h1>
+    <p class="en" style="font-size: 46px;">More gigs, fewer DMs asking “how much?”</p>
+    <div class="checks" style="margin-top: 80px; gap: 40px;">
+      <div class="check"><i>✓</i><div><b>Página gratis con tus precios</b><span>A free page with your prices</span></div></div>
+      <div class="check"><i>✓</i><div><b>Depósito antes de la tocada</b><span>A deposit before the gig</span></div></div>
+      <div class="check"><i>✓</i><div><b>5% por 6 meses (primeros 25)</b><span>5% for 6 months (first 25 businesses)</span></div></div>
+    </div>
+    <div class="chips" style="margin-top: 90px;"><span class="chip">Mariachi</span><span class="chip">Banda</span><span class="chip">DJ</span><span class="chip">Comida</span><span class="chip">Carpas</span><span class="chip">Decoración</span><span class="chip">Fotógrafos</span><span class="chip">Videógrafos</span><span class="chip">Salones</span></div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 50px;"><div class="brand"><img src="../public/logo.svg" alt=""><div><b>Bella's Fiestas</b><small>Chicago</small></div></div><span class="gold-btn" style="font-size: 46px;">Regístrate gratis 👆</span></div>
+  </div>
+</div>
+
+</body></html>
