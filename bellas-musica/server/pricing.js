@@ -28,13 +28,14 @@ export const CATEGORIES = {
   decor: ["Balloon decorations", "Event decorator", "Flowers", "Backdrops and photo walls"],
   photo: ["Photographer", "Videographer", "Photo booth"],
   services: ["Security / bouncer", "Bartender", "Party host / MC", "Kids entertainment", "Quinceañera choreographer", "Hair and makeup", "Clean-up crew"],
-  venues: ["Party hall", "Outdoor venue"]
+  venues: ["Party hall", "Outdoor venue"],
+  alterations: ["Dress alterations", "Suit and tux alterations", "Custom dresses and outfits"]
 };
 export const GROUP_TYPES = Object.values(CATEGORIES).flat();
 export const CATEGORY_OF = Object.fromEntries(Object.entries(CATEGORIES).flatMap(([c, types]) => types.map((t) => [t, c])));
 export const categoryOf = (type) => CATEGORY_OF[type] || "music";
 // Whether a new listing in this category is booked by the hour by default (a tent or a food truck is booked by package).
-export const HOURLY_BY_DEFAULT = { music: true, photo: true, services: true, food: false, rentals: false, decor: false, venues: false };
+export const HOURLY_BY_DEFAULT = { music: true, photo: true, services: true, food: false, rentals: false, decor: false, venues: false, alterations: false };
 
 // Cancellation policies: [minimum days before the event, share of the deposit refunded].
 // The first row whose minimum is met applies. Everything is computed on the server.
@@ -133,6 +134,11 @@ export const NEEDS_PRESETS = {
   venues: [
     { en: "The final guest count a week before", es: "El número final de invitados una semana antes" },
     { en: "Your decorator's and DJ's arrival times", es: "La hora en que llegan tu decorador y tu DJ" }
+  ],
+  alterations: [
+    { en: "Bring the dress or suit and the shoes to the first fitting", es: "Traer el vestido o el traje y los zapatos a la primera prueba" },
+    { en: "The party date, so it's ready in time", es: "La fecha de la fiesta, para tenerlo listo a tiempo" },
+    { en: "Time for 1 or 2 fittings", es: "Tiempo para 1 o 2 pruebas" }
   ]
 };
 export const MAX_NEEDS = 12;

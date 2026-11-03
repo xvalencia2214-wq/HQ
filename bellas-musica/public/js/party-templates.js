@@ -2,15 +2,15 @@
 // Only suggestions: everything can be changed on the party page.
 export const TEMPLATES = {
   quince: {
-    needs: ["music", "food", "rentals", "decor", "photo", "services", "venues"],
-    split: { venues: 25, food: 25, music: 20, decor: 10, photo: 10, rentals: 5, services: 5 },
+    needs: ["music", "food", "rentals", "decor", "photo", "services", "venues", "alterations"],
+    split: { venues: 25, food: 25, music: 20, decor: 10, photo: 8, rentals: 5, services: 5, alterations: 2 },
     timeline: [["10:00", "Tables, chairs and decorations set up", "Montaje de mesas, sillas y decoración"], ["13:00", "Misa", "Misa"], ["16:00", "Photos with the family", "Fotos con la familia"],
       ["18:00", "Guests arrive, dinner is served", "Llegan los invitados, se sirve la cena"], ["19:30", "Grand entrance and the waltz", "Entrada y el vals"], ["20:00", "Mariachi or banda", "Mariachi o banda"],
       ["21:00", "Cake and toast", "Pastel y brindis"], ["21:30", "Dance", "Baile"], ["00:30", "Clean-up", "Limpieza"]]
   },
   wedding: {
-    needs: ["music", "food", "rentals", "decor", "photo", "services", "venues"],
-    split: { venues: 30, food: 25, music: 15, photo: 12, decor: 10, rentals: 4, services: 4 },
+    needs: ["music", "food", "rentals", "decor", "photo", "services", "venues", "alterations"],
+    split: { venues: 30, food: 25, music: 15, photo: 10, decor: 10, rentals: 4, services: 4, alterations: 2 },
     timeline: [["12:00", "Ceremony", "Ceremonia"], ["14:00", "Photos", "Fotos"], ["17:00", "Cocktail hour", "Cóctel"], ["18:00", "Dinner", "Cena"], ["19:30", "First dance", "Primer baile"],
       ["20:00", "Mariachi serenade", "Serenata de mariachi"], ["21:00", "Dance (DJ or banda)", "Baile (DJ o banda)"], ["23:30", "Send-off", "Despedida"]]
   },

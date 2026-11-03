@@ -12,10 +12,10 @@ const GENRES = [
   ["DJ", "🎧", "#7b5cff"], ["Grupera", "🎤", "#4fa3ff"], ["food", "🌮", "#ff7a3d"], ["rentals", "⛺", "#a3b4d6"]
 ];
 const EVENTS = ["Quinceañera", "Wedding", "Birthday", "Serenata", "Anniversary", "Corporate / Restaurant"];
-const CATS = ["music", "food", "rentals", "decor", "photo", "services", "venues"];
-const CAT_COLORS = { music: "#14285e", food: "#ff7a3d", rentals: "#18c2a7", decor: "#ff3d8b", photo: "#ffb020", services: "#7b5cff", venues: "#a3b4d6" };
+const CATS = ["music", "food", "rentals", "decor", "photo", "services", "venues", "alterations"];
+const CAT_COLORS = { music: "#14285e", food: "#ff7a3d", rentals: "#18c2a7", decor: "#ff3d8b", photo: "#ffb020", services: "#7b5cff", venues: "#a3b4d6", alterations: "#e8c547" };
 // text on a selected chip: white on the dark blues, night ink on the light colours (both at least 4.5:1)
-const CAT_TEXT = { music: "#fff", services: "#fff", food: "#070b1a", rentals: "#070b1a", decor: "#070b1a", photo: "#070b1a", venues: "#070b1a" };
+const CAT_TEXT = { music: "#fff", services: "#fff", food: "#070b1a", rentals: "#070b1a", decor: "#070b1a", photo: "#070b1a", venues: "#070b1a", alterations: "#070b1a" };
 const TYPE_EMOJI = Object.fromEntries(GENRES.map(([k, e]) => [k, e]));
 
 function ensureStyles() {

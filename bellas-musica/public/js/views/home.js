@@ -10,7 +10,7 @@ import { holidayBanner } from "./business.js";
 
 const FIELDS = ["zip", "event", "date", "guests", "q", "song", "type", "max", "sort", "radius", "category", "soon"];
 // "Up to" price steps that make sense for each kind of vendor (a hall costs more than a balloon arch).
-const PRICE_STEPS = { music: [250, 350, 500, 900], food: [400, 800, 1500, 3000], rentals: [200, 400, 800, 1500], decor: [200, 400, 800, 1500], photo: [300, 600, 1000, 2000], services: [150, 300, 600, 1000], venues: [800, 1500, 3000, 6000] };
+const PRICE_STEPS = { music: [250, 350, 500, 900], food: [400, 800, 1500, 3000], rentals: [200, 400, 800, 1500], decor: [200, 400, 800, 1500], photo: [300, 600, 1000, 2000], services: [150, 300, 600, 1000], venues: [800, 1500, 3000, 6000], alterations: [50, 100, 200, 400] };
 
 // What the customer already told us, carried into the group page so they don't have to type it twice.
 const carry = (p) => new URLSearchParams(Object.entries({ event: p.event, guests: p.guests, date: p.date, zip: p.zip }).filter(([, v]) => v)).toString();

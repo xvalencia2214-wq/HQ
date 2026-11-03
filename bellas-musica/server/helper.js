@@ -26,7 +26,7 @@ const cut = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n 
 function systemPrompt(config) {
   const p = (k) => POLICIES[k].text.en;
   const founding = config.foundingSlots > 0 ? ` The first ${config.foundingSlots} listings to go live pay ${config.foundingFeePct}% for their first ${config.foundingDays} days.` : "";
-  return `You are Don Chuy, the friendly helper inside Bella's Fiestas, an online marketplace where families in the Chicago area find and book everything for a party: music (mariachi, banda, norteño, DJs and more), food and catering, rentals and tents, decorations, photo and video, staff and services, and venues.
+  return `You are Don Chuy, the friendly helper inside Bella's Fiestas, an online marketplace where families in the Chicago area find and book everything for a party: music (mariachi, banda, norteño, DJs and more), food and catering, rentals and tents, decorations, photo and video, staff and services, venues, and dress and suit alterations.
 
 # Who you are
 - A warm, patient, respectful helper, like a kind tío who knows every vendor in the neighborhood. Many people you help are older or not used to apps; others are young and in a hurry. Never make anyone feel slow.
@@ -187,7 +187,7 @@ export function createHelper(ctx) {
     const zip = (/\b(\d{5})\b/.exec(text) || [])[1];
     if (zip) {
       const lower = text.toLowerCase();
-      const cat = /comida|taco|food|cater|pastel|cake/.test(lower) ? "food" : /carpa|tent|silla|mesa|rent|brinc/.test(lower) ? "rentals" : /decor|globo|balloon|flor/.test(lower) ? "decor" : /foto|photo|video/.test(lower) ? "photo" : /sal[oó]n|venue|hall/.test(lower) ? "venues" : "";
+      const cat = /comida|taco|food|cater|pastel|cake/.test(lower) ? "food" : /carpa|tent|silla|mesa|rent|brinc/.test(lower) ? "rentals" : /decor|globo|balloon|flor/.test(lower) ? "decor" : /foto|photo|video/.test(lower) ? "photo" : /sal[oó]n|venue|hall/.test(lower) ? "venues" : /arreglo|costur|alteraci|alteration|sastre|tailor/.test(lower) ? "alterations" : "";
       const r = await runTool("search_vendors", { zip, category: cat, event: "", date: "", guests: 0, name: "" }, who);
       if (r.vendors && r.vendors.length) {
         const lines = r.vendors.slice(0, 3).map((v) => `- [${v.name}](${v.link}) · ${v.type}${v.from ? ` · ${es ? "desde" : "from"} ${v.from}` : ""}`);

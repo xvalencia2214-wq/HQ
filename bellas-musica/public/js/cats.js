@@ -3,8 +3,8 @@ import { esc } from "./ui.js";
 import { state } from "./state.js";
 
 // The kinds of things you can book for a party. Order = how they are shown.
-export const CAT_ORDER = ["music", "food", "rentals", "decor", "photo", "services", "venues"];
-export const CAT_ICON = { all: "✨", music: "🎺", food: "🌮", rentals: "⛺", decor: "🎈", photo: "📸", services: "🛡️", venues: "🏛️" };
+export const CAT_ORDER = ["music", "food", "rentals", "decor", "photo", "services", "venues", "alterations"];
+export const CAT_ICON = { all: "✨", music: "🎺", food: "🌮", rentals: "⛺", decor: "🎈", photo: "📸", services: "🛡️", venues: "🏛️", alterations: "🧵" };
 export const catLabel = (c) => `${CAT_ICON[c] || ""} ${t("cat." + c)}`.trim();
 // The category of a listing type ("Tents" -> rentals); anything unknown counts as music, like the server.
 export const catOfType = (type) => CAT_ORDER.find((c) => (state.meta?.categories?.[c] || []).includes(type)) || "music";
