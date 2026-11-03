@@ -41,7 +41,7 @@ try {
   const V = await person("vendor");
   await login(V, "vendor@example.com");
   await go(V, "#/dashboard?new=1"); await V.waitForSelector("#cform");
-  ok("the type list is grouped by category", (await V.locator("#c-type optgroup").count()) === 7);
+  ok("the type list is grouped by category", (await V.locator("#c-type optgroup").count()) === 8);
   ok("a new music listing is booked by the hour by default", await V.isChecked("#c-hourly") && await V.isVisible("#c-rate"));
   await V.selectOption("#c-type", "Tents");
   ok("choosing Tents switches to packages and hides the hourly price", !(await V.isChecked("#c-hourly")) && !(await V.isVisible("#c-rate")));
@@ -83,8 +83,8 @@ try {
   await go(C, "#/party"); await C.waitForSelector("#pform");
   await C.fill("#p-date", d); await C.fill("#p-zip", "60608"); await C.selectOption("#p-event", "Quinceañera"); await C.fill("#p-guests", "80");
   await C.click("#pform button[type=submit]");
-  await C.waitForFunction(() => document.querySelectorAll(".party-cat").length === 7 && ![...document.querySelectorAll(".party-cat")].some((s) => /Searching/.test(s.innerText)));
-  ok("Plan a party shows a section for each category", (await C.locator(".party-cat").count()) === 7);
+  await C.waitForFunction(() => document.querySelectorAll(".party-cat").length === 8 && ![...document.querySelectorAll(".party-cat")].some((s) => /Searching/.test(s.innerText)));
+  ok("Plan a party shows a section for each category", (await C.locator(".party-cat").count()) === 8);
   ok("music and rentals sections show who is free that day", (await C.locator("#pc-music").innerText()).includes("Mariachi Del Barrio") && (await C.locator("#pc-rentals").innerText()).includes("Carpas La Fiesta"));
   ok("empty categories say so", (await C.locator("#pc-food").innerText()).includes("Nobody in this category"));
   await C.uncheck('#needs input[value="venues"]');
