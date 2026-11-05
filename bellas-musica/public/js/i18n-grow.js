@@ -19,6 +19,8 @@ export const EN9 = {
   "kit.tip4": "Print the QR on a sign at your gigs: guests at tonight's party book your next one.",
   "kit.tip5": "After each party, ask the family to leave a review here. Reviews bring the next families.",
   // how far a vendor is from the family, and the calendar's booked days
+  "g.tour": "Virtual tour", "g.tourHint": "Walk through the place before you visit.", "g.tourOpen": "Open the tour full screen", "card.tour": "360° tour",
+  "dash.tour": "Virtual tour (360°)", "dash.tourHint": "Paste a Matterport, Kuula, or 360° YouTube or Vimeo link so families can walk through your place. To remove it, empty the box and save.",
   "g.fromYou": "{n} mi from you ({place})", "g.nearYou": "In your area ({place})", "g.noTravel": "No travel fee", "g.travelAdds": "+{fee} travel fee", "g.tooFar": "Doesn't travel that far",
   "cal.booked": "booked", "g.legendOpen": "Open", "g.legendBooked": "Booked", "g.legendClosed": "Not open",
   "g.datesLive": "Tap a gold day to see its open times. When someone books, the calendar updates right away, so a time is never booked twice.",
@@ -42,6 +44,8 @@ export const ES9 = {
   "kit.tip3": "Fije su mejor video con el texto en español.",
   "kit.tip4": "Imprima el QR en un letrero en sus tocadas: los invitados de esta fiesta reservan la siguiente.",
   "kit.tip5": "Después de cada fiesta, pídale a la familia que deje su reseña aquí. Las reseñas traen a las siguientes familias.",
+  "g.tour": "Recorrido virtual", "g.tourHint": "Recorre el lugar antes de visitarlo.", "g.tourOpen": "Abrir el recorrido en pantalla completa", "card.tour": "Recorrido 360°",
+  "dash.tour": "Recorrido virtual (360°)", "dash.tourHint": "Pega un enlace de Matterport, Kuula, o un video 360° de YouTube o Vimeo para que las familias recorran tu lugar. Para quitarlo, vacía la casilla y guarda.",
   "g.fromYou": "A {n} mi de ti ({place})", "g.nearYou": "En tu zona ({place})", "g.noTravel": "Sin costo de viaje", "g.travelAdds": "+{fee} de viaje", "g.tooFar": "No viaja tan lejos",
   "cal.booked": "reservado", "g.legendOpen": "Disponible", "g.legendBooked": "Reservado", "g.legendClosed": "No disponible",
   "g.datesLive": "Toca un día dorado para ver sus horarios libres. Cuando alguien reserva, el calendario se actualiza al momento: una hora nunca se reserva dos veces.",

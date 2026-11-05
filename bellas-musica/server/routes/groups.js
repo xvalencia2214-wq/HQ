@@ -5,7 +5,7 @@ import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, 
 import { cleanEntries, durationOf, peakLoad } from "../schedule.js";
 import { lookupZip, miles } from "../geo.js";
 import { inMarket } from "../market.js";
-import { parseVideo, sniffImage } from "../media.js";
+import { parseTour, parseVideo, sniffImage } from "../media.js";
 import { maskContact } from "./messages.js";
 import { activeOffers, claimFounding, feePctFor, getGroup, getVisibleGroup, isLive, groupDetail, markFeaturePaid, newId, requireOwner, openSlots, expirePending, isTeam, requireRealOwner, reaches } from "../shared.js";
 import { normalizePhone } from "../sms.js";
@@ -196,6 +196,11 @@ export default function groupRoutes(ctx, add) {
       const v = parseVideo(body.video_url);
       if (!v) throw new HttpError(400, "Use a YouTube, Vimeo, TikTok or Instagram video link");
       set.video_provider = v.provider; set.video_id = v.id;
+    }
+    if (body.tour_url !== undefined) {
+      const v = parseTour(str(body.tour_url, "Virtual tour", { max: 300 }));
+      if (!v) throw new HttpError(400, "Use a Matterport, Kuula, YouTube or Vimeo link for the virtual tour");
+      set.tour_provider = v.provider; set.tour_id = v.id;
     }
     const keys = Object.keys(set);
     if (keys.length) db.run(`UPDATE groups SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`, ...keys.map((k) => set[k]), g.id);

@@ -3,7 +3,7 @@ import { categoryOf, balancePaidInApp } from "./pricing.js";
 import { RESCHED_TTL, checkStart, durationOf, openTimes } from "./schedule.js";
 export { balancePaidInApp };
 import { lookupZip } from "./geo.js";
-import { embedUrl } from "./media.js";
+import { embedUrl, tourEmbedUrl } from "./media.js";
 import { usd } from "./emails.js";
 
 const ACTIVE = "('pending_payment','requested','confirmed')";
@@ -136,6 +136,7 @@ export function publicGroup(ctx, g, extras = {}) {
     travel_miles: g.travel_miles, travel_fee_cents: g.travel_fee_cents, deposit_pct: g.deposit_pct, cancel_policy: g.cancel_policy,
     events: safeJson(g.events, []), songs: safeJson(g.songs, []), needs: safeJson(g.needs_json, []), weekly_discount_pct: g.weekly_discount_pct || 0,
     video: g.video_provider ? { provider: g.video_provider, url: embedUrl(g.video_provider, g.video_id) } : null,
+    tour: g.tour_provider ? { provider: g.tour_provider, url: tourEmbedUrl(g.tour_provider, g.tour_id) } : null,
     ...extras.fields
   };
 }

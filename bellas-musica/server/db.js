@@ -669,6 +669,8 @@ export function openDb(config) {
   ensureColumn("groups", "founding_until", "INTEGER NOT NULL DEFAULT 0");   // ...its lower fee lasts until then
   ensureColumn("groups", "spotlight_until", "INTEGER NOT NULL DEFAULT 0");  // paid Spotlight: above Featured in search, the home page strip, twice the Discover turns
   ensureColumn("groups", "stripe_checked_at", "INTEGER NOT NULL DEFAULT 0"); // when payouts were last re-read from Stripe (the daily check)
+  ensureColumn("groups", "tour_provider", "TEXT NOT NULL DEFAULT ''");   // a venue's virtual tour: matterport, kuula, youtube or vimeo
+  ensureColumn("groups", "tour_id", "TEXT NOT NULL DEFAULT ''");
   // A customer disputed a card payment with their bank (a chargeback): the platform has a few days to answer in Stripe.
   db.exec(`CREATE TABLE IF NOT EXISTS disputes (
     id TEXT PRIMARY KEY,                         -- Stripe's dispute id (dp_...)

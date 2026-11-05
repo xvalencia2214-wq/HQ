@@ -21,6 +21,7 @@ export function groupCard(g, i, ctx = "") {
   else if (g.promoted) tags.push(`<span class="feat">${esc(t("card.featured"))}</span>`);
   if (g.demo) tags.push(`<span class="tag sample">${esc(t("card.sample"))}</span>`);
   if (g.events_done) tags.push(`<span class="tag trust">${esc(g.events_done === 1 ? t("card.doneOne") : t("card.done", { n: g.events_done }))}</span>`);
+  if (g.tour) tags.push(`<span class="tag">🔄 ${esc(t("card.tour"))}</span>`);
   if (g.travel_extra_cents) tags.push(`<span class="tag">${esc(t("card.travel", { price: money(g.travel_extra_cents) }))}</span>`);
   if (g.open_soon) tags.push(`<span class="tag soon">${esc(t("card.soon"))}</span>`);
   if (g.min_hours > 1) tags.push(`<span class="tag">${esc(t("g.minHours", { n: g.min_hours }))}</span>`);

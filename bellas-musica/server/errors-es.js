@@ -87,6 +87,7 @@ const EXACT = {
   "Booking by the hour must be on or off": "Elige si aceptas reservas por hora o no.",
   "Set a price per hour (at least $50) to take bookings by the hour": "Pon un precio por hora (mínimo $50) para aceptar reservas por hora.",
   "Use a YouTube, Vimeo, TikTok or Instagram video link": "Usa un enlace de video de YouTube, Vimeo, TikTok o Instagram.",
+  "Use a Matterport, Kuula, YouTube or Vimeo link for the virtual tour": "Usa un enlace de Matterport, Kuula, YouTube o Vimeo para el recorrido virtual.",
   "At most 12 packages": "Máximo 12 paquetes.",
   "Package not found": "Paquete no encontrado.",
   "You already have an add-on with that name": "Ya tienes un extra con ese nombre.",
@@ -348,7 +349,7 @@ const PATTERNS = [
 
 // The names of form fields used by those checks.
 const FIELDS = {
-  Desk: "Escritorio", Draft: "Borrador", Subject: "Asunto",
+  Desk: "Escritorio", Draft: "Borrador", Subject: "Asunto", "Virtual tour": "Recorrido virtual",
   "Add-on": "Extra", "Add-on name": "Nombre del extra", Amount: "Cantidad", Answer: "Respuesta", "Bookings at the same time": "Reservas a la misma hora",
   Budget: "Presupuesto", "Bundle name": "Nombre del paquete en conjunto", "Calendar link": "Enlace del calendario", "Cancellation policy": "Política de cancelación",
   "Client's email": "Correo del cliente", "Client's name": "Nombre del cliente", Code: "Código", Comment: "Comentario", "Days the link stays open": "Días que el enlace está abierto",

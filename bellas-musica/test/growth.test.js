@@ -108,7 +108,7 @@ test("the Terms and Privacy pages open with or without .html (people type the sh
       const r = await fetch(S.base + from, { redirect: "manual" });
       assert.equal(r.status, 301, from); assert.equal(r.headers.get("location"), to, from);
     }
-    for (const p of ["/terms.html", "/privacy.html"]) { const r = await fetch(S.base + p); assert.equal(r.status, 200, p); assert.match(await r.text(), /version 2026-10-20/); }
+    for (const p of ["/terms.html", "/privacy.html"]) { const r = await fetch(S.base + p); assert.equal(r.status, 200, p); assert.match(await r.text(), /version 2026-11-05/); }
     const followed = await fetch(S.base + "/terms"); assert.equal(followed.status, 200); assert.match(await followed.text(), /Terms of Service/);
   } finally { await S.close(); }
 });

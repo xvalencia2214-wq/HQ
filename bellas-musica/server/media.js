@@ -41,6 +41,35 @@ export function parseVideo(input) {
   return null;
 }
 
+// A venue's virtual tour (a 360° walk-through): Matterport, Kuula, or a YouTube/Vimeo video (360° videos play in
+// the same player). Only these hosts are accepted, and the page embeds only the ids, never the link as typed.
+export function parseTour(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return { provider: "", id: "" };
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw); } catch { return null; }
+  const host = u.hostname.replace(/^www\./, "");
+  if (host === "my.matterport.com" || host === "matterport.com") { // https://my.matterport.com/show/?m=SxQL3iGyoDo
+    const id = u.searchParams.get("m") || "";
+    return /^\/show\/?$/.test(u.pathname) && /^[A-Za-z0-9]{11}$/.test(id) ? { provider: "matterport", id } : null;
+  }
+  if (host === "kuula.co") { // https://kuula.co/share/7lVbT, /share/collection/7lVbT, /post/7lVbT
+    const seg = u.pathname.split("/").filter(Boolean);
+    if (seg[0] === "share" && seg[1] === "collection" && /^[\w-]{4,16}$/.test(seg[2] || "")) return { provider: "kuula", id: "c:" + seg[2] };
+    if ((seg[0] === "share" || seg[0] === "post") && /^[\w-]{4,16}$/.test(seg[1] || "") && seg[1] !== "collection") return { provider: "kuula", id: seg[1] };
+    return null;
+  }
+  const v = parseVideo(raw);
+  return v && (v.provider === "youtube" || v.provider === "vimeo") ? v : null;
+}
+
+export function tourEmbedUrl(provider, id) {
+  if (provider === "matterport" && /^[A-Za-z0-9]{11}$/.test(id)) return `https://my.matterport.com/show/?m=${id}`;
+  if (provider === "kuula") { const m = /^(c:)?([\w-]{4,16})$/.exec(id); if (m) return `https://kuula.co/share/${m[1] ? "collection/" : ""}${m[2]}`; }
+  if (provider === "youtube" || provider === "vimeo") return embedUrl(provider, id);
+  return "";
+}
+
 export function embedUrl(provider, id) {
   if (provider === "youtube") return `https://www.youtube-nocookie.com/embed/${id}`;
   if (provider === "vimeo") return `https://player.vimeo.com/video/${id}`;

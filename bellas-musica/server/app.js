@@ -140,7 +140,7 @@ export function createApp(config) {
     res.setHeader("Content-Security-Policy", [
       "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
-      "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com",
+      "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://my.matterport.com https://kuula.co",
       "connect-src 'self'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'", "object-src 'none'"
     ].join("; "));
     res.setHeader("X-Content-Type-Options", "nosniff");

@@ -47,6 +47,24 @@ ok("party checklist offers alterations", /Arreglos y costura/.test(party));
 // welcome page budget chips
 await go("#/welcome"); await P.waitForTimeout(1500);
 ok("welcome page has the Costura chip", (await P.locator('#lp-cats .chip[data-cat="alterations"]').count()) === 1);
+// a venue's virtual tour (still in Spanish): on its page with a full-screen link, as a tag on its card, and the venue's own box to add it
+S.db.run("UPDATE groups SET tour_provider = 'matterport', tour_id = 'SxQL3iGyoDo' WHERE id = 'salon-los-arcos-cicero'");
+await ctx.route("https://my.matterport.com/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<p>tour</p>" }));
+await go("#/?zip=60804&category=venues"); await P.waitForSelector("#results a"); await P.waitForTimeout(500);
+ok("venue card shows the 360° tour tag", /Recorrido 360°/.test(await P.locator("#results").innerText()));
+await go("#/group/salon-los-arcos-cicero"); await P.waitForSelector("section.tour iframe");
+ok("venue page shows the virtual tour", (await P.locator('section.tour iframe[src="https://my.matterport.com/show/?m=SxQL3iGyoDo"]').count()) === 1 && /Recorrido virtual/.test(await P.locator("section.tour").innerText()));
+ok("with a full-screen link that opens in a new tab", (await P.locator('section.tour a[target="_blank"][href="https://my.matterport.com/show/?m=SxQL3iGyoDo"]').count()) === 1);
+const hall = client(S.base); await hall.signup("hall23@example.com", "Hall Owner");
+const hg = (await hall.post("/api/groups", { name: "Salón Prueba", type: "Party hall", zip: "60608", members: 2, story: "Party hall for 200 guests with a dance floor and parking." })).json.id;
+await P.goto(S.base + "/#/login"); await P.waitForSelector("#authform"); await P.fill("#a-email", "hall23@example.com"); await P.fill("#a-pw", "correct horse battery"); await P.click("#authform button[type=submit]"); await P.waitForFunction(() => !location.hash.startsWith("#/login"));
+await go(`#/dashboard?g=${hg}&tab=media`); await P.waitForSelector("#tform");
+await P.fill("#t-url", "https://example.com/tour"); await P.click("#tform button[type=submit]"); await P.waitForFunction(() => document.getElementById("terr")?.textContent.length > 0);
+ok("a wrong link explains itself in Spanish", /recorrido virtual/.test(await P.locator("#terr").innerText()));
+await P.fill("#t-url", "https://my.matterport.com/show/?m=SxQL3iGyoDo"); await P.click("#tform button[type=submit]");
+await P.waitForSelector('#tform ~ .video iframe[src*="matterport"], .video iframe[src*="matterport"]');
+ok("the venue saves its tour and sees it in the dashboard", (await hall.get(`/api/groups/${hg}`)).json.tour?.provider === "matterport");
+if (out) await P.screenshot({ path: path.join(out, "5-tour-es.png") });
 ok("no page errors", problems.length === 0); if (problems.length) console.log(problems.join("\n"));
 await browser.close(); await S.close();
 console.log(failed ? `${failed} FAILED` : "ALL PASS"); process.exit(failed ? 1 : 0);
