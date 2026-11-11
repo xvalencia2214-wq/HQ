@@ -155,10 +155,14 @@ export function mountChuy() {
   </section>`;
   document.body.append(...wrap.children);
   $("chuyfab").onclick = () => setChuy(!open);
-  // small once the person is busy with the page (scrolled down, or typing in a field), full size again at the top
-  const mini = () => { const a = document.activeElement; const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.closest("#chuy"); $("chuyfab").classList.toggle("mini", window.scrollY > 80 || Boolean(typing)); };
+  // Small once the person is busy with the page: scrolled down, or has typed in a field on this screen. It never grows
+  // back while they are tapping around (a button that changes size under a finger swallows the tap): only at the top of
+  // a page they haven't typed on, or on the next screen.
+  let typed = false;
+  const mini = () => $("chuyfab").classList.toggle("mini", window.scrollY > 80 || typed);
   window.addEventListener("scroll", mini, { passive: true });
-  document.addEventListener("focusin", mini); document.addEventListener("focusout", () => setTimeout(mini, 0));
+  document.addEventListener("focusin", (e) => { const a = e.target; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.closest("#chuy")) { typed = true; mini(); } });
+  window.addEventListener("hashchange", () => { typed = false; mini(); });
   mini();
   $("chuy-close").onclick = () => setChuy(false);
   $("chuy-new").onclick = () => { history = []; store(KEY); try { speechSynthesis.cancel(); } catch { /* none */ } drawLog(); $("chuy-in").focus(); };

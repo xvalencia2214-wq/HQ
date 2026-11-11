@@ -77,7 +77,10 @@ try {
   await go(EN, "#/login"); await EN.waitForSelector("#authform .pweye");
   await EN.fill("#a-email", "eye24@example.com"); await EN.fill("#a-pw", "Correct horse battery");
   ok("the password box has a Show button", (await EN.locator("#authform .pweye").innerText()) === "Show" && (await EN.locator("#a-pw").getAttribute("type")) === "password");
+  ok("the Help button gets small once someone types", await EN.locator("#chuyfab").evaluate((e) => e.classList.contains("mini")));
   await EN.click("#authform .pweye");
+  await EN.locator("#a-pw").evaluate((e) => e.blur()); await EN.waitForTimeout(100);
+  ok("and stays small while they tap around (it never grows under a finger)", await EN.locator("#chuyfab").evaluate((e) => e.classList.contains("mini")));
   ok("Show reveals what was typed, and the button becomes Hide", (await EN.locator("#a-pw").getAttribute("type")) === "text" && (await EN.locator("#a-pw").inputValue()) === "Correct horse battery" && (await EN.locator("#authform .pweye").innerText()) === "Hide");
   await EN.click("#authform button[type=submit]"); await EN.waitForFunction(() => document.getElementById("autherr").textContent.length > 0);
   ok("a wrong password says what to check", /Wrong email or password/.test(await EN.locator("#autherr").innerText()) && /capital letter or an extra space/.test(await EN.locator("#autherr").innerText()));
@@ -85,6 +88,8 @@ try {
   await EN.fill("#a-pw", "correct horse battery "); await EN.click("#authform button[type=submit]");
   await EN.waitForFunction(() => !location.hash.startsWith("#/login"));
   ok("a stray space at the end still logs in", true);
+  await EN.waitForSelector("#sform, #results, .hero"); await EN.evaluate(() => window.scrollTo(0, 0)); await EN.waitForTimeout(150);
+  ok("on the next screen the Help button is full size again", !(await EN.locator("#chuyfab").evaluate((e) => e.classList.contains("mini"))));
 
   // ---- alterations: a fitting, not a party ----
   await go(EN, "#/group/aguja-de-oro-arreglos"); await EN.waitForSelector("#calbox .day.open");
