@@ -85,9 +85,6 @@ export function loadConfig(env = process.env) {
     // Mi Oficina, the owner's private AI office (server/office.js): its own daily cap, and the morning run + email
     officeDailyLimitUsd: int(env.OFFICE_DAILY_LIMIT_USD, 3),
     officeMorning: env.OFFICE_MORNING !== "0",
-    // Mi Oficina's model: Claude Fable 5.2 (Anthropic's most capable; about twice the price per answer) or Claude Opus 5.5.
-    // The daily limit above is the same either way, so the most a day can cost doesn't change.
-    officeModel: ["claude-fable-5-2", "claude-opus-5-5"].includes(env.OFFICE_MODEL) ? env.OFFICE_MODEL : "claude-fable-5-2",
     officeWebSearch: env.OFFICE_WEB_SEARCH !== "0",         // the Recruiting desk may search the web for real local businesses to invite
     aiTranslate: env.AI_TRANSLATE !== "0",                  // listings are translated between Spanish and English (needs ANTHROPIC_API_KEY)
     taxSetAsidePct: int(env.TAX_SETASIDE_PCT, 25),          // the Money & taxes desk's rule-of-thumb set-aside (not tax advice)

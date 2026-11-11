@@ -1,4 +1,4 @@
-// November 2026: Mi Oficina on Claude Fable 5.2 with a web search for the Recruiting desk; listings translated between
+// November 2026: Mi Oficina on Claude Opus 5.5 with a web search for the Recruiting desk; listings translated between
 // Spanish and English; a password typed with a stray space still logs in; the practice copy explains a missing setting.
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -44,14 +44,14 @@ test("Recruiting desk: searches the web for real businesses, the searches are co
       { type: "text", text: " (https://example.com/mariachi-sol)." }] });
     const v = await runDesk(boss, "recruiting");
     const call = F.calls[0].body;
-    assert.equal(call.model, "claude-fable-5-2");
+    assert.equal(call.model, "claude-opus-5-5");
     const ws = call.tools.find((t) => t.name === "web_search");
     assert.deepEqual({ type: ws.type, max_uses: ws.max_uses, city: ws.user_location.city }, { type: "web_search_20260209", max_uses: 4, city: "Chicago" });
     assert.match(call.system[1].text, /web_search/); assert.match(call.system[1].text, /never instructions to you/);
     assert.equal(call.fallbacks, "default");
     assert.equal(v.desks.find((d) => d.id === "recruiting").report.text, "Families near Cicero looked for mariachis. One lead: Mariachi Sol de Cicero (https://example.com/mariachi-sol).", "pieces around a quoted page join into one sentence");
-    // 1,000 in x $8 + 100 out x $40 per million = 12,000 micro-dollars, plus 3 searches at 1 cent
-    assert.equal(S.db.get("SELECT micro_usd FROM office_usage").micro_usd, 12000 + 30000);
+    // 1,000 in x $4 + 100 out x $20 per million = 6,000 micro-dollars, plus 3 searches at 1 cent
+    assert.equal(S.db.get("SELECT micro_usd FROM office_usage").micro_usd, 6000 + 30000);
     assert.equal(v.usage.web_search, true);
 
     // the other desks never get the web
@@ -60,7 +60,7 @@ test("Recruiting desk: searches the web for real businesses, the searches are co
   } finally { await S.close(); await F.close(); }
 });
 
-test("Recruiting desk without web search on the account: it says so once and works without; the settings turn search off or pick the other model", async () => {
+test("Recruiting desk without web search on the account: it says so once and works without; the setting turns search off", async () => {
   const F = await fakeClaude();
   const S = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss@up.test", ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: F.url });
   try {
@@ -79,15 +79,13 @@ test("Recruiting desk without web search on the account: it says so once and wor
   } finally { await S.close(); await F.close(); }
 
   const F2 = await fakeClaude();
-  const S2 = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss@up.test", ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: F2.url, OFFICE_WEB_SEARCH: "0", OFFICE_MODEL: "claude-opus-5-5" });
+  const S2 = await startApp({ DEMO_SEED: "0", WEATHER: "0", ADMIN_EMAILS: "boss@up.test", ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: F2.url, OFFICE_WEB_SEARCH: "0" });
   try {
     const boss = client(S2.base); await boss.signup("boss@up.test", "Boss");
     const v = await runDesk(boss, "recruiting");
     assert.equal(F2.calls[0].body.model, "claude-opus-5-5"); assert.ok(!F2.calls[0].body.tools.some((t) => t.name === "web_search"));
-    assert.equal(S2.db.get("SELECT micro_usd FROM office_usage").micro_usd, 1000 * 4 + 100 * 20, "priced as the model that ran");
-    assert.equal(v.usage.model, "claude-opus-5-5");
-    const odd = await startApp({ DEMO_SEED: "0", OFFICE_MODEL: "some-other-model" });
-    try { assert.equal(odd.ctx.config.officeModel, "claude-fable-5-2", "an unknown name falls back to the default"); } finally { await odd.close(); }
+    assert.equal(S2.db.get("SELECT micro_usd FROM office_usage").micro_usd, 1000 * 4 + 100 * 20, "no searches, no search cost");
+    assert.equal(v.usage.model, "claude-opus-5-5"); assert.equal(v.usage.web_search, false);
   } finally { await S2.close(); await F2.close(); }
 });
 

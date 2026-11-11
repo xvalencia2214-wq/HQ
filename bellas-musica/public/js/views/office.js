@@ -4,7 +4,6 @@ import { api } from "../api.js";
 import { esc, toast } from "../ui.js";
 import { chuyFormat } from "../chuy.js";
 
-const MODEL_NAMES = { "claude-fable-5-2": "Claude Fable 5.2", "claude-opus-5-5": "Claude Opus 5.5" };
 // A report may list web pages the Recruiting desk found: those become links that open in a new tab (https only; the
 // text is escaped first, so a link can only be the address itself).
 const officeFormat = (text) => chuyFormat(text).replace(/(^|[\s(>])(https:\/\/[^\s<>"')]{4,300})/g, (_, pre, url) => `${pre}<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${url.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "")}</a>`);
@@ -86,7 +85,7 @@ export async function office(app) {
     const where = act && (act.id ? `#${act.id}` : act.closest(".of-draft") ? `.of-draft[data-id="${act.closest(".of-draft").dataset.id}"] .${act.classList[0]}` : "");
     const caret = act && typeof act.selectionStart === "number" ? [act.selectionStart, act.selectionEnd] : null;
     const u = v.usage;
-    app.innerHTML = `<div class="titlebar"><h1>Mi Oficina</h1><div class="chips"><span class="tag">${v.mode === "live" ? `AI: on · ${esc(MODEL_NAMES[u.model] || u.model || "")}` : v.mode === "test" ? "AI: test mode (no key)" : "AI: off"}</span>${v.mode === "live" && u.web_search ? '<span class="tag">🔎 Web search: on</span>' : ""}<span class="tag">Today $${u.today_usd.toFixed(2)} of $${u.daily_limit_usd} · month $${u.month_usd.toFixed(2)}</span><a class="tag" href="#/admin">Owner dashboard</a></div></div>
+    app.innerHTML = `<div class="titlebar"><h1>Mi Oficina</h1><div class="chips"><span class="tag">${v.mode === "live" ? "AI: on" : v.mode === "test" ? "AI: test mode (no key)" : "AI: off"}</span>${v.mode === "live" && u.web_search ? '<span class="tag">🔎 Web search: on</span>' : ""}<span class="tag">Today $${u.today_usd.toFixed(2)} of $${u.daily_limit_usd} · month $${u.month_usd.toFixed(2)}</span><a class="tag" href="#/admin">Owner dashboard</a></div></div>
       <p class="lead">Your team works every morning and emails you the briefing. They only look things up and write drafts: <strong>nothing goes out until you approve it.</strong></p>
       ${v.mode === "test" ? `<div class="note">Test mode: the desks write simple reports from your real numbers, without AI. Add ANTHROPIC_API_KEY on Render to turn on the full office.</div>` : ""}
       ${floor()}${panel()}${chatBox()}`;

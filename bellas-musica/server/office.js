@@ -9,12 +9,13 @@
 //   - A daily spending cap (OFFICE_DAILY_LIMIT_USD) separate from Don Chuy's, and a free test mode without a key that
 //     still writes simple reports from the same numbers.
 import { HttpError, now, todayStr, addDays, getTimezone } from "./util.js";
+import { HELPER_MODEL } from "./helper.js";
 import { defineTemplates } from "./emails.js";
 import { lookupZip } from "./geo.js";
 import { upcomingHolidays } from "./routes/specials.js";
 
 // US$ per million tokens = µ$ per token (input, output, cache read, 5-minute cache write), and a web search ($10 per 1,000)
-const PRICES = { "claude-fable-5-2": { input: 8, output: 40, cacheRead: 0.2, cacheWrite: 10 }, "claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 } };
+const PRICE = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 }; // claude-opus-5-5
 const SEARCH_MICRO = 10_000, MAX_SEARCHES = 4;
 // The Recruiting desk's web search (Anthropic runs it; the results come back inside the answer). Chicago by default.
 const WEB_SEARCH = { type: "web_search_20260209", name: "web_search", max_uses: MAX_SEARCHES, user_location: { type: "approximate", city: "Chicago", region: "Illinois", country: "US", timezone: "America/Chicago" } };
@@ -115,12 +116,12 @@ export function createOffice(ctx) {
     if (sdk) return sdk;
     try {
       const { default: Anthropic } = await import("@anthropic-ai/sdk");
-      sdk = { Anthropic, client: new Anthropic({ apiKey: config.aiKey, ...(config.aiApiBase ? { baseURL: config.aiApiBase } : {}), maxRetries: 2, timeout: 600_000 }) }; // a desk on the most capable model, searching the web, can take several minutes
+      sdk = { Anthropic, client: new Anthropic({ apiKey: config.aiKey, ...(config.aiApiBase ? { baseURL: config.aiApiBase } : {}), maxRetries: 2, timeout: 600_000 }) }; // a desk that searches the web can take a few minutes
     } catch (e) { alert(`Mi Oficina can't load the Claude library: ${e.message}`, "office|sdk"); return null; }
     return sdk;
   }
   const spentToday = () => db.get("SELECT micro_usd FROM office_usage WHERE day = ?", todayStr())?.micro_usd || 0;
-  const MODEL = config.officeModel, PRICE = PRICES[MODEL];
+  const MODEL = HELPER_MODEL; // Claude Opus 5.5, like Don Chuy
   let webSearch = config.officeWebSearch; // turned off for this run of the server if the account doesn't have web search
   function record(u) {
     const micro = Math.round((u.input_tokens || 0) * PRICE.input + (u.output_tokens || 0) * PRICE.output + (u.cache_read_input_tokens || 0) * PRICE.cacheRead + (u.cache_creation_input_tokens || 0) * PRICE.cacheWrite
