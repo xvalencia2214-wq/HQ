@@ -1,7 +1,7 @@
 import { init, state, onChange, setUser, refreshMetaIfStale, refreshAttention } from "./state.js";
 import { api, ApiError } from "./api.js";
 import { t, lang, setLang, initLang, newScreen } from "./i18n.js";
-import { esc, toast } from "./ui.js";
+import { esc, toast, pwEyes } from "./ui.js";
 import { killMap } from "./map.js";
 import { home } from "./views/home.js";
 import { best } from "./views/best.js";
@@ -64,6 +64,7 @@ const app = document.getElementById("app");
 // Every page needs one level-1 heading for screen readers; views title themselves with <h2>, so promote the first one.
 const ensureH1 = () => { if (!app.querySelector("h1")) { const h = app.querySelector("h2"); if (h && h.getAttribute("aria-level") !== "1") { h.setAttribute("role", "heading"); h.setAttribute("aria-level", "1"); } } };
 new MutationObserver(ensureH1).observe(app, { childList: true, subtree: true });
+new MutationObserver(() => pwEyes(app)).observe(app, { childList: true, subtree: true }); // Show / Hide on every password box
 let routeToken = 0;
 let viewCleanup = null; // a view that runs animations (the welcome page) leaves a function that stops them
 

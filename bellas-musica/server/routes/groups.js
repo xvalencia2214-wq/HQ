@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpError, addDays, int, isDate, isZip, now, oneOf, rid, safeJson, str, todayStr } from "../util.js";
+import { requestLang } from "../errors-es.js";
 import { EVENT_TYPES, GROUP_TYPES, HOURLY_BY_DEFAULT, MAX_ADDONS, MAX_CAPACITY, MAX_HOURS, MAX_NEEDS, NEEDS_PRESETS, POLICIES, SHORT_MINUTES, SLOTS, categoryOf } from "../pricing.js";
 import { cleanEntries, durationOf, peakLoad } from "../schedule.js";
 import { lookupZip, miles } from "../geo.js";
@@ -138,7 +139,7 @@ export default function groupRoutes(ctx, add) {
       .map((g) => ({ ...manageView(g), my_role: g.owner_id === user.id ? "owner" : "manager" }))
   }), { auth: true });
 
-  add("GET", "/api/groups/:id", ({ params, user, query }) => {
+  add("GET", "/api/groups/:id", ({ params, user, query, req }) => {
     const g = getVisibleGroup(db, params.id, user);
     const isOwner = isTeam(db, user, g);
     if (!isOwner) ctx.stats.count("group_view", g.id); // a group looking at its own page is not a customer view
@@ -149,7 +150,9 @@ export default function groupRoutes(ctx, add) {
       const d = miles(fz, gz);
       from = { zip: query.zip, city: fz.city, miles: Math.round(d), reaches: reaches(g, d), travel_extra_cents: d > g.travel_miles ? g.travel_fee_cents : 0 };
     }
-    return { ...groupDetail(ctx, g), is_owner: isOwner, from };
+    // the story and the packages in the reader's language, when the vendor wrote them in the other one
+    const tr = ctx.translate.forViewer(g, req && req.headers ? requestLang(req) : "en");
+    return { ...groupDetail(ctx, g), is_owner: isOwner, from, ...(tr ? { tr } : {}) };
   });
 
   add("PATCH", "/api/groups/:id", ({ params, body, user }) => {
@@ -204,6 +207,7 @@ export default function groupRoutes(ctx, add) {
     }
     const keys = Object.keys(set);
     if (keys.length) db.run(`UPDATE groups SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`, ...keys.map((k) => set[k]), g.id);
+    if (set.story !== undefined) ctx.translate.soon(g.id);
     return manageView(getGroup(db, g.id));
   }, { auth: true });
 
@@ -224,6 +228,7 @@ export default function groupRoutes(ctx, add) {
     if (db.get("SELECT COUNT(*) c FROM packages WHERE group_id = ? AND private_customer_id IS NULL", g.id).c >= 12) throw new HttpError(400, "At most 12 packages");
     const f = packageFields(body);
     db.run("INSERT INTO packages (group_id, name, description, hours, minutes, price_cents) VALUES (?, ?, ?, ?, ?, ?)", g.id, f.name, f.description, f.hours, f.minutes, f.price_cents);
+    ctx.translate.soon(g.id);
     return manageView(getGroup(db, g.id));
   }, { auth: true });
   const ownedPackage = (user, id) => {
@@ -237,11 +242,13 @@ export default function groupRoutes(ctx, add) {
     const p = ownedPackage(user, params.pid);
     const f = packageFields({ name: body.name ?? p.name, description: body.description ?? p.description, hours: body.hours ?? p.hours, price: body.price ?? p.price_cents / 100 });
     db.run("UPDATE packages SET name = ?, description = ?, hours = ?, minutes = ?, price_cents = ? WHERE id = ?", f.name, f.description, f.hours, f.minutes, f.price_cents, p.id);
+    ctx.translate.soon(p.group_id);
     return manageView(getGroup(db, p.group_id));
   }, { auth: true });
   add("DELETE", "/api/packages/:pid", ({ params, user }) => {
     const p = ownedPackage(user, params.pid);
     db.run("DELETE FROM packages WHERE id = ?", p.id);
+    ctx.translate.soon(p.group_id);
     return manageView(getGroup(db, p.group_id));
   }, { auth: true });
 

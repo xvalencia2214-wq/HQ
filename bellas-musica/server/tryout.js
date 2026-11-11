@@ -30,8 +30,24 @@ function wifiAddress() {
 // because every practice account (one of them with the Admin page) has the same well-known password.
 const ONLINE = Boolean(process.env.RENDER_EXTERNAL_URL || process.env.NODE_ENV === "production");
 if (ONLINE && !process.env.PREVIEW_PASSWORD) {
+  // Stay up and say what is missing (a crash only shows in the host's logs, which is hard to find from a phone).
+  // Nothing of the app runs: no database, no accounts, only this page.
   console.error("This practice copy is on the internet: set PREVIEW_PASSWORD (Render → Environment) so only you can open it.");
-  process.exit(1);
+  const http = await import("node:http");
+  const page = `<!DOCTYPE html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>One more step · Bella's Fiestas</title>
+<body style="font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px;color:#0b1838;line-height:1.5">
+<h1 style="font-size:1.6rem">One more step before this practice copy opens</h1>
+<p>It needs a password so only you can see it.</p>
+<ol><li>In Render, open this service and tap <strong>Environment</strong>.</li>
+<li>Tap <strong>Add Environment Variable</strong>. Key: <strong>PREVIEW_PASSWORD</strong>. Value: a password you make up.</li>
+<li>Tap <strong>Save Changes</strong> and wait about 3 minutes.</li></ol>
+<p>Then open this page again. Safari asks for a name (type anything) and that password.</p>
+<hr><p lang="es"><strong>Falta un paso:</strong> en Render → Environment, agrega <strong>PREVIEW_PASSWORD</strong> con una contraseña que tú elijas y guarda. En unos 3 minutos esta página abrirá la copia de práctica.</p></body></html>`;
+  http.createServer((req, res) => {
+    if (req.url === "/api/health") { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok: true, setup: "PREVIEW_PASSWORD" })); return; }
+    res.writeHead(503, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "120" }); res.end(page);
+  }).listen(Number(process.env.PORT) || 3000);
+  await new Promise(() => {}); // wait here until the setting is added and the host restarts the service
 }
 const LAN = ONLINE ? "" : wifiAddress();
 if (LAN && !process.env.BASE_URL) process.env.BASE_URL = `http://${LAN}:${process.env.PORT || 3000}`;

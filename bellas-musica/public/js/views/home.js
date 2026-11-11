@@ -38,7 +38,7 @@ export function groupCard(g, i, ctx = "") {
     ${g.fits_event ? `<div class="fit">✓ ${esc(t("card.fits"))}</div>` : ""}
     ${g.matched_songs?.length ? `<div class="fit">♪ ${esc(t("card.plays"))}: ${esc(g.matched_songs.join(", "))}</div>` : ""}
     ${g.open_slots?.length ? `<div class="fit">📅 ${esc(t("card.open"))}: ${esc(g.open_slots.join(", "))}</div>` : ""}
-    <p>${esc(g.story)}</p>
+    <p>${esc(g.story_tr || g.story)}</p>
     <a class="btn" href="${href}">${esc(t("card.book"))}</a>
     ${shareButtons(g.name, "#/group/" + g.id)}
   </article>`;

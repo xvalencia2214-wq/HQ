@@ -77,13 +77,16 @@ test("Mi Oficina live: Claude with fallbacks, the desk's lookups, nothing privat
     assert.equal(F.calls.length, 4);
 
     const first = F.calls[0];
-    assert.equal(first.body.model, "claude-opus-5-5");
+    assert.equal(first.body.model, "claude-fable-5-2", "the office runs on the most capable model");
+    assert.ok(!first.body.tools.some((x) => x.type), "only the Recruiting desk searches the web");
+    assert.equal(first.body.thinking, undefined, "thinking is left to the model");
     assert.equal(first.body.fallbacks, "default");
     assert.equal(first.body.output_config.effort, "medium");
     assert.match(String(first.headers["anthropic-beta"]), /server-side-fallback-2026-07-01/);
     assert.deepEqual(first.body.system[0].cache_control, { type: "ephemeral" });
     assert.match(first.body.system[1].text, /Morning briefing/);
     assert.ok(first.body.tools.every((t) => t.strict === true && t.input_schema.additionalProperties === false), "strict tools");
+    assert.equal(v.usage.model, "claude-fable-5-2");
     assert.deepEqual(F.calls[3].body.tools, first.body.tools, "same tools every round (cache-friendly)");
 
     // what reached the AI: the real numbers, but nobody's contact details or private notes
@@ -202,8 +205,8 @@ test("Money & taxes desk: income after refunds, promotions, extras and tips, est
 
     const income = fee + fee / 2 + 4900 + 88;
     const cardFees = 2 * Math.round(dep * 0.029 + 30) + Math.round(4900 * 0.029 + 30) + Math.round(2000 * 0.029 + 30);
-    // AI: $1.50 Don Chuy + $0.50 office, plus the desk's own first request (2000 in, 500 out = 18,000 micro-dollars) counted before the report
-    const ai = 150 + Math.round((500000 + 2000 * 4 + 500 * 20) / 1e4);
+    // AI: $1.50 Don Chuy + $0.50 office, plus the desk's own first request (2000 in, 500 out at $8 / $40 per million = 36,000 micro-dollars) counted before the report
+    const ai = 150 + Math.round((500000 + 2000 * 8 + 500 * 40) / 1e4);
     const net = income - cardFees - ai;
     const $ = (c) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(c % 100 ? 2 : 0)}`;
 
@@ -237,7 +240,7 @@ test("Money & taxes desk: income after refunds, promotions, extras and tips, est
     const lines = (await res.text()).trim().split("\n");
     assert.match(lines[0], /^month,income,booking_fees,promotions/);
     const thisMonth = lines.find((l) => l.startsWith(today.slice(0, 7))).split(","), total = lines.at(-1).split(",");
-    const netNow = income - cardFees - (150 + Math.round((500000 + 2 * 18000) / 1e4)); // by now both of the desk's requests are counted
+    const netNow = income - cardFees - (150 + Math.round((500000 + 2 * 36000) / 1e4)); // by now both of the desk's requests are counted
     assert.equal(thisMonth[1], (income / 100).toFixed(2)); assert.equal(thisMonth[9], (netNow / 100).toFixed(2));
     assert.equal(total[0], `${year} total`); assert.equal(total[1], (income / 100).toFixed(2));
   } finally { await S.close(); await F.close(); }

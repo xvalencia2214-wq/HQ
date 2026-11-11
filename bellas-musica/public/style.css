@@ -920,3 +920,90 @@ html.big { font-size: 118.75%; }
   .fl-offer { font-size: 1.02rem; margin-top: 0; padding: 10px 16px; } .fl-foot { font-size: .95rem; margin-top: 0; }
   .fl-who, .fl-offer, .fl-perks li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ==== November 2026 lift: the same white, navy and gold, with more life. Appended last so it wins over the older rules.
+   - listings without a photo show artwork for their kind of business (a colour per category, papel picado, a big icon)
+   - cards: the picture runs edge to edge, the price stands out, tags never break in two
+   - the links above the results are tidy pills; My bookings and the dashboard header line up on a phone
+   - Don Chuy's button shrinks while the person scrolls or types; every password box has Show / Hide ==== */
+:root {
+  --sh-1: 0 1px 2px rgba(11,24,56,.05), 0 6px 18px rgba(11,24,56,.06);
+  --sh-2: 0 2px 4px rgba(11,24,56,.06), 0 18px 44px rgba(11,24,56,.13);
+  --papel: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='40' viewBox='0 0 52 40'%3E%3Cpath fill='%23fff' fill-opacity='.2' d='M3 0h46v24l-5.75 9-5.75-9-5.75 9-5.75-9-5.75 9-5.75-9-5.75 9L3 24z'/%3E%3Ccircle cx='26' cy='12' r='5' fill='%23000' fill-opacity='.14'/%3E%3Ccircle cx='13' cy='12' r='2.2' fill='%23000' fill-opacity='.14'/%3E%3Ccircle cx='39' cy='12' r='2.2' fill='%23000' fill-opacity='.14'/%3E%3C/svg%3E");
+}
+.tag, .badge, .feat { white-space: nowrap; }
+
+/* artwork for a listing without a photo */
+.photo.ph.art { position: relative; overflow: hidden; background: linear-gradient(150deg, var(--a1), var(--a2)); }
+.photo.ph.art::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 40px; background: var(--papel) repeat-x 0 0; }
+.photo.ph.art::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 62%, rgba(255,255,255,.28), transparent 58%); pointer-events: none; }
+.art-i { position: relative; z-index: 1; font-size: 4.2rem; line-height: 1; margin-top: 22px; filter: drop-shadow(0 8px 14px rgba(0,0,0,.28)); transition: transform .5s var(--ease); }
+.card:hover .art-i { transform: translateY(-4px) rotate(-6deg) scale(1.08); }
+.art-music { --a1: #14285e; --a2: #3559b5; }
+.art-food { --a1: #c2410c; --a2: #f59e0b; }
+.art-rentals { --a1: #0b6f62; --a2: #2bb7a0; }
+.art-decor { --a1: #b0204f; --a2: #f0679a; }
+.art-photo { --a1: #8a5a0a; --a2: #e0a93b; }
+.art-services { --a1: #43329e; --a2: #8573e6; }
+.art-venues { --a1: #1f4f7a; --a2: #5c9bd1; }
+.art-alterations { --a1: #1f6b45; --a2: #58b983; }
+
+/* cards */
+.card { padding: 0 16px 16px; overflow: hidden; box-shadow: var(--sh-1); gap: 9px; }
+.card > .photo { margin: 0 -16px 2px; height: 172px; border-radius: 0; }
+.card .rank { top: 12px; left: 12px; z-index: 2; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.card .feat { top: 12px; right: 60px; z-index: 2; }
+.card h3 { font-size: 1.28rem; line-height: 1.15; margin-top: 4px; }
+.card .meta { align-items: center; gap: 6px 8px; }
+.card .price { font-size: 1.08rem; color: var(--ink); }
+.card .dist { white-space: nowrap; }
+.card:hover { box-shadow: var(--sh-2); }
+.card .share .btn { padding: 8px 10px; font-size: .88rem; }
+
+/* the links above the results: pills, not a paragraph of underlines */
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+.links a { margin: 0; display: inline-flex; align-items: center; min-height: 40px; padding: 6px 14px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .92rem; font-weight: 600; box-shadow: var(--sh-1); transition: border-color .2s, transform .2s var(--ease); }
+.links a:hover, .links a:focus-visible { border-color: var(--gold-2); transform: translateY(-1px); }
+
+/* the search box at the top: a ribbon of papel picado in gold, and a smaller logo on a phone */
+.hero { position: relative; overflow: hidden; box-shadow: var(--sh-1); }
+.hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 40px; pointer-events: none; opacity: .9;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='40' viewBox='0 0 52 40'%3E%3Cpath fill='%23c9962b' fill-opacity='.2' d='M3 0h46v24l-5.75 9-5.75-9-5.75 9-5.75-9-5.75 9-5.75-9-5.75 9L3 24z'/%3E%3Ccircle cx='26' cy='12' r='5' fill='%23fff' fill-opacity='.9'/%3E%3Ccircle cx='13' cy='12' r='2.2' fill='%23fff' fill-opacity='.9'/%3E%3Ccircle cx='39' cy='12' r='2.2' fill='%23fff' fill-opacity='.9'/%3E%3C/svg%3E") repeat-x 0 0; }
+.hero > * { position: relative; }
+@media (max-width: 640px) {
+  .hero { padding-top: 44px; }
+  .hero-logo { width: 92px; height: 92px; border-radius: 22px; margin-bottom: 8px; }
+}
+@media (min-width: 641px) { .hero { padding-top: 52px; } }
+
+/* My bookings on a phone: the price and the buttons line up on the left under the details */
+@media (max-width: 640px) {
+  .req { flex-direction: column; gap: 8px; }
+  .req-r { text-align: left; }
+  .req-r > strong { font-size: 1.15rem; }
+  .req-r .btn { margin: 6px 6px 0 0; }
+}
+
+/* the dashboard's two top links stay on one row (the tabs keep wrapping, so every tab is always in sight) */
+.seg a { white-space: nowrap; }
+
+/* Don Chuy's button: small and round once the person scrolls or types */
+.chuy-fab { transition: padding .25s var(--ease), min-height .25s var(--ease), box-shadow .25s; }
+.chuy-fab.mini { min-height: 52px; padding: 3px; gap: 0; }
+.chuy-fab.mini .chuy-fab-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.chuy-fab.mini img { width: 46px; height: 46px; animation: none; }
+
+/* Show / Hide on a password box */
+.pwwrap { position: relative; display: block; }
+.pwwrap input { padding-right: 92px; }
+.pweye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-height: 40px; min-width: 64px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--cream-2); color: var(--ink); font: 700 .88rem var(--display); cursor: pointer; }
+.pweye[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+@media (prefers-reduced-motion: reduce) { .art-i, .links a, .chuy-fab { transition: none !important; } .card:hover .art-i { transform: none; } }
+@media print { .photo.ph.art { background: #fff; border: 1px solid #ccc; } .hero::before { display: none; } }
+/* a vendor page with no photos yet: the same artwork, wide */
+.gp .photo.ph.art { height: 210px; border-radius: 14px; margin-top: 12px; }
+.gp .photo.ph.art .art-i { font-size: 5.4rem; }
+/* a listing shown in the reader's language */
+.trnote { margin: 6px 0 0; font-size: .88rem; color: var(--ink-2); }
+.trnote .linkbtn { padding: 8px 6px; }

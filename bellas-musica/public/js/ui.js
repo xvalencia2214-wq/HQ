@@ -7,6 +7,19 @@ export function esc(s) {
 
 // The sign-up box: 18 or older, and agrees to the Terms of Service and the Privacy Policy (both open in a new tab, so
 // nothing typed is lost). Required: the server refuses a new account without it.
+// Every password box gets a Show / Hide button, so a person can see what they typed (a wrong capital or an extra
+// space is the usual reason a login fails). Called whenever a screen is drawn.
+export function pwEyes(root = document) {
+  for (const i of root.querySelectorAll('input[type="password"]:not([data-eye])')) {
+    i.dataset.eye = "1";
+    const wrap = document.createElement("span"); wrap.className = "pwwrap";
+    i.parentNode.insertBefore(wrap, i); wrap.appendChild(i);
+    const b = document.createElement("button"); b.type = "button"; b.className = "pweye"; wrap.appendChild(b);
+    const draw = () => { const shown = i.type === "text"; b.textContent = t(shown ? "auth.hidePw" : "auth.showPw"); b.setAttribute("aria-label", t(shown ? "auth.hidePwLabel" : "auth.showPwLabel")); b.setAttribute("aria-pressed", String(shown)); };
+    b.onclick = () => { i.type = i.type === "password" ? "text" : "password"; draw(); i.focus({ preventScroll: true }); };
+    draw();
+  }
+}
 export function agreeBox(id) {
   const link = (href, key) => `<a href="${href}" target="_blank" rel="noopener">${esc(t(key))}</a>`;
   return `<label class="chk agree"><input type="checkbox" id="${id}" name="agree"> <span>${esc(t("auth.agree")).replace("{terms}", link("terms.html", "auth.termsLink")).replace("{privacy}", link("privacy.html", "auth.privacyLink"))}</span></label>`;
@@ -90,8 +103,19 @@ export function wireShare(root) {
   root.querySelectorAll("[data-share]").forEach((b) => { b.onclick = () => share(b.getAttribute("data-name"), b.getAttribute("data-share")); });
 }
 
+const TYPE_ART = {
+  Mariachi: "🎺", Banda: "🥁", "Norteño": "🪗", "Trío romántico": "🎸", Grupera: "🎤", Conjunto: "🪗", "Sierreño": "🎸", "Tierra Caliente": "🎻", "Cumbia / Sonido": "💃", Tamborazo: "🥁", DJ: "🎧", Other: "🎶",
+  "Food truck": "🚚", "Taquería / taco catering": "🌮", Catering: "🍽️", "Cakes and desserts": "🎂", "Aguas frescas and drinks": "🍹",
+  Tents: "⛺", "Tables and chairs": "🪑", "Bounce house": "🏰", "Dance floor and stage": "🪩", "Linens and tableware": "🍴",
+  "Balloon decorations": "🎈", "Event decorator": "✨", Flowers: "💐", "Backdrops and photo walls": "🖼️",
+  Photographer: "📸", Videographer: "🎥", "Photo booth": "🤳",
+  "Security / bouncer": "🛡️", Bartender: "🍸", "Party host / MC": "🎙️", "Kids entertainment": "🤹", "Quinceañera choreographer": "👑", "Hair and makeup": "💄", "Clean-up crew": "🧹",
+  "Party hall": "🏛️", "Outdoor venue": "🌳", "Dress alterations": "🧵", "Suit and tux alterations": "🤵", "Custom dresses and outfits": "👗"
+};
+const ART_CATS = ["music", "food", "rentals", "decor", "photo", "services", "venues", "alterations"];
+export const typeArt = (type) => TYPE_ART[type] || "🎉";
 export function groupPhoto(g) {
   return g.photo
     ? `<div class="photo" role="img" aria-label="${esc(g.name)}" style="background-image:url('${esc(g.photo)}')"></div>`
-    : `<div class="photo ph"><img src="logo.svg" alt="" width="104" height="104"></div>`;
+    : `<div class="photo ph art art-${ART_CATS.includes(g.category) ? g.category : "music"}"><span class="art-i" aria-hidden="true">${typeArt(g.type)}</span></div>`;
 }

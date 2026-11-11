@@ -170,10 +170,10 @@ try {
   await D.goto(S.base + "/#/signup"); await D.fill("#a-name", "Dana Delete"); await D.fill("#a-email", "dana@example.com"); await D.fill("#a-pw", "a long password 3"); await D.check("#a-agree"); await D.click("#authform button[type=submit]");
   await D.waitForSelector("#nav a[data-r=account]", { state: "attached" }); await D.goto(S.base + "/#/account"); await D.waitForSelector("#dform", { state: "attached" });
   await D.click(".danger summary"); D.once("dialog", (d) => d.accept());
-  await D.fill("#d-pw", "wrong password"); await D.click("#dform button"); await D.waitForSelector("#derr:not(:empty)");
+  await D.fill("#d-pw", "wrong password"); await D.click("#dform button[type=submit]"); await D.waitForSelector("#derr:not(:empty)");
   ok("deleting with the wrong password is refused", /Wrong password/.test(await D.locator("#derr").innerText()));
   D.once("dialog", (d) => d.accept());
-  await D.fill("#d-pw", "a long password 3"); await D.click("#dform button"); await D.waitForSelector("#nav a[data-r=login]", { state: "attached" });
+  await D.fill("#d-pw", "a long password 3"); await D.click("#dform button[type=submit]"); await D.waitForSelector("#nav a[data-r=login]", { state: "attached" });
   ok("account deleted: logged out and back on the home page", D.url().endsWith("/#/") && (await D.locator("#nav a[data-r=login]").count()) === 1);
 
   // ---------------- owner/admin page ----------------

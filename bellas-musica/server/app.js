@@ -47,6 +47,7 @@ import guestRoutes from "./routes/guests.js";
 import helperRoutes from "./routes/helper.js";
 import { createHelper } from "./helper.js";
 import { createOffice } from "./office.js";
+import { createTranslator } from "./translate.js";
 import officeRoutes from "./routes/office.js";
 import { createPush } from "./push.js";
 import { renderVendorSite } from "./site.js";
@@ -124,6 +125,7 @@ export function createApp(config) {
   };
   ctx.helper = createHelper(ctx);
   ctx.office = createOffice(ctx);
+  ctx.translate = createTranslator(ctx);
 
   const clientIp = (req) => {
     if (config.trustProxy) {

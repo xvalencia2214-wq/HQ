@@ -309,7 +309,7 @@ const fin = [
 const appendix = [
   ...titlePage("APPENDIX", "Calibri Light", 28),
   P("The following supporting documents are attached:", { para: { spacing: { before: 200, after: 120 } } }),
-  bullet("Terms of Service and Privacy Policy (version of November 5, 2026), once reviewed by the attorney"),
+  bullet("Terms of Service and Privacy Policy (version of November 11, 2026), once reviewed by the attorney"),
   bullet("How to Use Bella's Fiestas guide, for families, vendors and the owners"),
   bullet("Vendor sign-up flyer with QR code"),
   bullet("Screenshots of the app: search, a vendor page, booking and the vendor dashboard"),

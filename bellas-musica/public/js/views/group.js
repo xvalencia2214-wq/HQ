@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { t, lang, setWho, currentScreen } from "../i18n.js";
-import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons, payWays } from "../ui.js";
+import { esc, money, fmtDate, stars, toast, today, goto, shareButtons, wireShare, fmtPhone, tomorrowKey, sel, lenLabel, minutesOf, slotButtons, payWays, groupPhoto } from "../ui.js";
 import { calendar, monthKey } from "../calendar.js";
 import { renderChat } from "../chat.js";
 import { heart, loadFavs, wireHearts } from "../fav.js";
@@ -40,11 +40,17 @@ export async function group(app, id, params = new URLSearchParams()) {
   }
 
   const music = g.category === "music";
+  const alt = g.category === "alterations"; // a fitting at the shop, not a party: fewer and different questions
+  // The vendor's words in the reader's language (server/translate.js), marked as a translation, with the original one tap away.
+  const tr = g.tr && (g.tr.story || Object.keys(g.tr.packages || {}).length) ? g.tr : null;
+  const pkTr = (p) => (tr && tr.packages && tr.packages[p.id]) || {};
+  const trAttr = (orig, translated) => (translated ? ` data-orig="${esc(orig || "")}" data-tr="${esc(translated)}"` : "");
+  const trNote = tr ? `<p class="trnote"><span aria-hidden="true">🌐</span> <span id="tr-label">${esc(t("tr.auto", { lang: t("tr.lang." + tr.from) }))}</span> <button type="button" class="linkbtn" id="tr-toggle" aria-pressed="false">${esc(t("tr.original"))}</button></p>` : "";
   // the least it can be booked for: the cheapest package, or the hourly price times the minimum hours
   const least = Math.min(...g.packages.map((p) => p.price_cents), g.hourly ? g.rate_cents * Math.max(1, g.min_hours) : Infinity);
   const fromPrice = Number.isFinite(least) ? least : g.rate_cents;
   const fact = (k, v) => `<div class="fact"><span>${esc(t(k))}</span><strong>${v}</strong></div>`;
-  const gallery = g.photos.length ? `<div class="gallery"><img id="hero-img" src="${esc(g.photos[0].url)}" alt="${esc(g.name)}">${g.photos.length > 1 ? `<div class="thumbs">${g.photos.map((p, i) => `<button type="button" class="thumb" data-i="${i}" aria-label="${esc(t("g.photo", { n: i + 1 }))}"><img src="${esc(p.url)}" alt=""></button>`).join("")}</div>` : ""}</div>` : "";
+  const gallery = g.photos.length ? `<div class="gallery"><img id="hero-img" src="${esc(g.photos[0].url)}" alt="${esc(g.name)}">${g.photos.length > 1 ? `<div class="thumbs">${g.photos.map((p, i) => `<button type="button" class="thumb" data-i="${i}" aria-label="${esc(t("g.photo", { n: i + 1 }))}"><img src="${esc(p.url)}" alt=""></button>`).join("")}</div>` : ""}</div>` : groupPhoto({ ...g, photo: "" }); // no photos yet: artwork for its kind of business
   const video = g.video ? `<div class="video${["tiktok", "instagram"].includes(g.video.provider) ? " tall" : ""}"><iframe src="${esc(g.video.url)}" title="${esc(g.name)}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` : "";
   const tour = g.tour && g.tour.url ? `<section class="tour" aria-label="${esc(t("g.tour"))}"><h2 class="sec">🏛️ ${esc(t("g.tour"))}</h2><p class="dim small">${esc(t("g.tourHint"))}</p>
     <div class="video"><iframe src="${esc(g.tour.url)}" title="${esc(t("g.tour"))}: ${esc(g.name)}" loading="lazy" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
@@ -57,20 +63,20 @@ export async function group(app, id, params = new URLSearchParams()) {
     ${g.from && !g.is_owner ? `<p class="fromyou${g.from.reaches ? "" : " far"}"><span aria-hidden="true">📍</span> <strong>${esc(g.from.miles < 1 ? t("g.nearYou", { place: `${g.from.city} ${g.from.zip}` }) : t("g.fromYou", { n: g.from.miles, place: `${g.from.city} ${g.from.zip}` }))}</strong> · ${esc(!g.from.reaches ? t("g.tooFar") : g.from.travel_extra_cents ? t("g.travelAdds", { fee: money(g.from.travel_extra_cents) }) : t("g.noTravel"))}</p>` : ""}
     ${gallery}${video}${tour}
     <div class="facts">
-      ${fact(music ? "g.members" : "g.team", g.members)}${fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${music ? fact("g.set", esc(t("g.minutes", { n: g.set_minutes }))) : ""}
+      ${fact(music ? "g.members" : "g.team", g.members)}${alt ? "" : fact("g.guests", esc(t("g.upto", { n: g.max_guests })))}${music ? fact("g.set", esc(t("g.minutes", { n: g.set_minutes }))) : ""}
       ${music ? fact("g.sound", g.sound_system ? esc(t("common.yes")) : esc(t("common.no"))) : ""}${music && g.dress_code ? fact("g.dress", esc(g.dress_code)) : ""}
       ${fact("g.travel", esc(g.travel_fee_cents ? t("g.travelFee", { miles: g.travel_miles, fee: money(g.travel_fee_cents) }) : t("g.travelFree", { miles: g.travel_miles })))}
       ${fact("g.deposit", `${g.deposit_pct}%`)}${fact("g.policy", esc(t("policy." + g.cancel_policy)))}
     </div>
     <p class="dim">${esc(policy[lang()] || "")}</p>${g.weather_policy ? `<p class="small"><strong>🌦 ${esc(t("wp.label"))}:</strong> ${esc(g.weather_policy)}</p>` : ""}
-    <h2 class="sec">${esc(t("g.story"))}</h2><p>${esc(g.story || t("g.noStory"))}</p>
+    <h2 class="sec">${esc(t("g.story"))}</h2><p id="g-story"${trAttr(g.story, tr && tr.story)}>${esc((tr && tr.story) || g.story || t("g.noStory"))}</p>${trNote}
     ${g.events.length ? `<div class="chips">${g.events.map((e) => `<span class="tag">${esc(t("event." + e))}</span>`).join("")}</div>` : ""}
   </div>
   ${music && g.songs.length ? `<div class="panel"><h2 class="sec">♪ ${esc(t("g.songs"))} (${g.songs.length})</h2><input id="songfilter" placeholder="${esc(t("g.songFilter"))}" aria-label="${esc(t("g.songFilter"))}"><ul class="songs" id="songlist"></ul></div>` : ""}
   ${offers.length ? `<div class="panel offer"><h2 class="sec">${esc(t("off.title"))}</h2><div class="pkgs">${offers.map((o) => `<div class="pkg"><div><span class="tag trust">${esc(t("off.tag"))}</span> <strong>${esc(o.name)}</strong><br><span class="dim">${o.description ? esc(o.description) + " · " : ""}${esc(t("g.hours", { n: o.hours }))} · ${esc(t("off.until", { date: new Date(o.expires_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US") }))}</span></div><div class="pkg-r"><strong>${money(o.price_cents)}</strong><br><button type="button" class="btn small" data-pkg="${o.id}">${esc(t("off.book"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${deals.map((d) => `<div class="panel deal"><h2 class="sec">🤝 ${esc(t("bun.title", { pct: d.discount_pct }))}</h2><p><strong>${esc(d.name)}</strong></p><ul class="plist">${d.members.map((m) => `<li><span>${m.id === g.id ? `<strong>${esc(m.name)}</strong>` : `<a href="#/group/${esc(m.id)}">${esc(m.name)}</a>`} <span class="dim small">· ${esc(t("type." + m.type))}</span></span></li>`).join("")}</ul><p class="dim small">${esc(t("bun.how", { pct: d.discount_pct }))}</p></div>`).join("")}
   ${g.addons.length ? `<div class="panel"><h2 class="sec">${esc(t("ao.title"))}</h2><div class="pkgs">${g.addons.map((a) => `<div class="pkg"><div><strong>${esc(a.name)}</strong>${a.description ? `<br><span class="dim">${esc(a.description)}</span>` : ""}</div><div class="pkg-r"><strong>${a.price_cents ? money(a.price_cents) : esc(t("ao.included"))}</strong></div></div>`).join("")}</div></div>` : ""}
-  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div>${p.holiday ? `<span class="tag pro">🌹 ${esc(t("sp." + p.holiday))} · ${esc(fmtDate(p.holiday_date))}</span><br>` : ""}<strong>${esc(p.name)}</strong><br><span class="dim">${p.description ? esc(p.description) + " · " : ""}${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
+  ${g.packages.length ? `<div class="panel"><h2 class="sec">${esc(t("g.packages"))}</h2><div class="pkgs">${g.packages.map((p) => `<div class="pkg"><div>${p.holiday ? `<span class="tag pro">🌹 ${esc(t("sp." + p.holiday))} · ${esc(fmtDate(p.holiday_date))}</span><br>` : ""}<strong${trAttr(p.name, pkTr(p).name)}>${esc(pkTr(p).name || p.name)}</strong><br><span class="dim"><span${trAttr(p.description ? p.description + " · " : "", pkTr(p).description ? pkTr(p).description + " · " : "")}>${esc(pkTr(p).description ? pkTr(p).description + " · " : p.description ? p.description + " · " : "")}</span>${esc(lenLabel(minutesOf(p)))}</span></div><div class="pkg-r"><strong>${money(p.price_cents)}</strong><br><button type="button" class="btn ghost small" data-pkg="${p.id}">${esc(t("g.choose"))}</button></div></div>`).join("")}</div></div>` : ""}
   ${(g.needs || []).length ? `<div class="panel"><h2 class="sec">📋 ${esc(t("needs.publicTitle"))}</h2><ul class="needs-list">${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></div>` : ""}
   ${g.recent_reviews.length ? `<div class="panel"><h2 class="sec">${esc(t("g.reviewsTitle"))}</h2>${g.past_reviews ? `<p class="dim small">${esc(t("pr.reviews", { n: g.past_reviews }))} · <span class="tag past" title="${esc(t("pr.labelTip"))}">${esc(t("pr.label"))}</span></p>` : ""}${g.recent_reviews.map((r) => `<div class="review">${stars(r.rating)} <strong>${esc(r.name)}</strong> ${r.past_client ? `<span class="tag past" title="${esc(t("pr.labelTip"))}">${esc(t("pr.label"))} · ${esc(t("event." + r.event))}</span>` : `<span class="tag trust">${esc(t("pr.booked"))}</span>`} <span class="dim">${esc(new Date(r.created_at * 1000).toLocaleDateString(lang() === "es" ? "es-US" : "en-US"))}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photos && r.photos.length ? `<div class="rphotos">${r.photos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(t("rv.photo", { name: r.name }))}" loading="lazy"></a>`).join("")}</div>` : ""}${r.reply ? `<div class="reply"><strong>${esc(t("rv.ownerReply"))}</strong><p>${esc(r.reply.text)}</p></div>` : ""}</div>`).join("")}</div>` : ""}
   </div><aside class="gp-side">
@@ -82,6 +88,14 @@ export async function group(app, id, params = new URLSearchParams()) {
   </aside></div>
   ${g.is_owner ? "" : `<div class="cta-space"></div><div class="cta-bar" id="ctabar"><span><strong>${esc(t("card.from", { price: money(fromPrice) }))}</strong></span><button type="button" class="btn" id="ctabtn">${esc(t("g.checkDates"))}</button></div>`}`;
   wireShare(app); wireHearts(app);
+  const trBtn = document.getElementById("tr-toggle");
+  if (trBtn) trBtn.onclick = () => { // swap the translated words and the vendor's own, in place
+    const showOrig = trBtn.getAttribute("aria-pressed") !== "true";
+    app.querySelectorAll("[data-tr]").forEach((el) => { el.textContent = showOrig ? el.dataset.orig : el.dataset.tr; });
+    trBtn.setAttribute("aria-pressed", String(showOrig));
+    trBtn.textContent = t(showOrig ? "tr.translated" : "tr.original");
+    document.getElementById("tr-label").textContent = showOrig ? t("tr.showingOrig") : t("tr.auto", { lang: t("tr.lang." + tr.from) });
+  };
   app.querySelectorAll(".thumb").forEach((b) => { b.onclick = () => { document.getElementById("hero-img").src = g.photos[Number(b.dataset.i)].url; }; });
 
   // songs
@@ -127,18 +141,18 @@ export async function group(app, id, params = new URLSearchParams()) {
     const hourChoices = Array.from({ length: Math.max(6, g.min_hours) - g.min_hours + 1 }, (_, i) => g.min_hours + i);
     const v = (k, d = "") => esc(prev[k] ?? d);
     box.innerHTML = `<form id="bookform" novalidate><div class="sum"><span>${esc(t("f.date"))}</span><span>${esc(fmtDate(st.date))} · ${esc(st.time)}</span></div>
-      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${p.holiday ? "🌹 " : ""}${esc(p.name)} · ${esc(lenLabel(minutesOf(p)))} · ${money(p.price_cents)}</option>`).join("")}</select>
+      <label for="b-pkg">${esc(t(g.hourly ? "g.package" : "g.pickPackage"))}</label><select id="b-pkg" name="packageId">${g.hourly ? `<option value="">${esc(g.min_hours > 1 ? t("g.hourlyMin", { price: money(g.rate_cents), n: g.min_hours }) : t("g.hourly", { price: money(g.rate_cents) }))}</option>` : ""}${[...offers.map((o) => ({ ...o, name: `${t("off.tag")}: ${o.name}` })), ...g.packages].map((p) => `<option value="${p.id}"${String(p.id) === String(pkgChoice) ? " selected" : ""}>${p.holiday ? "🌹 " : ""}${esc(pkTr(p).name || p.name)} · ${esc(lenLabel(minutesOf(p)))} · ${money(p.price_cents)}</option>`).join("")}</select>
       <div id="hrs-wrap"><label for="b-hrs">${esc(t(music ? "g.hoursLabel" : "g.hoursAny"))}</label><select id="b-hrs" name="hours">${hourChoices.map((h) => `<option value="${h}"${h === Number(prev.hours || Math.max(2, g.min_hours)) ? " selected" : ""}>${esc(t("g.hours", { n: h }))}</option>`).join("")}</select></div>
       ${g.addons.length ? `<fieldset class="addons"><legend>${esc(t("ao.pick"))}</legend>${g.addons.map((a) => `<label class="chk addon"><input type="checkbox" name="addon" value="${a.id}"${prevAddons.includes(String(a.id)) ? " checked" : ""}> <span>${esc(a.name)}</span><span class="addon-p">${a.price_cents ? "+" + money(a.price_cents) : esc(t("ao.included"))}</span></label>`).join("")}</fieldset>` : ""}
       <label for="b-ev">${esc(t("f.event"))}</label><select id="b-ev" name="event">${meta.events.map((e) => `<option value="${esc(e)}"${e === (prev.event || ctx.event) ? " selected" : ""}>${esc(t("event." + e))}</option>`).join("")}</select>
-      <label for="b-weeks">${esc(t("wk.repeat"))}</label><select id="b-weeks" name="weeks">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<option value="${n}"${String(n) === String(prev.weeks || params.get("repeat") || 1) ? " selected" : ""}>${esc(n === 1 ? t("wk.once") : t("wk.weeks", { n }))}</option>`).join("")}</select>
+      <label for="b-weeks"${alt ? " hidden" : ""}>${esc(t("wk.repeat"))}</label><select id="b-weeks" name="weeks"${alt ? " hidden" : ""}>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<option value="${n}"${String(n) === String(prev.weeks || params.get("repeat") || 1) ? " selected" : ""}>${esc(n === 1 ? t("wk.once") : t("wk.weeks", { n }))}</option>`).join("")}</select>
       <div class="dim small" id="wk-hint"${Number(prev.weeks || params.get("repeat") || 1) > 1 ? "" : " hidden"}>${esc(t("wk.hint"))}${g.weekly_discount_pct ? ` <strong>${esc(t("wk.discount", { pct: g.weekly_discount_pct }))}</strong>` : ""}</div>
-      <div class="row"><div><label for="b-guests">${esc(t("f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${v("guests", ctx.guests)}"></div>
-      <div><label for="b-ezip">${esc(t("g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
+      <div class="row"><div><label for="b-guests">${esc(t(alt ? "alt.pieces" : "f.guests"))}</label><input id="b-guests" name="guests" type="number" min="1" max="${g.max_guests}" inputmode="numeric" required value="${alt ? v("guests", "1") : v("guests", ctx.guests)}"></div>
+      <div><label for="b-ezip">${esc(t(alt ? "alt.zip" : "g.eventZip"))}</label><input id="b-ezip" name="eventZip" inputmode="numeric" maxlength="5" required value="${v("eventZip", ctx.zip || g.zip)}"></div></div>
       <label for="b-name">${esc(t("g.yourName"))}</label><input id="b-name" name="name" required maxlength="80" autocomplete="name" value="${v("name", user ? user.name : "")}">
       <label for="b-phone">${esc(t("g.yourPhone"))}</label><input id="b-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" value="${v("phone", user ? fmtPhone(user.phone) : "")}">
-      <label for="b-addr">${esc(t("g.address"))}</label><input id="b-addr" name="address" required maxlength="160" value="${v("address")}">
-      <label for="b-msg">${esc(t("g.special"))}</label><textarea id="b-msg" name="message" maxlength="500" placeholder="${esc(t("g.specialHint"))}">${v("message")}</textarea>
+      <label for="b-addr">${esc(t(alt ? "alt.where" : "g.address"))}</label><input id="b-addr" name="address" required maxlength="160" value="${alt ? v("address", t("alt.atShop")) : v("address")}">
+      <label for="b-msg">${esc(t(alt ? "alt.what" : "g.special"))}</label><textarea id="b-msg" name="message" maxlength="500" placeholder="${esc(t(alt ? "alt.whatHint" : "g.specialHint"))}">${v("message")}</textarea>
       <div id="quote" class="quote"></div>
       ${(g.needs || []).length ? `<div class="needs-box"><strong>📋 ${esc(t("needs.publicTitle"))}</strong><ul>${g.needs.map((n) => `<li>${esc(n)}</li>`).join("")}</ul><label class="chk"><input type="checkbox" id="b-needs" name="needs"${prev.needs ? " checked" : ""}> <span>${esc(t("needs.agree"))}</span></label></div>` : ""}
       <label class="chk"><input type="checkbox" id="b-agree" name="agree"${prev.agree ? " checked" : ""}> <span>${esc(t("g.agree"))}</span></label>

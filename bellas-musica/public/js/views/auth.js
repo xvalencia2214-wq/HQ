@@ -36,7 +36,7 @@ export function authView(app, mode, params) {
       setUser(r.user);
       if (r.user.lang && r.user.lang !== lang() && !signup) setLang(r.user.lang, { persist: false });
       location.hash = next;
-    } catch (ex) { err.textContent = ex.message; }
+    } catch (ex) { err.textContent = !signup && ex.status === 401 ? `${ex.message}. ${t("auth.wrongHint")}` : ex.message; }
   };
 }
 

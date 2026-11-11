@@ -48,15 +48,15 @@ try {
   ok("forgot shows the same neutral confirmation", (await A.locator(".note.ok").innerText()).includes("reset link is on its way"));
   const rtok = mail("auth.reset", "pat@example.com").match(/#\/reset\/([\w-]+)/)[1];
   await A.goto(S.base + "/#/reset/" + rtok); await A.waitForSelector("#rform");
-  await A.fill("#r-pw", "brand new password"); await A.fill("#r-pw2", "something different"); await A.click("#rform button");
+  await A.fill("#r-pw", "brand new password"); await A.fill("#r-pw2", "something different"); await A.click("#rform button[type=submit]");
   await A.waitForSelector("#rerr:not(:empty)");
   ok("mismatched passwords are caught before sending", /don't match/.test(await A.locator("#rerr").innerText()));
-  await A.fill("#r-pw2", "brand new password"); await A.click("#rform button"); await A.waitForSelector("#authform");
+  await A.fill("#r-pw2", "brand new password"); await A.click("#rform button[type=submit]"); await A.waitForSelector("#authform");
   ok("reset works and sends the person to log in", A.url().includes("#/login"));
   await login(A, "pat@example.com", "brand new password");
   ok("the new password logs in", (await A.locator("#nav a[data-r=account]").textContent()).includes("Pat"));
   await A.goto(S.base + "/#/reset/" + rtok); await A.waitForSelector("#rform");
-  await A.fill("#r-pw", "yet another password"); await A.fill("#r-pw2", "yet another password"); await A.click("#rform button");
+  await A.fill("#r-pw", "yet another password"); await A.fill("#r-pw2", "yet another password"); await A.click("#rform button[type=submit]");
   await A.waitForSelector("#rerr:not(:empty)");
   ok("a reset link can't be used twice", /invalid or has expired/.test(await A.locator("#rerr").innerText()));
   await client(S.base).signup("verify@example.com", "Vera Verify");

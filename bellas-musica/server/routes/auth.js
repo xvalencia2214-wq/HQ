@@ -4,7 +4,7 @@ import { normalizePhone } from "../sms.js";
 
 // The date on the Terms of Service and Privacy Policy now in force. Change it (and "Last updated" on both pages) whenever
 // either page changes, so each account shows which version its owner agreed to.
-export const TERMS_VERSION = "2026-11-05";
+export const TERMS_VERSION = "2026-11-11";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 const DUMMY_HASH = "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + Buffer.alloc(64).toString("base64"); // burns the same time for unknown emails
@@ -54,7 +54,10 @@ export default function authRoutes(ctx, add) {
     if (limiters.loginFails.blocked(ip)) throw new HttpError(429, "Too many login attempts from this network. Try again in 15 minutes.");
     if (!limiters.auth.check(`${ip}|${email}`)) throw new HttpError(429, "Too many login attempts. Try again in 15 minutes.");
     const u = db.get("SELECT * FROM users WHERE email = ?", email);
-    const ok = await verifyPassword(typeof body.password === "string" ? body.password : "", u ? u.pass_hash : DUMMY_HASH);
+    const typed = typeof body.password === "string" ? body.password : "";
+    let ok = await verifyPassword(typed, u ? u.pass_hash : DUMMY_HASH);
+    // a phone keyboard often adds a space after a suggestion: the same password without it is still the right password
+    if (!ok && u && typed.trim() && typed.trim() !== typed) ok = await verifyPassword(typed.trim(), u.pass_hash);
     if (!u || !ok) { limiters.loginFails.check(ip); throw new HttpError(401, "Wrong email or password"); } // only failures count here
     startSession(res, req, u.id);
     return { user: pub(u) };

@@ -4,6 +4,7 @@ import { lookupZip, miles, zipCount, nearestZip, zipsWithin } from "../geo.js";
 import { MARKET, inMarket } from "../market.js";
 import { expirePending, firstPhotos, foundingLeft, fromCents, isPromoted, isSpotlight, openSlots, publicGroup, ratingMap, ratingOf, reaches, LIVE_SQL } from "../shared.js";
 import { upcomingHolidays } from "./specials.js";
+import { requestLang } from "../errors-es.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -161,8 +162,13 @@ export default function searchRoutes(ctx, add) {
     return z;
   });
 
-  add("GET", "/api/search", ({ query }) => {
+  add("GET", "/api/search", ({ query, req }) => {
     const out = search(query);
+    // cards show the start of the story: in the reader's language when the vendor wrote it in the other one
+    if (req && req.headers && out.results.length) {
+      const tr = ctx.translate.stories(out.results.map((g) => g.id), requestLang(req));
+      if (tr.size) for (const g of out.results) if (tr.has(g.id)) g.story_tr = tr.get(g.id);
+    }
     if (!out.page) ctx.stats.count("search", out.origin.zip);
     ctx.stats.countMany("search_seen", out.results.map((g) => g.id)); // each vendor sees how often it shows up in searches
     // a search that found nobody: the clearest sign of where vendors are missing (what kind | which ZIP), on the Admin page

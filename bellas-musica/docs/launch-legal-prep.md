@@ -336,7 +336,11 @@ tap **Approve and send email** (the app emails that vendor or family), **Approve
 to copy"), or **Reject**. Tap the 🧠 **Shared memory** to leave your own rules ("Focus on Cicero this month"), and use
 **Talk to your office** to ask anything.
 
-**What it costs:** a full morning (all six desks) is usually about $1–2 once you have real vendors and bookings, and less while it is quiet. `OFFICE_DAILY_LIMIT_USD` (default $3)
-is the most it can spend in a day, separate from Don Chuy's limit. Today's and this month's cost are at the top of the
+**What it costs:** the office runs on Claude Fable 5.2, Anthropic's most capable model. A full morning (all six
+desks) is usually about $2–3 once you have real vendors and bookings, and less while it is quiet. To spend about half
+as much, add `OFFICE_MODEL` = `claude-opus-5-5` in Render. `OFFICE_DAILY_LIMIT_USD` (default $3)
+is the most it can spend in a day whichever model it uses, separate from Don Chuy's limit. The Recruiting desk can
+also **search the web** for real local businesses to invite (about 1 cent a search, at most 4 a run;
+`OFFICE_WEB_SEARCH` = `0` turns it off). Today's and this month's cost are at the top of the
 office. `OFFICE_MORNING` = `0` stops the morning run and email.
 
