@@ -16,10 +16,10 @@ export async function flyer(app) {
   const perk = (es, en) => `<li><strong>${esc(es)}</strong><span lang="en">${esc(en)}</span></li>`;
   app.innerHTML = `<div class="flyer-tools noprint">
       <p>Print this on letter paper and hand it out at party halls, expos and gigs. The QR code opens the sign-up page on <strong>${esc(host)}</strong>${/onrender\.com|localhost|127\.0\.0\.1/.test(host) ? ` <span class="warn">(this is not your own domain yet: print from your real site once it's live, so vendors sign up there)</span>` : ""}.</p>
-      <button type="button" class="btn" id="flyerprint">🖨️ Print / Imprimir</button> <a class="btn ghost" id="flyerqr" download="bellas-fiestas-vendor-qr.svg">Download the QR code</a>
+      <button type="button" class="btn" id="flyerprint">🖨️ Print / Imprimir</button> <a class="btn ghost" id="flyerqr" download="bellisimas-fiestas-vendor-qr.svg">Download the QR code</a>
     </div>
     <article class="flyer" lang="es" aria-label="Vendor flyer">
-      <div class="fl-head"><img src="logo.svg" alt="" width="72" height="72"><div><div class="fl-brand">Bella's Fiestas</div><div class="fl-tag">Música y todo para tu fiesta · <span lang="en">Music and everything for your fiesta</span></div></div></div>
+      <div class="fl-head"><img src="logo.svg" alt="" width="72" height="72"><div><div class="fl-brand">Bellísimas Fiestas</div><div class="fl-tag">Música y todo para tu fiesta · <span lang="en">Music and everything for your fiesta</span></div></div></div>
       <h1 class="fl-title">¿Tu negocio trabaja en fiestas?<br>Consigue más reservas.</h1>
       <p class="fl-sub" lang="en">Do you work parties? Get booked more.</p>
       <p class="fl-who">Mariachi · Banda · Norteño · Sierreño · DJ · Comida · Carpas y renta · Decoración · Fotógrafos y videógrafos · Salones</p>

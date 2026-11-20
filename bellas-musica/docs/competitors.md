@@ -107,7 +107,7 @@ results and may be a little out of date.
 7. **No trust layer.** Neither protects the deposit or checks that the group shows up, so families have no reason to
    pick them over calling the group they saw on TikTok.
 
-### What Bella's Fiestas already does differently
+### What Bellísimas Fiestas already does differently
 
 - **A website first, apps second.** Families browse without installing anything. Every vendor has a page Google can
   show, plus English and Spanish pages for each neighborhood and event.
@@ -116,7 +116,7 @@ results and may be a little out of date.
 - **Doesn't start at zero.** Past-client reviews (up to 10, labelled), "Nuevo" instead of a scary low score, and sample
   listings without fake stars.
 - **One city first.** Chicago only, with a founding-vendor deal and an outreach kit (`docs/chicago-launch.md`).
-- **A name that is ours.** Searching "Bella's Fiestas" finds nothing else.
+- **A name that is ours.** Searching "Bellísimas Fiestas" finds nothing else.
 
 ### What we built because of this research
 
@@ -135,7 +135,7 @@ results and may be a little out of date.
    Instagram bio and post the Spanish caption. Their followers are free customers.
 3. **Our own TikTok and Instagram, 3–4 posts a week, in Spanish first.** Short clips (with permission) of groups at
    real parties, "¿cuánto cuesta un mariachi en Chicago?" price explainers, quinceañera planning tips, and "a family
-   booked through Bella's Fiestas" stories. Use the handle @bellasfiestas everywhere (claim it now on TikTok,
+   booked through Bellísimas Fiestas" stories. Use the handle @bellisimasfiestas everywhere (claim it now on TikTok,
    Instagram, Facebook and YouTube).
 4. **Reviews from day one.** Collect past-client reviews when a vendor joins. Remind every family after the party
    (automatic). Answer every review.

@@ -1,6 +1,6 @@
 # Test drive: try every feature
 
-One command starts Bella's Fiestas with practice accounts and a quinceañera already being planned. Money and texts are
+One command starts Bellísimas Fiestas with practice accounts and a quinceañera already being planned. Money and texts are
 pretend. It uses its own practice data (the `data-tryout` folder), so it never mixes with anything real.
 
 ## Start it
@@ -116,7 +116,7 @@ else. Or use a private (incognito) window for a second person at the same time.
 - **Packages:** the add-ons (fog, dance floor lights, special lighting, visuals, audio/video). Add one from the suggestions.
 - **Profile:** the minimum hours (3) and the rain/weather policy.
 - **Calendar:** availability, calendar sync (Google/iPhone link) and importing your own calendar.
-- **Payments:** Bella's Pro (active), Featured, the referral link (invite another vendor: lower fee), the free
+- **Payments:** Bellísimas Pro (active), Featured, the referral link (invite another vendor: lower fee), the free
   website page link, licenses and insurance, and the earnings report (download the CSV for taxes).
 - **View public page**, and open the website page link from Payments.
 - **Reviews:** answer Rosa's review after she leaves it.
@@ -167,7 +167,7 @@ else. Or use a private (incognito) window for a second person at the same time.
   as someone else (for example padrino@prueba.com) to write the review.
 - **Founding vendors:** the DJ, the tents and the mariachi were the first three to go live, so their fee is 5% for 6
   months (**Payments** says "Founding vendor #1"). Make a new listing to see "22 of 25 spots left".
-- **Held deposits for new vendors:** these vendors are new, so families see "🔒 Bella's Fiestas keeps your deposit safe
+- **Held deposits for new vendors:** these vendors are new, so families see "🔒 Bellísimas Fiestas keeps your deposit safe
   until the group checks in", and the DJ sees "Your share is sent when you check in". Check in at Mateo's baptism
   (today) with Rosa's code and the note disappears (the money moves for real only with live Stripe).
 - **Spanish search page:** open **http://localhost:3000/es/chicago/pilsen/quinceanera** (Google shows this one to

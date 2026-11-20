@@ -48,7 +48,7 @@ export function loadConfig(env = process.env) {
     // Money
     platformFeePct: int(env.PLATFORM_FEE_PCT, 10), // % of the booking total, taken from the deposit
     featurePriceCents: int(env.FEATURE_PRICE_CENTS, 4900), // 30 days of featured placement
-    proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bella's Pro
+    proPriceCents: int(env.PRO_PRICE_CENTS, 2900),          // 30 days of Bellísimas Pro
     spotlightPriceCents: int(env.SPOTLIGHT_PRICE_CENTS, 9900), // 30 days of Spotlight: Featured plus the top of every list
     proFeePct: int(env.PRO_FEE_PCT, 6),                      // the platform fee for Pro listings
     directFeePct: int(env.DIRECT_FEE_PCT, 3),               // the fee on a vendor's own client paid through its payment link
@@ -74,7 +74,7 @@ export function loadConfig(env = process.env) {
     stripeApi: env.STRIPE_API_BASE || "https://api.stripe.com",
     // Email (Resend). Leave the key empty to only log emails (simulated).
     resendKey: env.RESEND_API_KEY || "",
-    emailFrom: env.EMAIL_FROM || "",            // e.g. Bella's Fiestas <hello@yourdomain.com>
+    emailFrom: env.EMAIL_FROM || "",            // e.g. Bellísimas Fiestas <hello@yourdomain.com>
     emailReplyTo: env.EMAIL_REPLY_TO || "",
     emailApi: env.EMAIL_API_BASE || "https://api.resend.com",
     // Don Chuy, the AI helper (server/helper.js). No key = a free test mode. AI_HELPER=0 hides him.
@@ -99,7 +99,7 @@ export function loadConfig(env = process.env) {
     // Failed logins from one network, across every account (slows down password guessing); per 15 minutes
     loginFailsPerIp: int(env.RATE_LOGIN_IP, 30),
     // Who is sending (shown in email footers; commercial email must include a postal address)
-    businessName: env.BUSINESS_NAME || "Bella's Fiestas",
+    businessName: env.BUSINESS_NAME || "Bellísimas Fiestas",
     businessAddress: env.BUSINESS_ADDRESS || "",
     supportEmail: env.SUPPORT_EMAIL || "",
     // Weather for outdoor parties (US National Weather Service, free, no key). WEATHER=0 turns it off.

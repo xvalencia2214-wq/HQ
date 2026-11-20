@@ -61,10 +61,10 @@ test("Mi Oficina live: Claude with fallbacks, the desk's lookups, nothing privat
       { stop_reason: "tool_use", content: [{ type: "tool_use", id: "t1", name: "memory_read", input: {} }, { type: "tool_use", id: "t2", name: "business_summary", input: {} }, { type: "tool_use", id: "t3", name: "recent_bookings", input: { days: 30 } }] },
       { stop_reason: "tool_use", content: [{ type: "tool_use", id: "t4", name: "vendor_health", input: {} }, { type: "tool_use", id: "t5", name: "support_queue", input: { days: 30 } }, { type: "tool_use", id: "t6", name: "content_ideas", input: {} }] },
       { stop_reason: "tool_use", content: [
-        { type: "tool_use", id: "t7", name: "save_draft", input: { kind: "vendor_email", target: gid, subject: "¡Felicidades!", body: "Hola, ¡felicidades por su reseña!\n— Bella's Fiestas", lang: "es" } },
+        { type: "tool_use", id: "t7", name: "save_draft", input: { kind: "vendor_email", target: gid, subject: "¡Felicidades!", body: "Hola, ¡felicidades por su reseña!\n— Bellísimas Fiestas", lang: "es" } },
         { type: "tool_use", id: "t8", name: "save_draft", input: { kind: "customer_email", target: b.id, subject: "Gracias", body: "Gracias por reservar.", lang: "es" } },
         { type: "tool_use", id: "t9", name: "save_draft", input: { kind: "vendor_email", target: "no-such-vendor", subject: "x", body: "x", lang: "es" } },
-        { type: "tool_use", id: "t10", name: "save_draft", input: { kind: "vendor_email", target: gid, subject: "¡Felicidades!", body: "Hola, ¡felicidades por su reseña!\n— Bella's Fiestas", lang: "es" } },
+        { type: "tool_use", id: "t10", name: "save_draft", input: { kind: "vendor_email", target: gid, subject: "¡Felicidades!", body: "Hola, ¡felicidades por su reseña!\n— Bellísimas Fiestas", lang: "es" } },
         { type: "tool_use", id: "t11", name: "memory_write", input: { note: "Asked Mariachi Oficina Live to share their 5-star review." } }] },
       { stop_reason: "end_turn", content: [{ type: "text", text: "**Good day.** 1 confirmed booking.\n- Approve the email to Mariachi Oficina Live." }] }
     );
@@ -180,7 +180,7 @@ test("Mi Oficina test mode (no key): simple reports from real numbers and Spanis
     // the office's own words and the vendor emails it sends exist in both languages
     const approve = await boss.post(`/api/admin/office/drafts/${d.id}`, { action: "approve" });
     assert.equal(approve.json.status, "sent");
-    assert.match(S.db.get("SELECT body FROM email_log WHERE kind = 'office.note'").body, /Abrir Bella's Fiestas|Open Bella's Fiestas/);
+    assert.match(S.db.get("SELECT body FROM email_log WHERE kind = 'office.note'").body, /Abrir Bellísimas Fiestas|Open Bellísimas Fiestas/);
   } finally { await S.close(); }
 });
 

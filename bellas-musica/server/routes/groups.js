@@ -408,7 +408,7 @@ export default function groupRoutes(ctx, add) {
   add("POST", "/api/groups/:id/photos", ({ params, body, user, ip }) => {
     const g = requireOwner(db, user, params.id);
     if (!limiters.upload.check(`${ip}|${user.id}`)) throw new HttpError(429, "Too many uploads. Try again later.");
-    const maxPhotos = g.pro_until > now() ? MAX_PHOTOS * 2 : MAX_PHOTOS; // Bella's Pro: twice the photos
+    const maxPhotos = g.pro_until > now() ? MAX_PHOTOS * 2 : MAX_PHOTOS; // Bellísimas Pro: twice the photos
     if (db.get("SELECT COUNT(*) c FROM photos WHERE group_id = ?", g.id).c >= maxPhotos) throw new HttpError(400, `At most ${maxPhotos} photos`);
     const b64 = typeof body.data === "string" ? body.data.replace(/^data:image\/[a-z+]+;base64,/i, "") : "";
     if (!b64 || b64.length > MAX_PHOTO_BYTES * 1.4) throw new HttpError(413, "Photo is too large (max 4 MB)");

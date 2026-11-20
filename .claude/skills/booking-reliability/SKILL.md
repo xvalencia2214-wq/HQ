@@ -1,6 +1,6 @@
 ---
 name: booking-reliability
-description: Use before touching anything in Bella's Música (bellas-musica/) that creates, prices, holds, pays, moves, cancels or refunds a booking — bookings, deposits, balance, payment plans, padrinos, carts/bundles, weekly series, tips, extras, check-in/no-show, held payouts, Stripe webhooks, scheduling and availability. Covers the money invariants, concurrency rules and the tests that prove them.
+description: Use before touching anything in Bellísimas Fiestas (bellas-musica/) that creates, prices, holds, pays, moves, cancels or refunds a booking — bookings, deposits, balance, payment plans, padrinos, carts/bundles, weekly series, tips, extras, check-in/no-show, held payouts, Stripe webhooks, scheduling and availability. Covers the money invariants, concurrency rules and the tests that prove them.
 ---
 
 # Booking system reliability

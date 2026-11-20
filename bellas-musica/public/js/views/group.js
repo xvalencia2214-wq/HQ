@@ -18,7 +18,7 @@ export async function group(app, id, params = new URLSearchParams()) {
   const zip0 = /^\d{5}$/.test(params.get("zip") || "") ? params.get("zip") : (() => { try { const z = localStorage.getItem("bm_zip"); return /^\d{5}$/.test(z || "") ? z : ""; } catch { return ""; } })();
   try { g = await api.get("/api/groups/" + encodeURIComponent(id) + (zip0 ? "?zip=" + zip0 : "")); }
   catch (e) { app.innerHTML = `<div class="panel empty">${esc(e.message)} <a href="#/">${esc(t("common.back"))}</a></div>`; return; }
-  document.title = `${g.name} · Bella's Fiestas`;
+  document.title = `${g.name} · Bellísimas Fiestas`;
   setWho(g.category, screen); // "Request this venue", "Message this food vendor"...
   const meta = state.meta, user = state.user;
   await loadFavs();

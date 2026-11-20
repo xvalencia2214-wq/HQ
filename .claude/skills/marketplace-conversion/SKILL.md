@@ -1,6 +1,6 @@
 ---
 name: marketplace-conversion
-description: Use when working on turning visitors into bookings in Bella's Música (bellas-musica/) — the welcome page, home search, category chips, vendor cards, the vendor page and booking form, sign-up timing, Get quotes, Plan a party, saved/shortlists, share links, trust signals, prices shown, and the funnel numbers on the Admin page. Also for any A/B-style or copy change meant to get more families to book bandas, grupos, catering, decorations and other vendors.
+description: Use when working on turning visitors into bookings in Bellísimas Fiestas (bellas-musica/) — the welcome page, home search, category chips, vendor cards, the vendor page and booking form, sign-up timing, Get quotes, Plan a party, saved/shortlists, share links, trust signals, prices shown, and the funnel numbers on the Admin page. Also for any A/B-style or copy change meant to get more families to book bandas, grupos, catering, decorations and other vendors.
 ---
 
 # Marketplace conversion optimization

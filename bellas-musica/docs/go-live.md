@@ -28,7 +28,7 @@ Set these environment variables (see `.env.example` for the full list):
 | `ALERT_WEBHOOK_URL` | a Slack/Discord webhook so you're told when something breaks (server errors, failed payments, and pages that crash in someone's browser) |
 | `SENTRY_DSN` | optional: also send those alerts to Sentry (free tier is plenty) |
 | `TWILIO_WHATSAPP_FROM` | optional: a WhatsApp-enabled Twilio number so people can pick WhatsApp for alerts. Twilio must approve your message templates before WhatsApp delivers messages you start; until then use texts |
-| `PRO_PRICE_CENTS`, `PRO_FEE_PCT` | the price of Bella's Pro (default 2900 = $29 for 30 days) and its platform fee (default 6%) |
+| `PRO_PRICE_CENTS`, `PRO_FEE_PCT` | the price of Bellísimas Pro (default 2900 = $29 for 30 days) and its platform fee (default 6%) |
 | `ANTHROPIC_API_KEY` | optional: turns on **Don Chuy**, the AI helper (Claude Opus 5.5). Without it he runs in free test mode. Steps and costs: `docs/launch-legal-prep.md` section 8 |
 | `OFFICE_DAILY_LIMIT_USD` | default 3: the most **Mi Oficina**, your private AI office (`#/office`, same key), may spend per day. `OFFICE_MORNING=0` stops its morning run and briefing email. `TAX_SETASIDE_PCT` (default 25) is the Money & taxes desk's rule-of-thumb set-aside, not tax advice |
 | `AI_DAILY_LIMIT_USD` | default 5: the most Don Chuy may spend per day; past it he rests until tomorrow and you get an alert. `AI_HELPER=0` hides him |
@@ -47,7 +47,7 @@ Check: open your address, sign up with your `ADMIN_EMAILS` email, and confirm **
 Email carries password resets, booking confirmations and reminders. Without it, people who forget a password are locked out.
 
 1. Create a Resend account, **add and verify your domain** (they show you the DNS records; wait for "Verified").
-2. Create an API key. Set `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bella's Fiestas <hello@yourdomain.com>`), `EMAIL_REPLY_TO`.
+2. Create an API key. Set `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Bellísimas Fiestas <hello@yourdomain.com>`), `EMAIL_REPLY_TO`.
 3. Set `BUSINESS_ADDRESS` (a real postal address; a PO box or registered-agent address is fine) and `SUPPORT_EMAIL`. US commercial email must include it, and the footer prints it.
 4. Redeploy, run `npm run preflight`, then sign up with a fresh address and check the confirmation email arrives (not in spam). Try **Forgot password** end to end.
 

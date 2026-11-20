@@ -84,7 +84,7 @@ function renderChrome() {
   const section = (id, title, rows) => `<div class="nav-sec" role="group" aria-labelledby="nh-${id}"><p class="nav-h" id="nh-${id}">${esc(title)}</p>${rows}</div>`;
   const was = document.activeElement, keep = was && document.getElementById("nav").contains(was) ? (was.id ? "#" + was.id : was.dataset.r ? `a[data-r="${was.dataset.r}"]` : "") : "";
   document.getElementById("nav").innerHTML =
-    `<div class="nav-top"><img src="logo.svg" alt="" width="40" height="40"><b>Bella's Fiestas</b><button type="button" id="navclose" class="navclose" aria-label="${esc(t("nav.close"))}"><span class="x" aria-hidden="true">✕</span><span>${esc(t("nav.close"))}</span></button></div>` +
+    `<div class="nav-top"><img src="logo.svg" alt="" width="40" height="40"><b>Bellísimas Fiestas</b><button type="button" id="navclose" class="navclose" aria-label="${esc(t("nav.close"))}"><span class="x" aria-hidden="true">✕</span><span>${esc(t("nav.close"))}</span></button></div>` +
     section("find", t("side.find"), link("home", "#/", "🔎", t("nav.find")) + link("quotes", "#/quotes", "✉️", t("nav.quotes")) + link("discover", "#/discover", "▶️", t("nav.discover")) + link("party", "#/party", "🎉", t("party.nav"))) +
     (u ? section("mine", t("side.mine"), link("saved", "#/saved", "♥", t("nav.saved")) + link("bookings", "#/bookings", "📅", t("nav.bookings")) + link("messages", "#/messages", "💬", t("nav.messages"), dot(a ? a.messages : 0))) : "") +
     section("biz", t("side.biz"), link("dashboard", "#/dashboard", "🎤", t("nav.groups"), dot(managerCount)) + (u && u.is_admin ? link("admin", "#/admin", "🛠️", t("nav.admin")) + link("office", "#/office", "🏢", "Mi Oficina") : "")) +
@@ -125,7 +125,7 @@ async function route() {
   const token = ++routeToken;
   killMap();
   if (viewCleanup) { const stop = viewCleanup; viewCleanup = null; stop(); }
-  document.title = "Bella's Fiestas";
+  document.title = "Bellísimas Fiestas";
   newScreen(); // listings are "groups" until the screen says otherwise
   const raw = location.hash.replace(/^#/, "") || "/";
   const qi = raw.indexOf("?");

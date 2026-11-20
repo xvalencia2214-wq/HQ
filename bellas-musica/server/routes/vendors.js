@@ -20,7 +20,7 @@ export function docsNeeded(type) {
   return [];
 }
 
-// Vendor tools: referrals, Bella's Pro, calendar sync, earnings, and licenses/insurance for review.
+// Vendor tools: referrals, Bellísimas Pro, calendar sync, earnings, and licenses/insurance for review.
 export default function vendorRoutes(ctx, add) {
   const { db, config, stripe } = ctx;
   const docDir = path.join(config.dataDir || path.dirname(config.uploadDir), "documents");
@@ -38,13 +38,13 @@ export default function vendorRoutes(ctx, add) {
     return { code, url: `${config.baseUrl}/#/signup?ref=${code}&next=${encodeURIComponent("#/dashboard?new=1")}`, invited: joined.length, live: joined.filter((x) => x.ref_rewarded).length, days: REFERRAL_DAYS };
   }, { auth: true });
 
-  // ---- Bella's Pro: 30 days of a lower platform fee, a Pro badge and more photos ----
+  // ---- Bellísimas Pro: 30 days of a lower platform fee, a Pro badge and more photos ----
   add("POST", "/api/groups/:id/pro", async ({ params, user }) => {
     const g = requireRealOwner(db, user, params.id);
     const id = newId("f");
     db.run("INSERT INTO payments_feature (id, group_id, amount_cents, kind, created_at) VALUES (?, ?, ?, 'pro', ?)", id, g.id, config.proPriceCents, now());
     if (!stripe.live) return { id, simulated: true, url: `${config.baseUrl}/#/pay/pro/${id}`, amount_cents: config.proPriceCents };
-    const session = await stripe.checkoutForFeature({ feature: { id, amount_cents: config.proPriceCents, name: `Bella's Pro (30 days): ${g.name}` }, group: g, successUrl: `${config.baseUrl}/#/dashboard?feature=${id}`, cancelUrl: `${config.baseUrl}/#/dashboard` });
+    const session = await stripe.checkoutForFeature({ feature: { id, amount_cents: config.proPriceCents, name: `Bellísimas Pro (30 days): ${g.name}` }, group: g, successUrl: `${config.baseUrl}/#/dashboard?feature=${id}`, cancelUrl: `${config.baseUrl}/#/dashboard` });
     db.run("UPDATE payments_feature SET stripe_session_id = ? WHERE id = ?", session.id, id);
     return { id, url: session.url, amount_cents: config.proPriceCents };
   }, { auth: true });

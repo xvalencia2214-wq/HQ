@@ -1,6 +1,6 @@
 ---
 name: bilingual-ux
-description: Use whenever you add or change any text a person will read in Bella's Música (bellas-musica/) — screens, buttons, errors, emails, texts/WhatsApp, push notifications, share pages, the /es/ Google pages — or review the English/Spanish experience. Covers where strings live, the {who} category words, singular/plural, dates and money, tone for Mexican-American families and vendors, and the checks that must pass.
+description: Use whenever you add or change any text a person will read in Bellísimas Fiestas (bellas-musica/) — screens, buttons, errors, emails, texts/WhatsApp, push notifications, share pages, the /es/ Google pages — or review the English/Spanish experience. Covers where strings live, the {who} category words, singular/plural, dates and money, tone for Mexican-American families and vendors, and the checks that must pass.
 ---
 
 # Bilingual English / Spanish UX

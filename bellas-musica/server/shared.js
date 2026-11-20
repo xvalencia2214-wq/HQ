@@ -77,7 +77,7 @@ export function doneCount(db, groupId) {
 export const isSpotlight = (g) => (g.spotlight_until || 0) > now();
 export const isPromoted = (g) => g.promoted_until > now() || isSpotlight(g);
 export const isPro = (g) => g.pro_until > now();
-// The platform fee for a listing: lower for Bella's Pro and for founding vendors, half for 30 days after a referral.
+// The platform fee for a listing: lower for Bellísimas Pro and for founding vendors, half for 30 days after a referral.
 export function feePctFor(g, config) {
   let pct = config.platformFeePct;
   if (isPro(g)) pct = Math.min(pct, config.proFeePct);

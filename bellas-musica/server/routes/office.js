@@ -31,7 +31,7 @@ export default function officeRoutes(ctx, add) {
     ctx.office.admin(user);
     const year = /^\d{4}$/.test(String(query.year || "")) ? query.year : "";
     const csv = ctx.office.moneyCsv(year);
-    res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="bellas-fiestas-money-${year || "this-year"}.csv"`, "Cache-Control": "no-store" });
+    res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="bellisimas-fiestas-money-${year || "this-year"}.csv"`, "Cache-Control": "no-store" });
     res.end(csv);
   });
 

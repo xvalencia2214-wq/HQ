@@ -21,7 +21,7 @@ const SCHEMA = {
     packages: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "name", "description"], properties: { id: { type: "integer" }, name: { type: "string" }, description: { type: "string" } } } }
   }
 };
-const SYSTEM = `You translate short business listings for Bella's Fiestas, a marketplace where families in Chicago's Mexican-American community book music, food, rentals and other vendors for their parties.
+const SYSTEM = `You translate short business listings for Bellísimas Fiestas, a marketplace where families in Chicago's Mexican-American community book music, food, rentals and other vendors for their parties.
 
 You receive one listing as JSON: its "story" and its "packages" (id, name, description).
 1. Decide the language it is written in: "en" (English), "es" (Spanish), or "both" (it already says everything in both languages).

@@ -1,6 +1,6 @@
 # Launch and lawyer prep
 
-Plain-language notes so you are ready for the lawyer, an accountant, vendors, or anyone else who asks how Bella's
+Plain-language notes so you are ready for the lawyer, an accountant, vendors, or anyone else who asks how Bellísimas
 Fiestas works. Written October 15, 2026. **This is not legal or tax advice.** It tells you what to ask and what the app
 already does, so your time with professionals is well spent.
 
@@ -45,7 +45,7 @@ answers ready:
 
 | Blank | What to decide |
 | --- | --- |
-| Business name | The legal name (e.g. "Bella's Fiestas LLC"). Form the company first (section 4). |
+| Business name | The legal name (e.g. "Bellísimas Fiestas LLC"). Form the company first (section 4). |
 | Address | A real postal address. A registered-agent address or PO box works for email footers. |
 | Support email | e.g. `ayuda@yourdomain.com`. It must be read every day. |
 | Governing law | Probably Illinois, where you are. |
@@ -90,7 +90,7 @@ The red boxes on the two pages are these same questions.
    fee? What happens if they do?"
 10. **Privacy laws.** "We're in Illinois. Which state privacy laws apply as we grow, and when? We keep no biometrics
     (so Illinois BIPA shouldn't apply), and we don't sell data or use ad trackers."
-11. **Trademark.** "Can we register 'Bella's Fiestas'? Is anyone else using it for events?"
+11. **Trademark.** "Can we register 'Bellísimas Fiestas'? Is anyone else using it for events?"
 12. **Don Chuy, the AI helper.** "Our helper is an AI (Claude, by Anthropic). He says he's an AI in his title, in his
     first message, and whenever someone asks. His answers can be wrong, so the Terms say the vendor page and the booking
     control. Conversations go to Anthropic to be answered, but we don't store them. Is our disclaimer (Terms 11a) and
@@ -98,7 +98,7 @@ The red boxes on the two pages are these same questions.
 
 13. **Mi Oficina (AI used to run the business).** "We use AI to draft vendor emails, support replies and social posts,
     and to summarize the business. It sees bookings with the customer's first name only, never contact details. A person
-    approves every message before it goes out. Is the Privacy section 'AI that helps us run Bella's Fiestas' enough?"
+    approves every message before it goes out. Is the Privacy section 'AI that helps us run Bellísimas Fiestas' enough?"
 
 **Bring to the meeting:** this document, the two pages (open `yourdomain.com/terms.html` on your iPad, or print them),
 and the fee list in section 6.
@@ -129,11 +129,11 @@ Ask the accountant about anything marked "ask".
 - [ ] **Chicago business license** (ask): the city may require one even for an online business run from home.
 - [ ] **BOI report**: as of 2025, U.S.-formed companies no longer have to file it with FinCEN. Confirm with the
   accountant, since rules have changed several times.
-- [ ] **Trademark search** for "Bella's Fiestas" (USPTO website, free to search). Registering costs about $350 per
+- [ ] **Trademark search** for "Bellísimas Fiestas" (USPTO website, free to search). Registering costs about $350 per
   category.
 - [ ] **DMCA agent**: register at copyright.gov ($6, renew every 3 years). It protects you if a vendor uploads someone
   else's photo or video.
-- [ ] **Domain and email**: your own domain (e.g. bellasfiestas.com) for the site and for email (Resend needs a
+- [ ] **Domain and email**: your own domain (e.g. bellisimasfiestas.com) for the site and for email (Resend needs a
   verified domain).
 - [ ] **Texts**: Twilio A2P 10DLC registration takes days to weeks. Start early (`docs/twilio-a2p.md`). Email covers
   everything important until it's approved.
@@ -290,7 +290,7 @@ doesn't really chat. **Nothing is charged until you finish all the steps below.*
 1. Go to **console.anthropic.com** and sign up with your business email. Confirm the email they send.
 2. Open **Billing**, add a card, and **buy credits** (start with $10–$20). It works like a prepaid phone: it can't spend
    more than the credit you bought. Leave **auto-reload off** unless you want automatic top-ups.
-3. Open **API keys** → **Create key**. Name it "Bella's Fiestas" and **copy it** (it's shown only once; it starts with
+3. Open **API keys** → **Create key**. Name it "Bellísimas Fiestas" and **copy it** (it's shown only once; it starts with
    `sk-ant-`). Don't paste it anywhere except Render.
 4. In **Render**, open your real service → **Environment** → add:
    - `ANTHROPIC_API_KEY` = the key you copied

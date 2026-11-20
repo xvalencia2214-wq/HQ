@@ -208,3 +208,13 @@ test("The practice copy online without its password: a page that says what to ad
     for (const p of ["/api/meta", "/api/search?zip=60608", "/api/auth/login", "/index.html"]) assert.equal((await get(p)).status, 503, p);
   } finally { child.kill("SIGKILL"); }
 });
+
+test("Text messages carry the name without the accent (a plain text with an í holds 70 letters instead of 160)", async () => {
+  const S = await startApp({ DEMO_SEED: "0" });
+  try {
+    assert.equal(await S.ctx.sms.send("(312) 555-0142", "Bellísimas Fiestas: nueva solicitud para el sábado. Ábrela aquí."), true);
+    const body = S.db.get("SELECT body FROM sms_log ORDER BY id DESC LIMIT 1").body;
+    assert.match(body, /^Bellisimas Fiestas: /); assert.doesNotMatch(body, /Bellísimas/);
+    assert.match(body, /sábado/, "only the name changes; the rest of the message stays as written");
+  } finally { await S.close(); }
+});

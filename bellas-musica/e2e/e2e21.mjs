@@ -75,7 +75,7 @@ try {
 
   // edit one and send it
   const card = B.locator(".of-draft", { hasText: "Mariachi Oficina" });
-  await card.locator(".of-body").fill("Hola Mariachi Oficina:\nAgregue su historia, por favor.\n— Bella's Fiestas");
+  await card.locator(".of-body").fill("Hola Mariachi Oficina:\nAgregue su historia, por favor.\n— Bellísimas Fiestas");
   // the screen redraws while the owner is editing (a desk starts working): the edit and the cursor stay
   await card.locator(".of-body").focus();
   await B.click("#ofrun"); await B.waitForTimeout(400);

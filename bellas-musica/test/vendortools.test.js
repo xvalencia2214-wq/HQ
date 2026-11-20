@@ -8,7 +8,7 @@ const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a
 const PDF = Buffer.from("%PDF-1.4\n% test certificate\n").toString("base64");
 const settle = () => new Promise((r) => setTimeout(r, 150));
 
-test("referrals and Bella's Pro lower the platform fee; Pro doubles the photo limit", async () => {
+test("referrals and Bellísimas Pro lower the platform fee; Pro doubles the photo limit", async () => {
   const S = await startApp({ DEMO_SEED: "0", PLATFORM_FEE_PCT: "10" });
   try {
     const a = client(S.base), b = client(S.base), cust = client(S.base), anon = client(S.base);

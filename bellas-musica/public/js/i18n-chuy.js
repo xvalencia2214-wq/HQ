@@ -26,7 +26,7 @@ export const EN8 = {
   "chuy.q.mine": "When is my next booking?",
   "chuy.q.more": "How do I get more bookings?",
   "chuy.q.payouts": "How do payouts work?",
-  "chuy.q.fees": "What does Bella's Fiestas charge?"
+  "chuy.q.fees": "What does Bellísimas Fiestas charge?"
 };
 export const ES8 = {
   "chuy.fab": "¿Ayuda?",
@@ -55,5 +55,5 @@ export const ES8 = {
   "chuy.q.mine": "¿Cuándo es mi próxima reserva?",
   "chuy.q.more": "¿Cómo consigo más reservas?",
   "chuy.q.payouts": "¿Cómo me pagan?",
-  "chuy.q.fees": "¿Cuánto cobra Bella's Fiestas?"
+  "chuy.q.fees": "¿Cuánto cobra Bellísimas Fiestas?"
 };

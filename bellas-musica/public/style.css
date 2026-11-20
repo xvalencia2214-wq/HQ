@@ -1007,3 +1007,7 @@ html.big { font-size: 118.75%; }
 /* a listing shown in the reader's language */
 .trnote { margin: 6px 0 0; font-size: .88rem; color: var(--ink-2); }
 .trnote .linkbtn { padding: 8px 6px; }
+
+/* the longer name (Bellísimas Fiestas) fits on the smallest phones */
+@media (max-width: 400px) { .brand { font-size: 1.22rem; gap: 8px; } .brand img { width: 40px; height: 40px; border-radius: 12px; } }
+@media (max-width: 340px) { .brand { font-size: 1.05rem; } .brand img { width: 34px; height: 34px; } }

@@ -34,7 +34,7 @@ if (ONLINE && !process.env.PREVIEW_PASSWORD) {
   // Nothing of the app runs: no database, no accounts, only this page.
   console.error("This practice copy is on the internet: set PREVIEW_PASSWORD (Render → Environment) so only you can open it.");
   const http = await import("node:http");
-  const page = `<!DOCTYPE html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>One more step · Bella's Fiestas</title>
+  const page = `<!DOCTYPE html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>One more step · Bellísimas Fiestas</title>
 <body style="font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px;color:#0b1838;line-height:1.5">
 <h1 style="font-size:1.6rem">One more step before this practice copy opens</h1>
 <p>It needs a password so only you can see it.</p>
@@ -69,8 +69,8 @@ const busy = async (e) => {
     older = (await at("/api/health")).ok && (await at("/js/views/landing.js")).status === 404;
   } catch { /* not ours */ }
   console.error(older
-    ? `\n*** An OLDER copy of Bella's Fiestas is still running (in another black window, or in the background). ***\nThe browser is showing that old copy, not this one.\nClose every black window. If it still says this: press Ctrl+Shift+Esc (Task Manager), find "Node.js JavaScript Runtime",\nclick it, press "End task", then type npm run tryout again in THIS window.\n`
-    : `\nPort ${config.port} is already in use: Bella's Fiestas (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\nStill stuck? Press Ctrl+Shift+Esc (Task Manager), end "Node.js JavaScript Runtime", and try again.\n`);
+    ? `\n*** An OLDER copy of Bellísimas Fiestas is still running (in another black window, or in the background). ***\nThe browser is showing that old copy, not this one.\nClose every black window. If it still says this: press Ctrl+Shift+Esc (Task Manager), find "Node.js JavaScript Runtime",\nclick it, press "End task", then type npm run tryout again in THIS window.\n`
+    : `\nPort ${config.port} is already in use: Bellísimas Fiestas (or another program) is already running in another window.\nClose that window first (or press Ctrl+C in it), then try again.\nStill stuck? Press Ctrl+Shift+Esc (Task Manager), end "Node.js JavaScript Runtime", and try again.\n`);
   process.exit(1);
 };
 const port = await app.listen().catch(busy);
@@ -113,7 +113,7 @@ const booking = (groupId, date, time, more) => ({ groupId, date, time, event: "Q
 let payLinkUrl = "";
 async function setUp() {
   console.log("Setting up the practice accounts and a party in progress...");
-  const owner = await signup(OWNER, "Dueño de Bella's");
+  const owner = await signup(OWNER, "Dueño de Bellísimas");
   const dj = await signup("dj@prueba.com", "Beto Ramírez", { sms_opt_in: true });
   const carpas = await signup("carpas@prueba.com", "Lupe Torres");
   const mariachi = await signup("mariachi@prueba.com", "Chuy Hernández", { sms_opt_in: true });
@@ -258,7 +258,7 @@ sendDailyTexts(app.ctx, { hour: 8 });
 const morning = db.all("SELECT body FROM sms_log WHERE created_at >= ? AND (body LIKE 'Today:%' OR body LIKE 'Hoy:%' OR body LIKE '%Today:%' OR body LIKE '%Hoy:%')", since).map((r) => "  " + r.body.replace(/\n/g, " ")).slice(0, 2);
 
 const url = config.baseUrl, here = ONLINE ? url : `http://localhost:${port}`;
-console.log(`Bella's Fiestas TEST DRIVE is running (version ${VERSION}): open ${here}
+console.log(`Bellísimas Fiestas TEST DRIVE is running (version ${VERSION}): open ${here}
 Opening the welcome page in your browser: ${here}/#/welcome
 ${LAN ? `
   >>> On your iPad or phone (same Wi-Fi as this computer), open:  ${url}

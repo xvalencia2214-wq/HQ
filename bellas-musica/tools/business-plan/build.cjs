@@ -1,4 +1,4 @@
-// Builds the Bella's Fiestas business plan in the layout of the SBDC "Lean" template.
+// Builds the Bellísimas Fiestas business plan in the layout of the SBDC "Lean" template.
 // Usage: node build.js out.docx '{"exec":3,...}'  (page numbers for the table of contents)
 const fs = require("fs");
 const path = require("path");
@@ -9,7 +9,7 @@ const {
 } = require("docx");
 
 const OUT = process.argv[2] || "plan.docx";
-const PAGES = Object.assign({ exec: 3, mgmt: 3, market: 4, target: 4, need: 4, comm: 4, comp: 5, funds: 6, fin: 8, app: 11 }, JSON.parse(process.argv[3] || "{}"));
+const PAGES = Object.assign({ exec: 3, mgmt: 3, market: 5, target: 5, need: 5, comm: 5, comp: 7, funds: 9, fin: 11, app: 14 }, JSON.parse(process.argv[3] || "{}"));
 const IMG = path.join(__dirname, "img"); // cover photo from the SBDC template; chart drawn from the plan's numbers
 const SERIF = "Times New Roman", SANS = "Calibri", BLUE = "2F5496";
 
@@ -103,7 +103,7 @@ const cover = [
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun("for")] }),
   spacer(1700),
   ...[
-    ["BELLA'S FIESTAS", true],
+    ["BELLÍSIMAS FIESTAS", true],
     ["Xavier Valencia and Abby Castaneda", false],
     ["[[Business address]]", false],
     ["[[City, State ZIP]]", false],
@@ -130,8 +130,8 @@ const toc = [
 
 const exec = [
   H1("Executive Summary"),
-  P("Bella's Fiestas is an online marketplace, owned by co-founders Xavier Valencia and Abby Castaneda, that lets Chicago-area families book everything for a party in one place. The owners will form Bella's Fiestas LLC, a two-member Illinois limited liability company, in November 2026. They started the company because booking a mariachi, a banda or a caterer for a quinceañera still means calling around, waiting days for prices and paying cash deposits with no protection, and they have seen their own families go through it."),
-  P("The Company's mission is to make planning a Latino family celebration simple, fair and safe, in Spanish and English. Through a website that installs like a phone app, families search by ZIP code and see real prices, open dates and reviews for music (mariachi, banda, norteño, DJs), food, tent and table rentals, decorations, photographers and videographers, party staff, venues and dress and suit alterations. They book with a card deposit that is refunded if the vendor does not show up. Competitors such as GigSalad, The Bash and Thumbtack are national, English-first directories that charge vendors for leads or memberships; most local vendors still book through Facebook and WhatsApp. Bella's Fiestas stands apart with a fully bilingual experience, instant prices, a calendar that prevents double booking, an arrival code that proves the vendor showed up, and free listings: vendors pay only a 10% fee when a family books and pays."),
+  P("Bellísimas Fiestas is an online marketplace, owned by co-founders Xavier Valencia and Abby Castaneda, that lets Chicago-area families book everything for a party in one place. The owners will form Bellísimas Fiestas LLC, a two-member Illinois limited liability company, in November 2026. They started the company because booking a mariachi, a banda or a caterer for a quinceañera still means calling around, waiting days for prices and paying cash deposits with no protection, and they have seen their own families go through it."),
+  P("The Company's mission is to make planning a Latino family celebration simple, fair and safe, in Spanish and English. Through a website that installs like a phone app, families search by ZIP code and see real prices, open dates and reviews for music (mariachi, banda, norteño, DJs), food, tent and table rentals, decorations, photographers and videographers, party staff, venues and dress and suit alterations. They book with a card deposit that is refunded if the vendor does not show up. Competitors such as GigSalad, The Bash and Thumbtack are national, English-first directories that charge vendors for leads or memberships; most local vendors still book through Facebook and WhatsApp. Bellísimas Fiestas stands apart with a fully bilingual experience, instant prices, a calendar that prevents double booking, an arrival code that proves the vendor showed up, and free listings: vendors pay only a 10% fee when a family books and pays."),
   P("The target market is Cook County and the surrounding suburbs, home to about 1.3 million Latino residents, and the families planning quinceañeras, weddings, baptisms and birthdays there. The app is built and tested. The owners are not requesting a loan: they will fund about $3,525 of start-up costs themselves (legal setup, a trademark filing, accounting setup, launch marketing and three months of operating costs), and the business is projected to cover its own monthly costs at about 12 bookings a month."),
   spacer(200),
   H1("Management Team"),
@@ -165,7 +165,7 @@ const market = [
   bullet("**Measurable impact:** a family sees a price and open dates in minutes instead of waiting days for call-backs; the deposit is refunded if the vendor never arrives; a vendor gets only paid, confirmed requests and never pays for a lead."),
   spacer(120),
   H2("MARKETPLACE NEED"),
-  P("Booking a party in the Chicago Latino community is slow, informal and risky. Prices are rarely posted, so families message several groups and wait. Deposits are often paid in cash or by Zelle with no protection if the group cancels or never arrives. National booking sites are in English, are built for weddings and corporate events, and charge vendors for leads that may not turn into work. Vendors, in turn, juggle dates in notebooks and chats and sometimes get double-booked. Bella's Fiestas solves this with posted prices, live calendars, a protected card deposit, an arrival code that proves the vendor showed up, and everything in Spanish and English."),
+  P("Booking a party in the Chicago Latino community is slow, informal and risky. Prices are rarely posted, so families message several groups and wait. Deposits are often paid in cash or by Zelle with no protection if the group cancels or never arrives. National booking sites are in English, are built for weddings and corporate events, and charge vendors for leads that may not turn into work. Vendors, in turn, juggle dates in notebooks and chats and sometimes get double-booked. Bellísimas Fiestas solves this with posted prices, live calendars, a protected card deposit, an arrival code that proves the vendor showed up, and everything in Spanish and English."),
   spacer(120),
   H2("COMMERCIALIZATION POTENTIAL"),
   P("**Industry growth and opportunity.** Cook County's Latino population grew about 11% from 2010 to 2020, much faster than the county as a whole, and families now discover vendors on TikTok, Instagram and WhatsApp rather than in directories. No booking platform in Chicago is built for Spanish-speaking families. After Chicago, the same app can serve other Illinois cities with large Latino communities (Aurora, Elgin, Waukegan, Joliet) and then other metro areas, with no new software to build."),
@@ -310,7 +310,7 @@ const appendix = [
   ...titlePage("APPENDIX", "Calibri Light", 28),
   P("The following supporting documents are attached:", { para: { spacing: { before: 200, after: 120 } } }),
   bullet("Terms of Service and Privacy Policy (version of November 11, 2026), once reviewed by the attorney"),
-  bullet("How to Use Bella's Fiestas guide, for families, vendors and the owners"),
+  bullet("How to Use Bellísimas Fiestas guide, for families, vendors and the owners"),
   bullet("Vendor sign-up flyer with QR code"),
   bullet("Screenshots of the app: search, a vendor page, booking and the vendor dashboard"),
   bullet("Social media kit: profile image, posts and the 2-week launch plan"),
@@ -318,12 +318,12 @@ const appendix = [
   bullet("Signed operating agreement between Xavier Valencia and Abby Castaneda"),
   bullet("Short resumes for both owners"),
   bullet("Letters of interest from the first founding vendors, if available"),
-  P("**Sources:** population figures are approximate 2020 Census numbers as reported by the University of Illinois Chicago Great Cities Institute, WBEZ and ABC7 Chicago. Competitor fees come from the owners' research in September and October 2026. App features, fees and costs come from Bella's Fiestas' own settings and setup guides.", { para: { spacing: { before: 240, after: 160 } }, run: { size: 20 } })
+  P("**Sources:** population figures are approximate 2020 Census numbers as reported by the University of Illinois Chicago Great Cities Institute, WBEZ and ABC7 Chicago. Competitor fees come from the owners' research in September and October 2026. App features, fees and costs come from Bellísimas Fiestas' own settings and setup guides.", { para: { spacing: { before: 240, after: 160 } }, run: { size: 20 } })
 ];
 
 const doc = new Document({
   creator: "Xavier Valencia and Abby Castaneda",
-  title: "Business Plan for Bella's Fiestas",
+  title: "Business Plan for Bellísimas Fiestas",
   styles: {
     default: { document: { run: { font: SERIF, size: 24 } } },
     paragraphStyles: [

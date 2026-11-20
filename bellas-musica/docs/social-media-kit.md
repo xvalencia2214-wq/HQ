@@ -1,4 +1,4 @@
-# Bella's Fiestas social media kit
+# Bellísimas Fiestas social media kit
 
 The images are in the kit folder (made from `tools/social-kit.html`): a profile picture, a Facebook cover, 6 posts
 (1080×1080) and 3 stories (1080×1920, for Instagram, TikTok and Facebook stories). Below: bios, a caption for every
@@ -11,8 +11,8 @@ really does; everything below is true in the app today.
 
 ## 1. Your accounts
 
-Grab the same name everywhere, even on the ones you won't use yet: **@bellasfiestas** (or @bellasfiestaschi,
-@bellasfiestasapp if it's taken). Instagram, TikTok, Facebook page, and WhatsApp Business.
+Grab the same name everywhere, even on the ones you won't use yet: **@bellisimasfiestas** (or @bellisimasfiestaschi,
+@bellisimasfiestasapp if it's taken). Instagram, TikTok, Facebook page, and WhatsApp Business.
 
 - **Profile picture:** `profile.png` (same on every app, so people recognize you).
 - **Facebook cover:** `facebook-cover.png`.
@@ -26,11 +26,11 @@ Grab the same name everywhere, even on the ones you won't use yet: **@bellasfies
 > Mariachi, banda, DJ y más para tu fiesta en Chicago 🎉 Reserva aquí 👇
 
 **Facebook "About":**
-> Bella's Fiestas es la forma fácil de reservar todo para tu fiesta en Chicago: mariachis, bandas, DJs, comida, carpas, decoración, fotógrafos, videógrafos y salones. Mira precios reales y fechas libres, y reserva con un depósito protegido. En español y en inglés.
-> Bella's Fiestas is the easy way to book everything for your party in Chicago, in Spanish and English: real prices, open dates and a protected deposit.
+> Bellísimas Fiestas es la forma fácil de reservar todo para tu fiesta en Chicago: mariachis, bandas, DJs, comida, carpas, decoración, fotógrafos, videógrafos y salones. Mira precios reales y fechas libres, y reserva con un depósito protegido. En español y en inglés.
+> Bellísimas Fiestas is the easy way to book everything for your party in Chicago, in Spanish and English: real prices, open dates and a protected deposit.
 
 **WhatsApp Business greeting:**
-> ¡Hola! Gracias por escribir a Bella's Fiestas 🎉 Aquí puedes ver precios y fechas libres de mariachis, bandas, DJs y más: [tu link]. ¿Eres un grupo o negocio? Regístrate gratis en el mismo link.
+> ¡Hola! Gracias por escribir a Bellísimas Fiestas 🎉 Aquí puedes ver precios y fechas libres de mariachis, bandas, DJs y más: [tu link]. ¿Eres un grupo o negocio? Regístrate gratis en el mismo link.
 
 ---
 
@@ -43,7 +43,7 @@ Grab the same name everywhere, even on the ones you won't use yet: **@bellasfies
 > #fiestas #chicago #quinceañera #mariachi #boda #pilsen #littlevillage #cicero #fiestaschicago
 
 **post-2-launch.png (launch day)**
-> ¡Ya llegó Bella's Fiestas! 🎺 Busca con tu código postal, mira precios y fechas libres, y reserva tu mariachi, banda o DJ en minutos, con depósito protegido. Link en la bio.
+> ¡Ya llegó Bellísimas Fiestas! 🎺 Busca con tu código postal, mira precios y fechas libres, y reserva tu mariachi, banda o DJ en minutos, con depósito protegido. Link en la bio.
 > It's here! Book your mariachi, banda or DJ in minutes, with real prices and a protected deposit. Link in bio.
 > #mariachichicago #bandachicago #quinceañera #bodas #fiestas #chicago #djchicago #fiestasmexicanas
 
@@ -53,7 +53,7 @@ Grab the same name everywhere, even on the ones you won't use yet: **@bellasfies
 > #quinceañera #bautizo #cumpleaños #fiestas #chicago #mariachi
 
 **post-4-protected.png**
-> ¿Te ha pasado que el grupo no llega? 😤 En Bella's Fiestas, el grupo marca su llegada con un código. Si no llegó y lo reportas en 3 días, te devolvemos lo que pagaste en la app.
+> ¿Te ha pasado que el grupo no llega? 😤 En Bellísimas Fiestas, el grupo marca su llegada con un código. Si no llegó y lo reportas en 3 días, te devolvemos lo que pagaste en la app.
 > Group didn't show? Report it within 3 days and get back what you paid in the app.
 > #fiestas #chicago #mariachi #quinceañera #bodas
 
@@ -97,14 +97,14 @@ Best times: evenings (6–9 p.m.) and weekend mornings, when families plan parti
 
 ## 4. Video ideas (TikTok and Reels, 15–40 seconds)
 
-1. **Who we are:** the two of you on camera. "Somos [nombres], y creamos Bella's Fiestas porque…" Your real story wins.
+1. **Who we are:** the two of you on camera. "Somos [nombres], y creamos Bellísimas Fiestas porque…" Your real story wins.
 2. **The search in 15 seconds:** screen recording on the iPad: type 60608 → mariachi cards with prices → done. Text: "Así de fácil."
 3. **"POV: you ask a mariachi for a price on Facebook…"**: funny skit of waiting 3 days for an answer, then the app shows the price instantly.
 4. **The calendar:** show gold days and Booked days. "Nunca más reservas dobles" (for vendors).
-5. **Behind the scenes at a party:** with a vendor's permission, film 10 seconds of them playing, plus "Reservado en Bella's Fiestas."
+5. **Behind the scenes at a party:** with a vendor's permission, film 10 seconds of them playing, plus "Reservado en Bellísimas Fiestas."
 6. **Don Chuy:** ask him in Spanish "¿Cuánto cuesta un mariachi?" on screen. People love a friendly helper.
 7. **For vendors:** "3 razones para anunciar tu grupo gratis", fast cuts with text.
-8. **Quinceañera checklist:** "Todo lo que necesitas para tu quince", ending with "encuéntralo todo en Bella's Fiestas".
+8. **Quinceañera checklist:** "Todo lo que necesitas para tu quince", ending with "encuéntralo todo en Bellísimas Fiestas".
 
 Use trending Mexican and regional songs (TikTok's music library) and always add Spanish text on screen.
 
@@ -112,9 +112,9 @@ Use trending Mexican and regional songs (TikTok's music library) and always add 
 
 ## 5. Invite vendors by DM (copy and paste)
 
-> ¡Hola! Vimos su grupo y nos encantó 🎺 Somos Bella's Fiestas, una nueva app en Chicago donde las familias reservan mariachis, bandas, DJs y más con depósito. Anunciarse es gratis y nunca pagan por clientes; los primeros 25 negocios pagan solo 5% por 6 meses. ¿Les mando el link para que creen su página? Toma unos 10 minutos.
+> ¡Hola! Vimos su grupo y nos encantó 🎺 Somos Bellísimas Fiestas, una nueva app en Chicago donde las familias reservan mariachis, bandas, DJs y más con depósito. Anunciarse es gratis y nunca pagan por clientes; los primeros 25 negocios pagan solo 5% por 6 meses. ¿Les mando el link para que creen su página? Toma unos 10 minutos.
 
-> Hi! We loved your group 🎺 We're Bella's Fiestas, a new Chicago app where families book mariachis, bandas, DJs and more with a deposit. Listing is free, you never pay for leads, and the first 25 businesses pay only 5% for 6 months. Want the link to make your page? It takes about 10 minutes.
+> Hi! We loved your group 🎺 We're Bellísimas Fiestas, a new Chicago app where families book mariachis, bandas, DJs and more with a deposit. Listing is free, you never pay for leads, and the first 25 businesses pay only 5% for 6 months. Want the link to make your page? It takes about 10 minutes.
 
 **Tips:** reply to every comment and DM the same day; answer "¿cuánto cobran?" questions with your link; never post
 a vendor's photos, videos or reviews without their OK; and check that the founding spots are still open before posting

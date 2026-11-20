@@ -1,6 +1,6 @@
 ---
 name: vendor-marketplace-quality
-description: Use when changing how customers find, compare or trust vendors in Bella's Música (bellas-musica/) — search, ranking, category chips, cards, vendor pages, badges, reviews, Spotlight/Featured placement, Discover, "Best of" and the /chicago landing pages — or when auditing listing quality (bandas, grupos, mariachi, catering, decorations, rentals, venues).
+description: Use when changing how customers find, compare or trust vendors in Bellísimas Fiestas (bellas-musica/) — search, ranking, category chips, cards, vendor pages, badges, reviews, Spotlight/Featured placement, Discover, "Best of" and the /chicago landing pages — or when auditing listing quality (bandas, grupos, mariachi, catering, decorations, rentals, venues).
 ---
 
 # Vendor marketplace quality

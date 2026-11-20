@@ -19,7 +19,10 @@ export function createSms(config, db, alert = () => {}) {
     if (!to0) return false;
     const wa = channel === "whatsapp" && config.twilioWhatsappFrom;
     const to = wa ? "whatsapp:" + to0 : to0;
-    const text = String(body).slice(0, 300);
+    // A plain text message holds 160 letters, but one letter outside the basic set (the í in Bellísimas) makes the whole
+    // message hold only 70, so it costs two or three times as much. The name goes without the accent in texts; WhatsApp
+    // has no such limit.
+    const text = (wa ? String(body) : String(body).replace(/Bellísimas/g, "Bellisimas")).slice(0, 300);
     const row = db.run("INSERT INTO sms_log (to_phone, body, created_at) VALUES (?, ?, ?)", to, text, now());
     if (!live) return true;
     try {

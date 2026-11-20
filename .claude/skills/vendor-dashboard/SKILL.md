@@ -1,6 +1,6 @@
 ---
 name: vendor-dashboard
-description: Use when changing what vendors (bandas, mariachis, DJs, caterers, decorators, rental and venue owners) see and do in Bella's Música (bellas-musica/) — the dashboard tabs, requests and replies, calendar and availability, profile editing, packages/add-ons, photos and video, payouts, stats, Pro/Featured/Spotlight upgrades, team helpers, payment links, morning text and alerts.
+description: Use when changing what vendors (bandas, mariachis, DJs, caterers, decorators, rental and venue owners) see and do in Bellísimas Fiestas (bellas-musica/) — the dashboard tabs, requests and replies, calendar and availability, profile editing, packages/add-ons, photos and video, payouts, stats, Pro/Featured/Spotlight upgrades, team helpers, payment links, morning text and alerts.
 ---
 
 # Vendor dashboard improvements
