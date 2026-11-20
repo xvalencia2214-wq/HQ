@@ -58,7 +58,7 @@ try {
   await F.check("#sg-ok"); await F.click("#signform button[type=submit]");
   ok("the family signs the agreement", await until(() => S.db.get("SELECT name FROM agreement_signs WHERE booking_id = ? AND side = 'customer'", b.id)?.name === "Rosa Martínez"));
   await F.waitForSelector("#agr-sign td");
-  ok("the agreement shows who signed", /Signed by Rosa Martínez/.test(await text(F)));
+  ok("the agreement shows who signed", await until(async () => /Signed by Rosa Martínez/.test(await text(F))));
 
   // ---- the vendor: held share, signs too, asks a past client for a review ----
   const V = await person("vendor");
